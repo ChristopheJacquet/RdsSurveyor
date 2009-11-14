@@ -1,0 +1,113 @@
+package eu.jacquet80.rds;
+
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.io.File;
+import java.io.IOException;
+
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+
+import eu.jacquet80.rds.core.StreamLevelDecoder;
+import eu.jacquet80.rds.input.AudioFileBitReader;
+import eu.jacquet80.rds.input.BinaryFileBitReader;
+import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.LiveAudioBitReader;
+import eu.jacquet80.rds.input.TeeBitReader;
+import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.ui.TimeLine;
+
+public class RDSSurveyor {
+
+	private static String getParam(String param, String[] args, int pos) {
+		if(pos >= args.length) {
+			System.out.println("-" + param + " needs a filename.");
+			System.exit(0);
+		}
+		return args[pos];
+	}
+	
+	public static void main(String[] args) throws IOException {
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009.");
+		
+		BitReader reader = null;
+		boolean showGui = true;
+		
+		for(int i=0; i<args.length; i++) {
+			BitReader newReader = null;
+			if("-inaudio".equals(args[i])) {
+				newReader = new LiveAudioBitReader();
+			} else if("-inbinfile".equals(args[i])) {
+				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
+			} else if("-inaudiofile".equals(args[i])) {
+				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
+			} else if("-outbinfile".equals(args[i])) {
+				if(reader == null) {
+					System.out.println("A source specification must come before using -outbinfile");
+					System.exit(0);
+				} else
+					reader = new TeeBitReader(reader, new File(getParam("outbinfile", args, ++i)));
+			} else if("-nogui".equals(args[i])) {
+				showGui = false;
+			} else {
+				System.out.println("Arguments:");
+				System.out.println("  -inaudio                 Use sound card audio as input");
+				System.out.println("  -inbinfile <file>        Use the given binary file as input");
+				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
+				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
+				System.out.println("  -nogui                   Do not show the graphical user interface");
+				System.exit(1);
+			}
+			
+			if(newReader != null) {
+				if(reader == null) reader = newReader;
+				else {
+					System.out.println("Cannot have two different input sources.");
+					System.exit(0);
+				}
+			}
+		}
+		
+		if(reader == null) {
+			System.out.println("A source must be provided.");
+			System.exit(0);
+		}
+		
+
+		Log log = new Log();
+		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder();
+		
+		if(showGui) {
+			JFrame frame = new JFrame("RDS Surveyor");
+			final JTextArea area = new JTextArea();
+			area.setFont(new Font("Monospaced", Font.PLAIN, 14));
+			frame.setLayout(new BorderLayout());
+			frame.add(new JScrollPane(area), BorderLayout.CENTER);
+			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			frame.setPreferredSize(new Dimension(800, 400));
+			frame.pack();
+			frame.setVisible(true);
+		
+			JFrame fTL = new JFrame("Timeline");
+			final TimeLine timeLine = new TimeLine(log);
+			fTL.setLayout(new BorderLayout());
+			fTL.add(new JScrollPane(timeLine), BorderLayout.CENTER);
+			fTL.setPreferredSize(new Dimension(1000, 200));
+			fTL.pack();
+			fTL.setVisible(true);
+			
+			log.addGroupListener(new Runnable() {
+				public void run() {
+					area.setText(streamLevelDecoder.getTunedStation().toString().replace("\n", "\r\n"));
+					timeLine.update();
+				}
+			});
+		}
+
+		streamLevelDecoder.processStream(reader, log);
+		
+		System.out.println("\nProcessing complete.");
+	}
+}
