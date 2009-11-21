@@ -30,22 +30,31 @@
 
 package eu.jacquet80.rds.log;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class Log {
-	private LinkedList<LogMessage> messages = new LinkedList<LogMessage>();
+	private ArrayList<LogMessage> messages = new ArrayList<LogMessage>();
 	private LinkedList<Runnable> groupListeners = new LinkedList<Runnable>();
 	
-	public void addMessage(LogMessage message) {
+	public synchronized void addMessage(LogMessage message) {
 		messages.add(message);
 	}
 	
-	public int getLastTime() {
-		return messages.getLast().getBitTime();
+	public synchronized int getLastTime() {
+		return messages.get(messages.size() - 1).getBitTime();
 	}
 	
-	public Iterable<LogMessage> messages() {
-		return messages;
+	// the list of messages can only grow, so it is not really a critical
+	// section issue if some message appears between the moment the count is
+	// gotten and the moment the items are iterated. Newer messages simply are
+	// not scanned this time.
+	public synchronized int messageCount() {
+		return messages.size();
+	}
+	
+	public synchronized LogMessage getMessage(int i) {
+		return messages.get(i);
 	}
 	
 	public void addGroupListener(Runnable r) {
@@ -54,15 +63,17 @@ public class Log {
 	
 	public String toString() {
 		StringBuffer res = null;
-		for(LogMessage m : messages) {
-			if(res == null) res = new StringBuffer("Log\t");
-			else res.append("\n\t");
-			res.append(m);
+		synchronized(this) {
+			for(LogMessage m : messages) {
+				if(res == null) res = new StringBuffer("Log\t");
+				else res.append("\n\t");
+				res.append(m);
+			}
 		}
 		return (res == null) ? "Empty Log" : res.toString();
 	}
 	
-	public boolean empty() {
+	public synchronized boolean empty() {
 		return messages.size() == 0;
 	}
 	

@@ -40,7 +40,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class AudioFileBitReader implements BitReader {
 	private int pos = 0; //, lastPos = 0;
-	private final long frameLength;
+	//private final long frameLength;
 	private final AudioInputStream ais;
 	private final int frameSize;
 	private int prevClock = 0;
@@ -57,7 +57,7 @@ public class AudioFileBitReader implements BitReader {
 		
 		System.out.println("length = " + ais.getFrameLength() + " samples, format: " + format);
 		
-		frameLength = ais.getFrameLength();
+		//frameLength = ais.getFrameLength();
 
 		frameSize = format.getFrameSize();
 		
