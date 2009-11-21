@@ -48,6 +48,20 @@ public class GroupLevelDecoder {
 		return res;
 	}
 	
+	private int processBasicTuningBits(int block1) {
+		// Groups 0A, 0B, 15B : for TA, M/S and DI we need only block 1 (or block 3 for 15B)
+		int ta = (block1>>4) & 1;
+		int ms = (block1>>3) & 1;
+		int addr = block1 & 3;
+		
+		station.setDIbit(addr, (block1>>2) & 1);
+		
+		System.out.print("TA=" + ta + ", M/S=" + ms + ", ");
+		
+		// we return addr because it is also used to address PS segment in 0A/0B
+		return addr;
+	}
+	
 	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime, Log log) {
 		time += 104 / 1187.5;
 		
@@ -91,14 +105,7 @@ public class GroupLevelDecoder {
 		
 		// Groups 0A & 0B
 		if(type == 0) {
-			// Groups 0A & 0B : for TA, M/S and DI we need only block 1
-			int ta = (blocks[0]>>4) & 1;
-			int ms = (blocks[0]>>3) & 1;
-			int addr = blocks[1] & 3;
-			
-			station.setDIbit(addr, (blocks[1]>>2) & 1);
-			
-			System.out.print("TA=" + ta + ", M/S=" + ms + ", ");
+			int addr = processBasicTuningBits(blocks[1]);
 			
 			// Groups 0A & 0B: to extract PS segment we need blocks 1 and 3
 			if(blocksOk[3]) {
@@ -356,6 +363,12 @@ public class GroupLevelDecoder {
 				else log.addMessage(new EONReturn(bitTime, on));
 			}
 			
+		}
+		
+		// For 15B we need only group 1, and possibly group 3
+		if(type == 15 && version == 1) {
+			processBasicTuningBits(blocks[1]);
+			if(blocksOk[3]) processBasicTuningBits(blocks[3]);
 		}
 		
 		return; // true;
