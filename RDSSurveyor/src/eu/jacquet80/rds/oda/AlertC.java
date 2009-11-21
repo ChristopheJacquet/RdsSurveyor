@@ -31,13 +31,14 @@
 package eu.jacquet80.rds.oda;
 
 public class AlertC extends ODA {
-	public static AlertC INSTANCE = new AlertC();
-	
-	private AlertC() {
+	public AlertC() {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks) {
+	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk) {
+		// in all cases, we need all blocks to proceed
+		if(!blocksOk[2] || !blocksOk[3]) return;
+		
 		if(type == 3 && version == 0) {
 			int var = (blocks[2]>>14) & 0x3;
 			System.out.print("Sys.Info v=" + var+ ", ");
@@ -69,7 +70,7 @@ public class AlertC extends ODA {
 		}
 		
 		else
-		if(type == 8 && version == 0) {
+		if(version == 0) {
 			int x4 = (blocks[1] & 0x10)>>4;
 			System.out.print("X4=" + x4 + " ");
 			

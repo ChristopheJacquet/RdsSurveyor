@@ -81,7 +81,7 @@ public class RDSSurveyor {
 		if(liveInput && outFile == null) {
 			System.out.print("Using default output file. ");
 			String tempDir = System.getProperty("java.io.tmpdir");
-			outFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_hhmmss").format(new Date()) + ".rds");
+			outFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 		}
 		
 		// use the output file if defined
