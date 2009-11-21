@@ -5,6 +5,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
@@ -34,21 +36,20 @@ public class RDSSurveyor {
 		
 		BitReader reader = null;
 		boolean showGui = true;
+		boolean liveInput = false;    // true if input is "live", not playback
+		File outFile = null;
 		
 		for(int i=0; i<args.length; i++) {
 			BitReader newReader = null;
 			if("-inaudio".equals(args[i])) {
 				newReader = new LiveAudioBitReader();
+				liveInput = true;
 			} else if("-inbinfile".equals(args[i])) {
 				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
-				if(reader == null) {
-					System.out.println("A source specification must come before using -outbinfile");
-					System.exit(0);
-				} else
-					reader = new TeeBitReader(reader, new File(getParam("outbinfile", args, ++i)));
+				outFile = new File(getParam("outbinfile", args, ++i));
 			} else if("-nogui".equals(args[i])) {
 				showGui = false;
 			} else {
@@ -73,6 +74,20 @@ public class RDSSurveyor {
 		if(reader == null) {
 			System.out.println("A source must be provided.");
 			System.exit(0);
+		}
+		
+		// when input is "live", then always create an output file
+		// if there is no output file, create one in the temp directory
+		if(liveInput && outFile == null) {
+			System.out.print("Using default output file. ");
+			String tempDir = System.getProperty("java.io.tmpdir");
+			outFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_hhmmss").format(new Date()) + ".rds");
+		}
+		
+		// use the output file if defined
+		if(outFile != null) {
+			System.out.println("Binary output file is " + outFile.getAbsoluteFile());
+			reader = new TeeBitReader(reader, outFile);
 		}
 		
 

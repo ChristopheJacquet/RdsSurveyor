@@ -109,7 +109,7 @@ public class TunedStation extends Station {
 		
 		res.append("\n\t\t" + stats());
 		
-		res.append("\n\t\t" + date);
+		if(date != null) res.append("\n\t\tLatest CT: " + date);
 		
 		res.append("\n\t\tDI: ")
 				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
