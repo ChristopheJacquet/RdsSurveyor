@@ -211,6 +211,7 @@ public class GroupLevelDecoder {
 			Date date = cal.getTime();
 			
 			System.out.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
+			station.setDate(date);
 			log.addMessage(new ClockTime(bitTime, date));
 			
 		}
