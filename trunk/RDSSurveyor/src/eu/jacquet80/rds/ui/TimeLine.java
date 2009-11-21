@@ -69,7 +69,8 @@ public class TimeLine extends JPanel {
 		super.paintComponent(g);
 
 		LogMessagePainter painter = new LogMessagePainter(g);
-		for(LogMessage m : log.messages()) {
+		for(int i = 0; i < log.messageCount(); i++) {
+			LogMessage m = log.getMessage(i);
 			m.accept(painter);
 		}
 	}
