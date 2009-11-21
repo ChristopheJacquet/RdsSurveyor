@@ -39,6 +39,7 @@ import eu.jacquet80.rds.oda.ODA;
 
 public class TunedStation extends Station {
 	private char[][] rt = new char[2][64];
+	private char[] latestRT = null;
 	private Map<Integer, OtherNetwork> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] blockCount = new int[17][2];
 	private Date date = null;
@@ -156,6 +157,7 @@ public class TunedStation extends Station {
 	
 	public void setRTChars(int ab, int position, char ... characters) {
 		setChars(rt[ab], position, characters);
+		latestRT = rt[ab];
 	}
 	
 	public void setODAforGroup(int type, int version, ODA oda) {
@@ -181,6 +183,11 @@ public class TunedStation extends Station {
 	public void setDIbit(int pos, int val) {
 		di &= 0xF ^ (1<<(3-pos));		// clear bit
 		di |= val<<(3-pos);				// set it if needed
+	}
+	
+	public String getRT() {
+		if(latestRT == null) return null;
+		else return new String(latestRT);
 	}
 
 }

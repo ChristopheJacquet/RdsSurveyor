@@ -33,21 +33,37 @@ package eu.jacquet80.rds.oda;
 import java.util.HashMap;
 import java.util.Map;
 
+import eu.jacquet80.rds.core.TunedStation;
+
 public abstract class ODA {
-	private static Map<Integer, ODA> odas = new HashMap<Integer, ODA>();
+	private static Map<Integer, Class<? extends ODA>> odas = new HashMap<Integer, Class<? extends ODA>>();
+	protected TunedStation station = null;
 	
-	public abstract void receiveGroup(int type, int version, int[] blocks);
+	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk);
 	public abstract String getName();
 	
-	protected static void register(int aid, ODA oda) {
+	public void setStation(TunedStation station) {
+		this.station = station;
+	}
+	
+	protected static void register(int aid, Class<? extends ODA> oda) {
 		odas.put(aid, oda);
 	}
 	
 	public static ODA forAID(int aid) {
-		return odas.get(aid);
+		try {
+			Class<? extends ODA> theClass = odas.get(aid);
+			if(theClass != null) return theClass.newInstance();
+			else return null;
+		} catch (InstantiationException e) {
+			return null;
+		} catch (IllegalAccessException e) {
+			return null;
+		}
 	}
 	
 	static {
-		register(0xCD46, AlertC.INSTANCE);
+		register(0x4BD7, RTPlus.class);
+		register(0xCD46, AlertC.class);
 	}
 }

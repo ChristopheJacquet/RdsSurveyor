@@ -149,16 +149,25 @@ public class GroupLevelDecoder {
 			}
 		}
 		
-		// Groups 2A: to extract 4-char RT segment we need blocks 1, 2 and 3
-		if(type == 2 && version == 0 && blocksOk[2] && blocksOk[3]) {
+		// Groups 2A: to extract 2 RT characters we need blocks 1 and (2 or 3)
+		if(type == 2 && version == 0 && (blocksOk[2] || blocksOk[3])) {
 			int addr = blocks[1] & 0xF;
 			int ab = (blocks[1]>>4) & 1;
-			char ch1 = (char) ( (blocks[2]>>8) & 0xFF);
-			char ch2 = (char) (blocks[2] & 0xFF);
-			char ch3 = (char) ( (blocks[3]>>8) & 0xFF);
-			char ch4 = (char) (blocks[3] & 0xFF);
+			char ch1 = '?', ch2 = '?', ch3 = '?', ch4 = '?';
+			
+			if(blocksOk[2]) {
+				ch1 = (char) ( (blocks[2]>>8) & 0xFF);
+				ch2 = (char) (blocks[2] & 0xFF);
+				station.setRTChars(ab, addr*2, ch1, ch2);
+			}
+			
+			if(blocksOk[3]) {
+				ch3 = (char) ( (blocks[3]>>8) & 0xFF);
+				ch4 = (char) (blocks[3] & 0xFF);
+				station.setRTChars(ab, addr*2+1, ch3, ch4);
+			}
+			
 			System.out.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2 + ch3 + ch4 + "\"");
-			station.setRTChars(ab, addr, ch1, ch2, ch3, ch4);
 		}
 		
 		// Groups 3A: to extract AID we need blocks 1 and 3
@@ -171,8 +180,11 @@ public class GroupLevelDecoder {
 			else System.out.printf("AID #%04X ", aid);
 			
 			ODA oda = ODA.forAID(aid);
-			station.setODAforGroup(odaG, odaV, oda);
-			if(oda != null) System.out.print("(" + oda.getName() + "): ");
+			if(oda != null) {
+				station.setODAforGroup(odaG, odaV, oda);
+				oda.setStation(station);
+				System.out.print("(" + oda.getName() + "): ");
+			}
 			else System.out.print(" ");
 			
 			if(odaG == 0 && odaV == 0) System.out.print("only in group 3A   ");
@@ -180,12 +192,12 @@ public class GroupLevelDecoder {
 			else System.out.print("group " + odaG + (char)('A' + odaV) + "   ");
 			
 			// if data ok, pass it to the ODA handler
-			if(blocksOk[2]) {
+			if(oda != null && blocksOk[2]) {
 				System.out.printf("ODA data=%04X", blocks[2]);
 				
 				System.out.println();
 				System.out.print("\t--> ");
-				oda.receiveGroup(type, version, blocks);
+				oda.receiveGroup(type, version, blocks, blocksOk);
 			}
 		}
 		
@@ -218,12 +230,9 @@ public class GroupLevelDecoder {
 		
 		// Groups 5A-9A, 11A-13A: TDC, we need blocks 1, 2 and 3
 		// but don't handle 7A groups here if using RP
-		if(((type >= 5 && type <= 9) || (type >= 11 && type <= 13)) && version == 0 && blocksOk[2] && blocksOk[3] && !(station.isUsingRP() && type==7)) {
+		if(((type >= 5 && type <= 9) || (type >= 11 && type <= 13)) && version == 0 && !(station.isUsingRP() && type==7)) {
 			int a = (blocks[1] & 0x1F);
-			/*int ch1 = (blocks[2]>>8) & 0xFF;
-			int ch2 = (blocks[2] & 0xFF);
-			int ch3 = (blocks[3]>>8) & 0xFF;
-			int ch4 = (blocks[3] & 0xFF);*/
+
 			switch(type) {
 			case 5: System.out.print("TDC/ODA "); break;
 			case 6: System.out.print("IH/ODA "); break;
@@ -234,12 +243,15 @@ public class GroupLevelDecoder {
 			case 12: System.out.print("ODA "); break;
 			case 13: System.out.print("ERP "); break;
 			}
-			System.out.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
+			
+			if(blocksOk[2] && blocksOk[3])
+				System.out.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
+			
 			ODA oda = station.getODAforGroup(type, version);
 			if(oda != null) {
 				System.out.println();
-				System.out.print("\t--> ");
-				oda.receiveGroup(type, version, blocks);
+				System.out.print("\t" + oda.getName() +  " --> ");
+				oda.receiveGroup(type, version, blocks, blocksOk);
 			}
 		}
 		
