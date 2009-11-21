@@ -129,7 +129,8 @@ public class RTPlus extends ODA {
 					String text = null;
 					if(rt != null) {
 						if(start[i] + len[i] <= rt.length()) {
-							text = rt.substring(start[i], start[i] + len[i]);
+							// beware, len is the _additional_ length!
+							text = rt.substring(start[i], start[i] + len[i] + 1);
 						}
 					}
 					System.out.print(ctype[i] + "/" + classNames[ctype[i]] + "@" + start[i] + ":" + len[i]);
