@@ -31,6 +31,7 @@
 package eu.jacquet80.rds.core;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.LinkedList;
 
 import eu.jacquet80.rds.input.BitReader;
@@ -38,22 +39,25 @@ import eu.jacquet80.rds.log.Log;
 
 
 public class StreamLevelDecoder {
-	//private final static int STATE_NOT_SYNC = 0, STATE_SYNC = 100;
 	private final static int SYNC_THRESHOLD = 2;  // need 2 blocks after initial block to confirm synchronization
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
-	
 
 	private final static int syndromes[][] = {{0xF600, 0xF600}, {0xF500, 0xF500}, {0x9700, 0xF300}, {0x9600, 0x9600}};
 
+	private final PrintStream output;
+	private final GroupLevelDecoder groupLevelDecoder;
+	
+	public StreamLevelDecoder(PrintStream output) {
+		this.output = output;
+		groupLevelDecoder = new GroupLevelDecoder(output);
+	}
 	
 	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][]) {
 		for(int i=0; i<nbSyncAtOffset.length; i++)
 			for(int j=0; j<nbSyncAtOffset[i].length; j++)
 				nbSyncAtOffset[i][j] = new LinkedList<Integer>();
 	}
-	
-	private final GroupLevelDecoder groupLevelDecoder = new GroupLevelDecoder();
 		
 	public void processStream(BitReader reader, Log log) throws IOException { 
 		int block = 0;        // block contents
@@ -83,29 +87,15 @@ public class StreamLevelDecoder {
 			if(bit) block |= 1;
 			bitCount++;
 			bitTime++;
-			
-			///
-			/*
-			System.out.print(".");
-			int syndr = calcSyndrome(block);
-			for(int i=0; i<4; i++)
-				if(syndr == syndromes[i]) System.out.println(i+1);
-			if(true) continue;
-			*/
-			///
-			
+						
 			if(! synced) {
-				///System.out.printf("%07X " , block);
-				///if(bitCount >1000 ) System.exit(0);
-				
 				int synd = RDS.calcSyndrome(block);
 				
-				///System.out.printf("(%04X)", synd); 
-				System.out.print(".");
+				output.print(".");
 
 				for(int i=0; i<4; i++) {
 					if(synd == syndromes[i][0] || synd == syndromes[i][1]) {
-						System.out.print("[" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
+						output.print("[" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
 						int offset = bitTime % 26;
 						int pseudoBlock = (bitTime / 26 + 4 - i) % 4;
 						
@@ -121,19 +111,17 @@ public class StreamLevelDecoder {
 							synced = true;
 							eraseSyncArray(nbSyncAtOffset);
 						
-						
-						///syncState = 1;
-						group[i] = (block>>10) & 0xFFFF;
-						blockCount = (i+1) % 4;
-						bitCount = 0;
-						nbOk = 1;
-						for(int j=0; j<4; j++) blocksOk[j] = false;
-						blocksOk[i] = true;
-						System.out.println("\nGot synchronization on block " + (char)('A' + i) + "!");
-						System.out.print("      ");
-						for(int j=0; j<i; j++) System.out.print(".");
-						System.out.print("S");
-						if(blockCount == 0) System.out.println();
+							group[i] = (block>>10) & 0xFFFF;
+							blockCount = (i+1) % 4;
+							bitCount = 0;
+							nbOk = 1;
+							for(int j=0; j<4; j++) blocksOk[j] = false;
+							blocksOk[i] = true;
+							output.println("\nGot synchronization on block " + (char)('A' + i) + "!");
+							output.print("      ");
+							for(int j=0; j<i; j++) output.print(".");
+							output.print("S");
+							if(blockCount == 0) output.println();
 						}
 						break;
 						
@@ -143,80 +131,60 @@ public class StreamLevelDecoder {
 				if(bitCount == 26) {
 					group[blockCount] = (block>>10) & 0xFFFF;
 					int synd = RDS.calcSyndrome(block);
-					///System.out.printf("(%04X)", synd);
+
 					if(synd == syndromes[blockCount][0] || synd == syndromes[blockCount][1]) {
 						nbOk++;
 						blocksOk[blockCount] = true;
-						if(synd == syndromes[blockCount][0]) System.out.print("G");   // type A offset word
-						else System.out.print("g");   // type B offset word (for group C)
+						if(synd == syndromes[blockCount][0]) output.print("G");   // type A offset word
+						else output.print("g");   // type B offset word (for group C)
 					} else {
-						//System.out.println("<" + synd + ", " + syndromes[blockCount] + ">");
-						//int blockSansOffset = (block & 0x3FFFC00) | (((block & 0x3FF) + 0x3FF - RDS.offsetWords[blockCount]) & 0x3FF);
-					///	int blockSansOffset = block ^ RDS.offsetWords[blockCount];
-					///	int syndrome = RDS.calcSyndrome(blockSansOffset)>>6; //((synd>>6) - (syndromes[blockCount]>>6) + 0x3FF) % 0x400;
+						blocksOk[blockCount] = false;
+						output.print(".");
+						/*
+						This is a placeholder for error correction code
+						
 						int syndrome = (synd ^ syndromes[blockCount][0])>>6;///
 						
-						//System.out.printf("   Block: %07X, BlockSO: %07X, Synd: %03X\n", block, blockSansOffset, syndrome);
-						
-						int nbErreurs = 1; //RDS.nbErrors(syndrome);
-						if(nbErreurs <= 0) {
-						///	blockSansOffset = RDS.correct(blockSansOffset, syndrome);
+						int nbErrors = 1;
+						if(nbErrors <= 0) {
 							block = RDS.correct(block, syndrome); ///
-							//System.out.print("<corr: " + RDS.calcSyndrome(blockSansOffset) + "/" + syndromes[blockCount] + ">");
 							group[blockCount] = (block>>10) & 0xFFFF; ///
 							blocksOk[blockCount] = true;
-							System.out.print("c");
+							output.print("c");
 						} else {
 							blocksOk[blockCount] = false;
-							System.out.print(".");
+							output.print(".");
 						}
-						/// SI ERRCOR System.out.print(nbErreurs<10 ? nbErreurs : "+");
+						*/
 					}
-					// SI ERRCOR System.out.print(" ");
 					
 					bitCount = 0;
 					blockCount++;
 					
 					// end of group?
 					if(blockCount > 3) {
-						System.out.print(" ");
+						output.print(" ");
 						groupCount++;
 						
 						blockCount = 0;
 						
 						if(nbOk > 0) nbUnsync = 0; else nbUnsync++;
 						
-						/*if(!synced) {
-							if(syncState > SYNC_THRESHOLD) {
-								syncState = STATE_SYNC;
-								System.out.print(" Confirmed synchronization. ");
-							}
-						}*/
-						
 						// after a while without a correct block, decide we have lost synchronization
 						if(nbUnsync > SYNC_LOSS_DURATION) {
 							synced = false;
 							groupLevelDecoder.loseSync();
-							System.out.println(" Lost synchronization.");
+							output.println(" Lost synchronization.");
 						}
 						
 						
 						// process group data
-						if(log != null)
-							groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime, log);
-							//currentStation = new TunedStation();
-							//timeLine.update();
-						//}
-
-						//if(groupCount % 10 == 0) System.out.println(data);
+						groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime, log);
 						
+						if(log != null) log.notifyGroup();
 
-						log.notifyGroup();
-
-						System.out.println();
-						System.out.printf("%04d: ", bitTime / 26);
-						///if(bitTime/26 >= 64000) ((DumpFileBitReader)reader).setLogOn();
-						///if(bitTime/26 > 64600) { ((DumpFileBitReader)reader).setLogOff();}
+						output.println();
+						output.printf("%04d: ", bitTime / 26);
 
 						nbOk = 0;
 					}

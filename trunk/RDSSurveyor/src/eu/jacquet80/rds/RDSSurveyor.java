@@ -92,7 +92,7 @@ public class RDSSurveyor {
 		
 
 		Log log = new Log();
-		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder();
+		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder(System.out);
 		
 		if(showGui) {
 			JFrame frame = new JFrame("RDS Surveyor");
