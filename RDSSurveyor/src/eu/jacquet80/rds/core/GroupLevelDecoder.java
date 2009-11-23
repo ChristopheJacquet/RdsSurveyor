@@ -1,5 +1,6 @@
 package eu.jacquet80.rds.core;
 
+import java.io.PrintStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -21,15 +22,21 @@ public class GroupLevelDecoder {
 	private boolean synced = true;
 	
 	private final String[] RP_TNGD_VALUES = {
-			"No RP",
-			"RP groups 00-99",
-			"RP groups 00-39",
-			"RP groups 40-99",
-			"RP groups 40-69",
-			"RP groups 70-99",
-			"RP groups 00-19",
-			"RP groups 20-39",
-		};
+		"No RP",
+		"RP groups 00-99",
+		"RP groups 00-39",
+		"RP groups 40-99",
+		"RP groups 40-69",
+		"RP groups 70-99",
+		"RP groups 00-19",
+		"RP groups 20-39",
+	};
+
+	private final PrintStream output;
+	
+	public GroupLevelDecoder(PrintStream output) {
+		this.output = output;
+	}
 	
 	public void loseSync() {
 		synced = false;
@@ -56,7 +63,7 @@ public class GroupLevelDecoder {
 		
 		station.setDIbit(addr, (block1>>2) & 1);
 		
-		System.out.print("TA=" + ta + ", M/S=" + ms + ", ");
+		output.print("TA=" + ta + ", M/S=" + ms + ", ");
 		
 		// we return addr because it is also used to address PS segment in 0A/0B
 		return addr;
@@ -73,7 +80,7 @@ public class GroupLevelDecoder {
 		
 		if(blocksOk[0]) {
 			int pi = blocks[0];
-			System.out.printf("PI=%04X, ", pi);
+			output.printf("PI=%04X, ", pi);
 			if(station.getPI() == pi) {
 				station.pingPI(bitTime);
 				synced = true;
@@ -85,7 +92,7 @@ public class GroupLevelDecoder {
 				return;
 			}
 			if(station.getPI() != oldPI) log.addMessage(new StationTuned(bitTime, station));
-		} else System.out.print("         ");
+		} else output.print("         ");
 		
 		if(!synced) return;   // after a sync loss, we wait for a PI before processing further data
 		
@@ -100,7 +107,7 @@ public class GroupLevelDecoder {
 			int tp = (blocks[1]>>10) & 1;
 			int pty = (blocks[1]>>5) & 0x1F;
 			
-			System.out.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
+			output.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
 		} else station.addUnknownGroupToStats();
 		
 		// Groups 0A & 0B
@@ -111,13 +118,13 @@ public class GroupLevelDecoder {
 			if(blocksOk[3]) {
 				char ch1 = (char) ( (blocks[3]>>8) & 0xFF);
 				char ch2 = (char) (blocks[3] & 0xFF);
-				System.out.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
+				output.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
 				station.setPSChars(addr, ch1, ch2);
 			}
 			
 			// Groups 0A: to extract AFs we need blocks 1 and 2
 			if(version == 0 && blocksOk[2]) {
-				System.out.print(station.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
+				output.print(station.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
 			}
 		}
 
@@ -125,13 +132,13 @@ public class GroupLevelDecoder {
 		if(type == 1 && version == 0) {
 			int tngd = (blocks[1]>>2) & 7;   // transmitter network group designator
 			int bsi = (blocks[1]) & 3;       // battery saving interval sync and id
-			System.out.print("RP Config: [" + RP_TNGD_VALUES[tngd]);
+			output.print("RP Config: [" + RP_TNGD_VALUES[tngd]);
 			if(tngd > 0) {   // print the rest only if there IS RP
 				station.setUsesRP(true);
-				if((bsi & 2) > 0) System.out.print(", Start of Interval");
-				else System.out.print(", Interval number bit=" + (bsi & 1));
+				if((bsi & 2) > 0) output.print(", Start of Interval");
+				else output.print(", Interval number bit=" + (bsi & 1));
 			}
-			System.out.print("], ");
+			output.print("], ");
 		}
 		
 		// Groups 1A & 1B: to extract PIN we need blocks 1 and 3
@@ -140,19 +147,19 @@ public class GroupLevelDecoder {
 			int day = (pin>>11) & 0x1F;
 			int hour = (pin>>6) & 0x1F;
 			int min = pin & 0x3F;
-			System.out.print("PIN=" + pin + " [D=" + day + " H=" + hour + ":" + min + "] ");
+			output.print("PIN=" + pin + " [D=" + day + " H=" + hour + ":" + min + "] ");
 		}
 		
 		// Group 1A: to extract slow labeling codes, we need blocks 1 and 3
 		if(type == 1 && version == 0 && blocksOk[2]) {
 			int variant = (blocks[2] >> 12) & 0x7;
 			int la = (blocks[2] >> 15) & 0x1;
-			System.out.print("LA=" + la + " v=" + variant + " ");
+			output.print("LA=" + la + " v=" + variant + " ");
 			switch(variant) {
 			case 0:
 				int opc = (blocks[2] >> 8) & 0xF;
 				int ecc = blocks[2] & 0xFF;
-				System.out.printf("OPC=%01X ECC=%02X ", opc, ecc);
+				output.printf("OPC=%01X ECC=%02X ", opc, ecc);
 			}
 		}
 		
@@ -174,7 +181,7 @@ public class GroupLevelDecoder {
 				station.setRTChars(ab, addr*2+1, ch3, ch4);
 			}
 			
-			System.out.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2 + ch3 + ch4 + "\"");
+			output.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2 + ch3 + ch4 + "\"");
 		}
 		
 		// Groups 3A: to extract AID we need blocks 1 and 3
@@ -183,27 +190,27 @@ public class GroupLevelDecoder {
 			int odaG = (blocks[1]>>1) & 0xF;
 			int odaV = blocks[1] & 1;
 			
-			if(aid == 0) System.out.print("NO AID: ");
-			else System.out.printf("AID #%04X ", aid);
+			if(aid == 0) output.print("NO AID: ");
+			else output.printf("AID #%04X ", aid);
 			
 			ODA oda = ODA.forAID(aid);
 			if(oda != null) {
 				station.setODAforGroup(odaG, odaV, oda);
 				oda.setStation(station);
-				System.out.print("(" + oda.getName() + "): ");
+				output.print("(" + oda.getName() + "): ");
 			}
-			else System.out.print(" ");
+			else output.print(" ");
 			
-			if(odaG == 0 && odaV == 0) System.out.print("only in group 3A   ");
-			else if(odaG == 0xF && odaV == 1) System.out.print("temporary data fault at encoder   ");
-			else System.out.print("group " + odaG + (char)('A' + odaV) + "   ");
+			if(odaG == 0 && odaV == 0) output.print("only in group 3A   ");
+			else if(odaG == 0xF && odaV == 1) output.print("temporary data fault at encoder   ");
+			else output.print("group " + odaG + (char)('A' + odaV) + "   ");
 			
 			// if data ok, pass it to the ODA handler
 			if(oda != null && blocksOk[2]) {
-				System.out.printf("ODA data=%04X", blocks[2]);
+				output.printf("ODA data=%04X", blocks[2]);
 				
-				System.out.println();
-				System.out.print("\t--> ");
+				output.println();
+				output.print("\t--> ");
 				oda.receiveGroup(type, version, blocks, blocksOk);
 			}
 		}
@@ -229,7 +236,7 @@ public class GroupLevelDecoder {
 			cal.setTimeZone(new SimpleTimeZone(sign * offset * 30 * 60 * 1000, ""));
 			Date date = cal.getTime();
 			
-			System.out.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
+			output.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
 			station.setDate(date);
 			log.addMessage(new ClockTime(bitTime, date));
 			
@@ -241,23 +248,23 @@ public class GroupLevelDecoder {
 			int a = (blocks[1] & 0x1F);
 
 			switch(type) {
-			case 5: System.out.print("TDC/ODA "); break;
-			case 6: System.out.print("IH/ODA "); break;
-			case 7: System.out.print("RP/ODA "); break;
-			case 8: System.out.print("TMC/ODA "); break;
-			case 9: System.out.print("EWS/ODA "); break;
-			case 11: System.out.print("ODA "); break;
-			case 12: System.out.print("ODA "); break;
-			case 13: System.out.print("ERP "); break;
+			case 5: output.print("TDC/ODA "); break;
+			case 6: output.print("IH/ODA "); break;
+			case 7: output.print("RP/ODA "); break;
+			case 8: output.print("TMC/ODA "); break;
+			case 9: output.print("EWS/ODA "); break;
+			case 11: output.print("ODA "); break;
+			case 12: output.print("ODA "); break;
+			case 13: output.print("ERP "); break;
 			}
 			
 			if(blocksOk[2] && blocksOk[3])
-				System.out.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
+				output.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
 			
 			ODA oda = station.getODAforGroup(type, version);
 			if(oda != null) {
-				System.out.println();
-				System.out.print("\t" + oda.getName() +  " --> ");
+				output.println();
+				output.print("\t" + oda.getName() +  " --> ");
 				oda.receiveGroup(type, version, blocks, blocksOk);
 			}
 		}
@@ -268,42 +275,42 @@ public class GroupLevelDecoder {
 				decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
 				decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
 
-			System.out.print("RP: flag=" + (char)('A' + ((blocks[1]>>5) & 1)) + ", ");
+			output.print("RP: flag=" + (char)('A' + ((blocks[1]>>5) & 1)) + ", ");
 			
 			if((blocks[1] & 0x8) == 8) {
 				int idx = blocks[1] & 0x7;
 				if(idx == 0)
-					System.out.print("Alpha message: " + addrStr);
+					output.print("Alpha message: " + addrStr);
 				else {
-					System.out.print("Alpha message: msg[" + idx + "]=\"");
+					output.print("Alpha message: msg[" + idx + "]=\"");
 					for(int i=2; i<=3; i++) {
-						System.out.print((char)((blocks[i]>>8) & 0xFF));
-						System.out.print((char)(blocks[i] & 0xFF));
+						output.print((char)((blocks[i]>>8) & 0xFF));
+						output.print((char)(blocks[i] & 0xFF));
 					}
-					System.out.print("\"");
+					output.print("\"");
 				}
 				
 			}
-			if((blocks[1] & 0xC) == 4) System.out.print("18/15-digit numeric msg: " + addrStr);
+			if((blocks[1] & 0xC) == 4) output.print("18/15-digit numeric msg: " + addrStr);
 			if((blocks[1] & 0xE) == 2) {
-				System.out.print("10-digit msg " + (1+(blocks[1] & 1)) + "/2: ");
-				if((blocks[1] & 1) == 0) System.out.print(addrStr +
+				output.print("10-digit msg " + (1+(blocks[1] & 1)) + "/2: ");
+				if((blocks[1] & 1) == 0) output.print(addrStr +
 						(", msg=" + decodeBCD(blocks[3], 1)) + (decodeBCD(blocks[3], 0) + "..."));
-				else System.out.print("msg=..." + decodeBCDWord(blocks[2]) + decodeBCDWord(blocks[3]));
+				else output.print("msg=..." + decodeBCDWord(blocks[2]) + decodeBCDWord(blocks[3]));
 			}
-			if((blocks[1] & 0xF) == 1) System.out.print("Part of func");
-			if((blocks[1] & 0xF) == 0) System.out.print("Beep: " + addrStr);
+			if((blocks[1] & 0xF) == 1) output.print("Part of func");
+			if((blocks[1] & 0xF) == 0) output.print("Beep: " + addrStr);
 		}
 		
 		// Groups 14A: to extract variant we need only block 1
 		if(type == 14) {
 			OtherNetwork on = null;
-			System.out.print("EON, ");
+			output.print("EON, ");
 
 			// in both version if we have block 3 we have ON PI
 			if(blocksOk[3]) {
 				int onPI = blocks[3];
-				System.out.printf("ON.PI=%04X, ", onPI);
+				output.printf("ON.PI=%04X, ", onPI);
 				
 				on = station.getON(onPI);
 				if(on == null) {
@@ -313,52 +320,52 @@ public class GroupLevelDecoder {
 			}
 			
 			int ontp = (blocks[1]>>4) & 1;
-			System.out.print("ON.TP=" + ontp + ", ");
+			output.print("ON.TP=" + ontp + ", ");
 			
 			if(version == 0) { // info about ON only in 14A groups
 				int variant = blocks[1] & 0xF; 
-				System.out.print("v=" + variant + ", ");
+				output.print("v=" + variant + ", ");
 			
 				// to extract ON info we need block 2
 				if(blocksOk[2]) {
 					if(variant >= 0 && variant <= 3) {  // ON PS
 						char ch1 = (char) ( (blocks[2]>>8) & 0xFF);
 						char ch2 = (char) ( blocks[2] & 0xFF);
-						System.out.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
+						output.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
 						
 						if(on != null) on.setChars(on.ps, variant, ch1, ch2);
 					}
 					
 					if(variant == 4) { // frequencies
 						if(on != null) {
-							System.out.print("ON.AF: " + on.addAFPair((blocks[2]>>8)&0xFF, blocks[2]&0xFF) + " ");
+							output.print("ON.AF: " + on.addAFPair((blocks[2]>>8)&0xFF, blocks[2]&0xFF) + " ");
 						}
 					}
 					
 					if(variant >= 5 && variant <= 8) {
 						if(on != null) {
-							System.out.print("ON.AF: " + on.addMappedFreq((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
+							output.print("ON.AF: " + on.addMappedFreq((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
 						}
 					}
 					
 					if(variant == 12) {
-						System.out.printf("Linkage information: %04X ", blocks[2]);
+						output.printf("Linkage information: %04X ", blocks[2]);
 					}
 					
 					if(variant == 13) {
 						int onpty = (blocks[2]>>11) & 0x1F;
 						int onta = (blocks[2]) & 1;
-						System.out.printf("ON.PTY=%d, ON.TA=%d ", onpty, onta);
+						output.printf("ON.PTY=%d, ON.TA=%d ", onpty, onta);
 					}
 					
 					if(variant == 14) {
 						int onpin = blocks[2];
-						System.out.printf("ON.PIN=%04X ", onpin);
+						output.printf("ON.PIN=%04X ", onpin);
 					}
 				}
 			} else { // 14B groups
 				int onta = (blocks[1]>>3) & 1;
-				System.out.print("ON.TA=" + onta + ", " + (onta==1 ? "switch now to ON" : "switch back from ON"));
+				output.print("ON.TA=" + onta + ", " + (onta==1 ? "switch now to ON" : "switch back from ON"));
 				if(onta == 1) log.addMessage(new EONSwitch(bitTime, on));
 				else log.addMessage(new EONReturn(bitTime, on));
 			}
