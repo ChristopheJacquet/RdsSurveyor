@@ -108,7 +108,26 @@ public class RTPlus extends ODA {
 	@Override
 	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk) {
 		// Main RT+ group handling
+		if(type == 3 && version == 0 && blocksOk[2]) {
+			int ert = (blocks[2]>>13) & 1;
+			System.out.print("Applies to " + (ert == 1 ? "eRT" : "RT") + ", ");
+			
+			int cb = (blocks[2]>>12) & 1;
+			System.out.print((cb == 0 ? "NO " : "") + "template, ");
+			
+			int scb = (blocks[2]>>8) & 0xF;
+			System.out.printf("SCB=%01X, ", scb);
+			
+			int tn = blocks[2] & 0xFF;
+			System.out.printf("template #%02X", tn);
+		}
+		
 		if(version == 0 && type != 3) {
+			int running = (blocks[1]>>4) & 1;
+			int toggle = (blocks[1]>>3) & 1;
+			
+			System.out.printf("Running=%d, Toggle=%d, ", running, toggle);
+			
 			int[] ctype = new int[] {0, 0}, start = new int[2], len = new int[2];
 			
 			if(blocksOk[2]) {
