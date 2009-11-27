@@ -108,6 +108,7 @@ public class GroupLevelDecoder {
 			int pty = (blocks[1]>>5) & 0x1F;
 			
 			output.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
+			station.setPTY(pty);
 		} else station.addUnknownGroupToStats();
 		
 		// Groups 0A & 0B
