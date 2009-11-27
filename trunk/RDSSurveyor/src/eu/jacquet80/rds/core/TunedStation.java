@@ -47,6 +47,42 @@ public class TunedStation extends Station {
 	private ODA[] odas = new ODA[32];
 	private boolean usesRP = false;
 	private int di = 0;
+	private int pty = 0;
+	
+	private static String[] ptyLabels = {
+		"No programme type or undefined",
+		"News",
+		"Current Affairs",
+		"Information",
+		"Sport",
+		"Education",
+		"Drama",
+		"Culture",
+		"Science",
+		"Varied",
+		"Pop Music",
+		"Rock Music",
+		"Easy Listening Music",
+		"Light classical",
+		"Serious classical",
+		"Other Music",
+		"Weather",
+		"Finance",
+		"Children's programmes",
+		"Social Affairs",
+		"Religion",
+		"Phone In",
+		"Travel",
+		"Leisure",
+		"Jazz Music",
+		"Country Music",
+		"National Music",
+		"Oldies Music",
+		"Folk Music",
+		"Documentary",
+		"Alarm Test",
+		"Alarm"
+	};
 
 	
 	public TunedStation(int pi) {
@@ -85,12 +121,12 @@ public class TunedStation extends Station {
 	public String toString() {
 		StringBuffer res = new StringBuffer();
 		//System.out.println("pi=" + pi + ", ps=" + new String(ps) + ", time=" + timeOfLastPI);
-		res.append(String.format("\tPI=%04X PS=\"%s\" Time=%.3f", pi, new String(ps), (float)(timeOfLastPI / (1187.5f))));
+		res.append(String.format("PI=%04X    PS=\"%s\"    Time=%.3f", pi, new String(ps), (float)(timeOfLastPI / (1187.5f))));
 		
 		for(int ab=0; ab<2; ab++) {
 			for(int i=0; i<64; i++) {
 				if(rt[ab][i] != '?') {
-					res.append(String.format("\n\t\tRT %c = \"", (char)('a'+ab)));
+					res.append(String.format("\nRT %c = \"", (char)('a'+ab)));
 					for(int j=0; j<64; j++) {
 						if(rt[ab][j] == 0x0D) break;
 						res.append(rt[ab][j]);
@@ -101,18 +137,20 @@ public class TunedStation extends Station {
 			}
 		}
 		
-		for(OtherNetwork on : otherNetworks.values()) res.append("\n\t\tON: ").append(on);
+		for(OtherNetwork on : otherNetworks.values()) res.append("\nON: ").append(on);
 		
 		// AFs
-		res.append("\n\t\t").append(afsToString());
+		res.append("\n").append(afsToString());
 		
 		//res.append("\n\t\tquality = " + quality);
 		
-		res.append("\n\t\t" + stats());
+		res.append("\n" + stats());
 		
-		if(date != null) res.append("\n\t\tLatest CT: " + date);
+		if(date != null) res.append("\nLatest CT: " + date);
 		
-		res.append("\n\t\tDI: ")
+		res.append("\nPTY: " + pty + " -> " + ptyLabels[pty]);
+		
+		res.append("\nDI: ")
 				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
 				.append((di & 2) == 0 ? "Not artificial head" : "Artificial head").append(", ")
 				.append((di & 4) == 0 ? "Not compressed" : "Compressed").append(", ")
@@ -188,6 +226,10 @@ public class TunedStation extends Station {
 	public String getRT() {
 		if(latestRT == null) return null;
 		else return new String(latestRT);
+	}
+	
+	public void setPTY(int pty) {
+		this.pty = pty;
 	}
 
 }
