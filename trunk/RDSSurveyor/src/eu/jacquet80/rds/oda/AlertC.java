@@ -41,7 +41,7 @@ public class AlertC extends ODA {
 		
 		if(type == 3 && version == 0) {
 			int var = (blocks[2]>>14) & 0x3;
-			System.out.print("Sys.Info v=" + var+ ", ");
+			console.print("Sys.Info v=" + var+ ", ");
 			
 			if(var == 0) {
 				int ltn = (blocks[2]>>6) & 0x3F;
@@ -52,7 +52,7 @@ public class AlertC extends ODA {
 				int scopeR = (blocks[2]>>1) & 1;
 				int scopeU = (blocks[2]) & 1;
 				
-				System.out.printf("LTN=%d, AFI=%d, Mode=%d, MGS[scope]=%c%c%c%c ",
+				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS[scope]=%c%c%c%c ",
 						ltn, afi, mode,
 						scopeI==1 ? 'I' : ' ',
 						scopeN==1 ? 'N' : ' ',
@@ -65,57 +65,57 @@ public class AlertC extends ODA {
 				int tw = (blocks[2]>>2) & 3;
 				int td = blocks[2] & 3;
 				
-				System.out.printf("Gap=%d, SID=%d, for mode 1: Ta=%d, Tw=%d, Td=%d", gap, sid, ta, tw, td);
+				console.printf("Gap=%d, SID=%d, for mode 1: Ta=%d, Tw=%d, Td=%d", gap, sid, ta, tw, td);
 			}
 		}
 		
 		else
 		if(version == 0) {
 			int x4 = (blocks[1] & 0x10)>>4;
-			System.out.print("X4=" + x4 + " ");
+			console.print("X4=" + x4 + " ");
 			
 			if(x4 == 0) {
 				int single_group = (blocks[1] & 0x8)>>3;
 				if(single_group == 1) {
-					System.out.print("single-group: ");
+					console.print("single-group: ");
 					int dp = blocks[1] & 7;
 					int div = (blocks[2]>>15) & 1;
 					int dir = (blocks[2]>>14) & 1;
 					int extent = (blocks[2]>>11) & 7;
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
-					System.out.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 				}
 				else {
 					int idx = blocks[1] & 7;
-					System.out.print("multi-group [" + idx + "]: ");
+					console.print("multi-group [" + idx + "]: ");
 					int first = (blocks[2]>>15) & 1;
 					if(first == 1) {
-						System.out.print("1st, ");
+						console.print("1st, ");
 						
 						int dir = (blocks[2]>>14) & 1;
 						int extent = (blocks[2]>>11) & 7;
 						int event = blocks[2] & 0x7FF;
 						int location = blocks[3];
-						System.out.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+						console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
 					} else {
 						int second = (blocks[2]>>14) & 1;
 						int remaining = (blocks[2]>>12) & 3;
 						if(second == 1) {
-							System.out.print("2nd");
-						} else System.out.print("later");
-						System.out.print("[rem=" + remaining + "]");
+							console.print("2nd");
+						} else console.print("later");
+						console.print("[rem=" + remaining + "]");
 					}
 				}
 			} else {
 				int addr = blocks[1] & 0xF;
-				System.out.print("Tuning Info: ");
+				console.print("Tuning Info: ");
 				switch(addr) {
-				case 4: case 5: System.out.printf("Prov.name[%d]=\"%c%c%c%c\" ", 
+				case 4: case 5: console.printf("Prov.name[%d]=\"%c%c%c%c\" ", 
 						addr-4, (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF, (blocks[3]>>8) & 0xFF, blocks[3] & 0xFF);
 				break;
-				default: System.out.print("addr=" + addr);
+				default: console.print("addr=" + addr);
 				}
 			}
 		}

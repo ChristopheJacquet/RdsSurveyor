@@ -45,12 +45,12 @@ public class StreamLevelDecoder {
 
 	private final static int syndromes[][] = {{0xF600, 0xF600}, {0xF500, 0xF500}, {0x9700, 0xF300}, {0x9600, 0x9600}};
 
-	private final PrintStream output;
+	private final PrintStream console;
 	private final GroupLevelDecoder groupLevelDecoder;
 	
-	public StreamLevelDecoder(PrintStream output) {
-		this.output = output;
-		groupLevelDecoder = new GroupLevelDecoder(output);
+	public StreamLevelDecoder(PrintStream console) {
+		this.console = console;
+		groupLevelDecoder = new GroupLevelDecoder(console);
 	}
 	
 	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][]) {
@@ -91,11 +91,11 @@ public class StreamLevelDecoder {
 			if(! synced) {
 				int synd = RDS.calcSyndrome(block);
 				
-				output.print(".");
+				console.print(".");
 
 				for(int i=0; i<4; i++) {
 					if(synd == syndromes[i][0] || synd == syndromes[i][1]) {
-						output.print("[" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
+						console.print("[" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
 						int offset = bitTime % 26;
 						int pseudoBlock = (bitTime / 26 + 4 - i) % 4;
 						
@@ -117,11 +117,11 @@ public class StreamLevelDecoder {
 							nbOk = 1;
 							for(int j=0; j<4; j++) blocksOk[j] = false;
 							blocksOk[i] = true;
-							output.println("\nGot synchronization on block " + (char)('A' + i) + "!");
-							output.print("      ");
-							for(int j=0; j<i; j++) output.print(".");
-							output.print("S");
-							if(blockCount == 0) output.println();
+							console.println("\nGot synchronization on block " + (char)('A' + i) + "!");
+							console.print("      ");
+							for(int j=0; j<i; j++) console.print(".");
+							console.print("S");
+							if(blockCount == 0) console.println();
 						}
 						break;
 						
@@ -135,11 +135,11 @@ public class StreamLevelDecoder {
 					if(synd == syndromes[blockCount][0] || synd == syndromes[blockCount][1]) {
 						nbOk++;
 						blocksOk[blockCount] = true;
-						if(synd == syndromes[blockCount][0]) output.print("G");   // type A offset word
-						else output.print("g");   // type B offset word (for group C)
+						if(synd == syndromes[blockCount][0]) console.print("G");   // type A offset word
+						else console.print("g");   // type B offset word (for group C)
 					} else {
 						blocksOk[blockCount] = false;
-						output.print(".");
+						console.print(".");
 						/*
 						This is a placeholder for error correction code
 						
@@ -163,7 +163,7 @@ public class StreamLevelDecoder {
 					
 					// end of group?
 					if(blockCount > 3) {
-						output.print(" ");
+						console.print(" ");
 						groupCount++;
 						
 						blockCount = 0;
@@ -174,7 +174,7 @@ public class StreamLevelDecoder {
 						if(nbUnsync > SYNC_LOSS_DURATION) {
 							synced = false;
 							groupLevelDecoder.loseSync();
-							output.println(" Lost synchronization.");
+							console.println(" Lost synchronization.");
 						}
 						
 						
@@ -183,8 +183,8 @@ public class StreamLevelDecoder {
 						
 						if(log != null) log.notifyGroup();
 
-						output.println();
-						output.printf("%04d: ", bitTime / 26);
+						console.println();
+						console.printf("%04d: ", bitTime / 26);
 
 						nbOk = 0;
 					}
