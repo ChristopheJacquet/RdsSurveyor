@@ -30,6 +30,7 @@
 
 package eu.jacquet80.rds.oda;
 
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,6 +39,7 @@ import eu.jacquet80.rds.core.TunedStation;
 public abstract class ODA {
 	private static Map<Integer, Class<? extends ODA>> odas = new HashMap<Integer, Class<? extends ODA>>();
 	protected TunedStation station = null;
+	protected PrintStream console = System.out;
 	
 	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk);
 	public abstract String getName();
@@ -46,7 +48,11 @@ public abstract class ODA {
 		this.station = station;
 	}
 	
-	protected static void register(int aid, Class<? extends ODA> oda) {
+	public void setConsole(PrintStream console) {
+		this.console = console;
+	}
+	
+	private static void register(int aid, Class<? extends ODA> oda) {
 		odas.put(aid, oda);
 	}
 	

@@ -5,6 +5,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -22,6 +24,14 @@ import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.TimeLine;
 
 public class RDSSurveyor {
+	/**
+	 * The nullConsole just does nothing. It silently discards any message.
+	 */
+	private static PrintStream nullConsole = new PrintStream(new OutputStream() {
+		@Override
+		public void write(int b) throws IOException {
+		}
+	});
 
 	private static String getParam(String param, String[] args, int pos) {
 		if(pos >= args.length) {
@@ -38,6 +48,7 @@ public class RDSSurveyor {
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		File outFile = null;
+		PrintStream console = System.out;
 		
 		for(int i=0; i<args.length; i++) {
 			BitReader newReader = null;
@@ -52,6 +63,8 @@ public class RDSSurveyor {
 				outFile = new File(getParam("outbinfile", args, ++i));
 			} else if("-nogui".equals(args[i])) {
 				showGui = false;
+			} else if("-noconsole".equals(args[i])) {
+				console = nullConsole;
 			} else {
 				System.out.println("Arguments:");
 				System.out.println("  -inaudio                 Use sound card audio as input");
@@ -59,6 +72,7 @@ public class RDSSurveyor {
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
+				System.out.println("  -noconsole               No console analysis");
 				System.exit(1);
 			}
 			
@@ -92,7 +106,7 @@ public class RDSSurveyor {
 		
 
 		Log log = new Log();
-		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder(System.out);
+		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder(console);
 		
 		if(showGui) {
 			JFrame frame = new JFrame("RDS Surveyor");
