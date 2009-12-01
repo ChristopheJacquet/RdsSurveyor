@@ -18,7 +18,7 @@ public class GroupLevelDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
 	private double time = 0.0;
-	private TunedStation station = new TunedStation();
+	private TunedStation station = new TunedStation(0);
 	private boolean synced = true;
 	
 	private final String[] RP_TNGD_VALUES = {
@@ -88,7 +88,7 @@ public class GroupLevelDecoder {
 			int oldPI = station.getPI();
 			if(! station.setPI(pi) ) {
 				log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-				station = new TunedStation();
+				station = new TunedStation(bitTime);
 				return;
 			}
 			if(station.getPI() != oldPI) log.addMessage(new StationTuned(bitTime, station));
@@ -102,7 +102,7 @@ public class GroupLevelDecoder {
 			type = ((blocks[1]>>12) & 0xF);
 			version = ((blocks[1]>>11) & 1);
 			
-			station.addGroupToStats(type, version);
+			station.addGroupToStats(type, version, nbOk);
 			
 			int tp = (blocks[1]>>10) & 1;
 			int pty = (blocks[1]>>5) & 0x1F;

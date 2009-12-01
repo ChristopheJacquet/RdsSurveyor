@@ -28,29 +28,30 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.log;
 
-import eu.jacquet80.rds.core.TunedStation;
+package eu.jacquet80.rds.input;
 
-public class StationLost extends LogMessage {
-	private final TunedStation station;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
+public class BinStringFileBitReader implements BitReader {
+	private final InputStream isr;
 	
-	public StationLost(int bitTime, TunedStation station) {
-		super(bitTime);
-		
-		this.station = station;
-	}
-	
-	public String toString() {
-		return bitTime + "> Lost: " + station.getPS();
-	}
-
-	@Override
-	public void accept(LogMessageVisitor visitor) {
-		visitor.visit(this);
+	public BinStringFileBitReader(File f) throws FileNotFoundException {
+		isr = new FileInputStream(f);
 	}
 	
-	public TunedStation getStation() {
-		return station;
+	public boolean getBit() throws IOException {
+		while(true) {
+			int c = isr.read();
+			switch(c) {
+			case '0': return false;
+			case '1': return true;
+			}
+		}
 	}
+
 }

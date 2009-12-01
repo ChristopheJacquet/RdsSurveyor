@@ -36,6 +36,7 @@ import java.util.LinkedList;
 
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.StationLost;
 
 
 public class StreamLevelDecoder {
@@ -81,6 +82,8 @@ public class StreamLevelDecoder {
 			try {
 				bit = reader.getBit();
 			} catch(EOFException e) {
+				// when the end of stream is reached, must add log information about the last tuned station
+				log.addMessage(new StationLost(groupLevelDecoder.getTunedStation().getTimeOfLastPI(), groupLevelDecoder.getTunedStation()));
 				return;
 			}
 			block = (block << 1) & 0x3FFFFFF;

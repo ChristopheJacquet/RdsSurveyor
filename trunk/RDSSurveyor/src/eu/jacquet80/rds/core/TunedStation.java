@@ -48,6 +48,7 @@ public class TunedStation extends Station {
 	private boolean usesRP = false;
 	private int di = 0;
 	private int pty = 0;
+	private int totalBlocks, totalBlocksOk;
 	
 	private static String[] ptyLabels = {
 		"No programme type or undefined",
@@ -85,12 +86,13 @@ public class TunedStation extends Station {
 	};
 
 	
-	public TunedStation(int pi) {
+	public TunedStation(int pi, int time) {
 		reset(pi);
+		pingPI(time);
 	}
 	
-	public TunedStation() {
-		this(0);
+	public TunedStation(int time) {
+		this(0, time);
 	}
 
 	
@@ -112,6 +114,8 @@ public class TunedStation extends Station {
 		for(int i=0; i<blockCount.length; i++)
 			for(int j=0; j<2; j++)
 				blockCount[i][j] = 0;
+		totalBlocks = 0;
+		totalBlocksOk = 0;
 		
 		odas = new ODA[32];
 		usesRP = false;
@@ -121,7 +125,7 @@ public class TunedStation extends Station {
 	public String toString() {
 		StringBuffer res = new StringBuffer();
 		//System.out.println("pi=" + pi + ", ps=" + new String(ps) + ", time=" + timeOfLastPI);
-		res.append(String.format("PI=%04X    PS=\"%s\"    Time=%.3f", pi, new String(ps), (float)(timeOfLastPI / (1187.5f))));
+		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%.3f", pi, getStationName(), new String(ps), (float)(timeOfLastPI / (1187.5f))));
 		
 		for(int ab=0; ab<2; ab++) {
 			for(int i=0; i<64; i++) {
@@ -177,8 +181,10 @@ public class TunedStation extends Station {
 		timeOfLastPI = time;
 	}
 	
-	public void addGroupToStats(int type, int version) {
+	public void addGroupToStats(int type, int version, int nbOk) {
 		blockCount[type][version]++;
+		totalBlocks += 4;
+		totalBlocksOk += nbOk;
 	}
 	
 	public void addUnknownGroupToStats() {
@@ -232,4 +238,11 @@ public class TunedStation extends Station {
 		this.pty = pty;
 	}
 
+	public int getTotalBlocks() {
+		return totalBlocks;
+	}
+	
+	public int getTotalBlocksOk() {
+		return totalBlocksOk;
+	}
 }
