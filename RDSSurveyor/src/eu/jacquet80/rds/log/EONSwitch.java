@@ -30,12 +30,12 @@
 
 package eu.jacquet80.rds.log;
 
-import eu.jacquet80.rds.core.OtherNetwork;
+import eu.jacquet80.rds.core.Station;
 
 public class EONSwitch extends LogMessage {
-	private final OtherNetwork on;
+	private final Station on;
 	
-	public EONSwitch(int bitTime, OtherNetwork on) {
+	public EONSwitch(int bitTime, Station on) {
 		super(bitTime);
 		
 		this.on = on;
@@ -46,7 +46,7 @@ public class EONSwitch extends LogMessage {
 		visitor.visit(this);
 	}
 	
-	public OtherNetwork getON() {
+	public Station getON() {
 		return on;
 	}
 }

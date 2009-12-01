@@ -39,6 +39,7 @@ import java.util.Set;
 public class OtherNetwork extends Station {
 	private Map<Integer, Set<Integer>> mappedAFs = new HashMap<Integer, Set<Integer>>();
 	
+	@Override
 	public String addMappedFreq(int channel, int mappedChannel) {
 		int freq = channelToFrequency(channel);
 		int mappedFreq = channelToFrequency(mappedChannel);

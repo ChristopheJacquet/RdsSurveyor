@@ -306,18 +306,26 @@ public class GroupLevelDecoder {
 		
 		// Groups 14A: to extract variant we need only block 1
 		if(type == 14) {
-			OtherNetwork on = null;
+			Station on = null;
 			console.print("EON, ");
 
 			// in both version if we have block 3 we have ON PI
 			if(blocksOk[3]) {
 				int onPI = blocks[3];
-				console.printf("ON.PI=%04X, ", onPI);
+				console.printf("ON.PI=%04X%s, ", onPI, onPI == station.getPI() ? " (self)" : "");
 				
-				on = station.getON(onPI);
-				if(on == null) {
-					on = new OtherNetwork(onPI);
-					station.addON(on);
+				if(onPI != station.getPI()) {
+					on = station.getON(onPI);
+					if(on == null) {
+						on = new OtherNetwork(onPI);
+						station.addON(on);
+					}
+				} else { 
+					// ON.PI may be equal to TN.PI in case of variant 12: it
+					// is used to transmit linkage information for the
+					// transmitting network. In this case we must surely not
+					// create a new OtherNetwork instance.
+					on = station;
 				}
 			}
 			
@@ -358,6 +366,7 @@ public class GroupLevelDecoder {
 						int onpty = (blocks[2]>>11) & 0x1F;
 						int onta = (blocks[2]) & 1;
 						console.printf("ON.PTY=%d, ON.TA=%d ", onpty, onta);
+						if(on != null) on.setPTY(onpty);
 					}
 					
 					if(variant == 14) {
