@@ -50,6 +50,44 @@ public abstract class Station {
 	private HashMap<String, Integer>[] psSegments;
 	private String[] psPage;
 	private String dynamicPSmessage;
+	protected int pty = 0;
+	
+	protected static String[] ptyLabels = {
+		"No programme type or undefined",
+		"News",
+		"Current Affairs",
+		"Information",
+		"Sport",
+		"Education",
+		"Drama",
+		"Culture",
+		"Science",
+		"Varied",
+		"Pop Music",
+		"Rock Music",
+		"Easy Listening Music",
+		"Light classical",
+		"Serious classical",
+		"Other Music",
+		"Weather",
+		"Finance",
+		"Children's programmes",
+		"Social Affairs",
+		"Religion",
+		"Phone In",
+		"Travel",
+		"Leisure",
+		"Jazz Music",
+		"Country Music",
+		"National Music",
+		"Oldies Music",
+		"Folk Music",
+		"Documentary",
+		"Alarm Test",
+		"Alarm"
+	};
+
+
 	
 	@SuppressWarnings("unchecked")
 	protected void reset(int pi) {
@@ -179,4 +217,19 @@ public abstract class Station {
 	public int getPI() {
 		return pi;
 	}
+	
+	
+	public void setPTY(int pty) {
+		this.pty = pty;
+	}
+	
+	public int getPTY() {
+		return pty;
+	}
+
+	public String addMappedFreq(int channel, int mappedChannel) {
+		// not implemented here, mapped frequencies only exist for other networks
+		return null;
+	}
+
 }

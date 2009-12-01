@@ -40,51 +40,15 @@ import eu.jacquet80.rds.oda.ODA;
 public class TunedStation extends Station {
 	private char[][] rt = new char[2][64];
 	private char[] latestRT = null;
-	private Map<Integer, OtherNetwork> otherNetworks;  // maps ON-PI -> OtherNetwork
+	private Map<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] blockCount = new int[17][2];
 	private Date date = null;
 	private int timeOfLastPI = 0;
 	private ODA[] odas = new ODA[32];
 	private boolean usesRP = false;
 	private int di = 0;
-	private int pty = 0;
 	private int totalBlocks, totalBlocksOk;
 	
-	private static String[] ptyLabels = {
-		"No programme type or undefined",
-		"News",
-		"Current Affairs",
-		"Information",
-		"Sport",
-		"Education",
-		"Drama",
-		"Culture",
-		"Science",
-		"Varied",
-		"Pop Music",
-		"Rock Music",
-		"Easy Listening Music",
-		"Light classical",
-		"Serious classical",
-		"Other Music",
-		"Weather",
-		"Finance",
-		"Children's programmes",
-		"Social Affairs",
-		"Religion",
-		"Phone In",
-		"Travel",
-		"Leisure",
-		"Jazz Music",
-		"Country Music",
-		"National Music",
-		"Oldies Music",
-		"Folk Music",
-		"Documentary",
-		"Alarm Test",
-		"Alarm"
-	};
-
 	
 	public TunedStation(int pi, int time) {
 		reset(pi);
@@ -103,7 +67,7 @@ public class TunedStation extends Station {
 			Arrays.fill(rt[i], '?');
 		}
 		
-		otherNetworks = new HashMap<Integer, OtherNetwork>();
+		otherNetworks = new HashMap<Integer, Station>();
 		
 		for(int i=0; i<16; i++)
 			for(int j=0; j<2; j++)
@@ -141,7 +105,7 @@ public class TunedStation extends Station {
 			}
 		}
 		
-		for(OtherNetwork on : otherNetworks.values()) res.append("\nON: ").append(on);
+		for(Station on : otherNetworks.values()) res.append("\nON: ").append(on);
 		
 		// AFs
 		res.append("\n").append(afsToString());
@@ -216,11 +180,11 @@ public class TunedStation extends Station {
 		this.date = date;
 	}
 	
-	public void addON(OtherNetwork on) {
+	public void addON(Station on) {
 		otherNetworks.put(on.getPI(), on);
 	}
 	
-	public OtherNetwork getON(int onpi) {
+	public Station getON(int onpi) {
 		return otherNetworks.get(onpi);
 	}
 	
@@ -232,10 +196,6 @@ public class TunedStation extends Station {
 	public String getRT() {
 		if(latestRT == null) return null;
 		else return new String(latestRT);
-	}
-	
-	public void setPTY(int pty) {
-		this.pty = pty;
 	}
 
 	public int getTotalBlocks() {
