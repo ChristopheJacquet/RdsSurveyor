@@ -16,11 +16,13 @@ import javax.swing.JTextArea;
 
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.input.AudioFileBitReader;
+import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.ui.Segmenter;
 import eu.jacquet80.rds.ui.TimeLine;
 
 public class RDSSurveyor {
@@ -47,6 +49,7 @@ public class RDSSurveyor {
 		BitReader reader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
+		Segmenter segmenter = null;
 		File outFile = null;
 		PrintStream console = System.out;
 		
@@ -57,6 +60,8 @@ public class RDSSurveyor {
 				liveInput = true;
 			} else if("-inbinfile".equals(args[i])) {
 				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
+			} else if("-inbinstrfile".equals(args[i])) {
+				newReader = new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i)));
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
@@ -65,10 +70,15 @@ public class RDSSurveyor {
 				showGui = false;
 			} else if("-noconsole".equals(args[i])) {
 				console = nullConsole;
+			} else if("-segment".equals(args[i])) {
+				console = nullConsole;   // implies -noconsole
+				showGui = false;         // implies -nogui
+				segmenter = new Segmenter(System.out);
 			} else {
 				System.out.println("Arguments:");
 				System.out.println("  -inaudio                 Use sound card audio as input");
 				System.out.println("  -inbinfile <file>        Use the given binary file as input");
+				System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
@@ -133,6 +143,10 @@ public class RDSSurveyor {
 					timeLine.update();
 				}
 			});
+		}
+		
+		if(segmenter != null) {
+			segmenter.registerAtLog(log);
 		}
 
 		streamLevelDecoder.processStream(reader, log);

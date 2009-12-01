@@ -36,9 +36,12 @@ import java.util.LinkedList;
 public class Log {
 	private ArrayList<LogMessage> messages = new ArrayList<LogMessage>();
 	private LinkedList<Runnable> groupListeners = new LinkedList<Runnable>();
+	private LinkedList<LogMessageVisitor> newMessageListeners = new LinkedList<LogMessageVisitor>();
 	
 	public synchronized void addMessage(LogMessage message) {
 		messages.add(message);
+		
+		for(LogMessageVisitor v : newMessageListeners) message.accept(v);
 	}
 	
 	public synchronized int getLastTime() {
@@ -59,6 +62,10 @@ public class Log {
 	
 	public void addGroupListener(Runnable r) {
 		groupListeners.add(r);
+	}
+	
+	public void addNewMessageListener(LogMessageVisitor v) {
+		newMessageListeners.add(v);
 	}
 	
 	public String toString() {
