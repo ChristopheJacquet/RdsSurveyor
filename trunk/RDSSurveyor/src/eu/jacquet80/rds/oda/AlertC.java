@@ -31,6 +31,8 @@
 package eu.jacquet80.rds.oda;
 
 public class AlertC extends ODA {
+	private String[] providerName = {"????", "????"};
+	
 	public AlertC() {
 	}
 
@@ -112,8 +114,9 @@ public class AlertC extends ODA {
 				int addr = blocks[1] & 0xF;
 				console.print("Tuning Info: ");
 				switch(addr) {
-				case 4: case 5: console.printf("Prov.name[%d]=\"%c%c%c%c\" ", 
-						addr-4, (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF, (blocks[3]>>8) & 0xFF, blocks[3] & 0xFF);
+				case 4: case 5:
+					providerName[addr-4] = String.format("%c%c%c%c", (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF, (blocks[3]>>8) & 0xFF, blocks[3] & 0xFF);
+					console.printf("Prov.name[%d]=\"%s\" ", addr-4, providerName[addr-4]); 
 				break;
 				default: console.print("addr=" + addr);
 				}

@@ -343,7 +343,7 @@ public class GroupLevelDecoder {
 						char ch2 = (char) ( blocks[2] & 0xFF);
 						console.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
 						
-						if(on != null) on.setChars(on.ps, variant, ch1, ch2);
+						if(on != null) on.setPSChars(variant, ch1, ch2);
 					}
 					
 					if(variant == 4) { // frequencies

@@ -32,6 +32,7 @@ package eu.jacquet80.rds.core;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -43,9 +44,8 @@ import java.util.Map.Entry;
 public abstract class Station {
 	protected int pi;
 	protected char[] ps = new char[8];
-	protected Set<Integer> afs = new HashSet<Integer>();
-	protected int frequency;
-	protected int afCount;
+	protected final Map<Integer, AFList> afs = new HashMap<Integer, AFList>();
+	protected AFList currentAFList = null;
 	private int badPI = 0;
 	private HashMap<String, Integer>[] psSegments;
 	private String[] psPage;
@@ -95,9 +95,8 @@ public abstract class Station {
 		
 		Arrays.fill(ps, '?');
 		
-		frequency = 0;
-		afCount = 0;
 		afs.clear();
+		currentAFList = null;
 
 		psSegments = new HashMap[4];
 		for(int i=0; i<4; i++) psSegments[i] = new HashMap<String, Integer>();
@@ -153,37 +152,41 @@ public abstract class Station {
 		return true;
 	}
 
-	protected int channelToFrequency(int channel) {
-		return 875 + channel;
+	protected static int channelToFrequency(int channel) {
+		if(channel >= 0 && channel <= 204) return 875 + channel;
+		else return 0;
 	}
 	
-	protected String frequencyToString(int freq) {
+	protected static String frequencyToString(int freq) {
 		return String.format("%d.%d", freq/10, freq%10);
 	}
 	
-	protected String addAFPair(int a, int b) {
+	public String addAFPair(int a, int b) {
 		if(a >= 224 && a <= 249) {
-			afCount = a - 224;
-			frequency = channelToFrequency(b);
-			return "AF: #" + afCount + ", freq=" + frequencyToString(frequency);
+			currentAFList = afs.get(b);
+			if(currentAFList == null) {
+				currentAFList = new AFList(b, a - 224);
+				afs.put(b, currentAFList);
+			}
+			
+			return "AF: #" + (a-224) + ", freq=" + frequencyToString(currentAFList.getTransmitterFrequency());
 		} else {
-			int freqA = 0, freqB = 0;
-			if(a >= 0 && a <= 204) {
-				freqA = channelToFrequency(a);
-				afs.add(freqA);
+			if(currentAFList == null) {
+				currentAFList = new AFList(0, 0);
 			}
-			if(b >= 0 && b <= 204) {
-				freqB = channelToFrequency(b);
-				afs.add(freqB);
-			}
-			return "AF: " + frequencyToString(freqA) + ", " + frequencyToString(freqB);
+			if(a >= 0 && a <= 205 && b >= 0 && b <= 205) {
+				String res = currentAFList.addPair(a, b);
+				return "AF: " + res;
+			} else return "Unhandled AF pair: " + a + ", " + b;
 		}
 	}
 	
 	protected String afsToString() {
 		StringBuffer res = new StringBuffer();
-		res.append("freq=").append(frequencyToString(frequency)).append(" AF# ").append(afCount).append(' ');
-		for(int af : afs) res.append(frequencyToString(af)).append(' ');
+		for(AFList l : afs.values()) {
+			if(l.getTransmitterFrequency() == 0) continue;
+			res.append("AF ").append(l).append("  ");
+		}
 		return res.toString();
 	}
 	
@@ -232,4 +235,55 @@ public abstract class Station {
 		return null;
 	}
 
+}
+
+class AFList {
+	private final int transmitterFrequency;
+	private final int size;
+	private final Set<Integer> afs = new HashSet<Integer>(24);
+	private char method = 'A';
+	
+	public AFList(int transmitterFrequency, int size) {
+		this.transmitterFrequency = Station.channelToFrequency(transmitterFrequency);
+		this.size = size;
+	}
+	
+	public int getTransmitterFrequency() {
+		return transmitterFrequency;
+	}
+	
+	public String addPair(int a, int b) {
+		int fA = Station.channelToFrequency(a);
+		int fB = Station.channelToFrequency(b);
+		String typeIfB = fA < fB ? "same" : "variant"; 
+		if(fA == transmitterFrequency) {  // method B
+			method = 'B';
+			if(fB != 0) afs.add(fB);
+			return "Method B: " + transmitterFrequency + " -> " + Station.frequencyToString(fB) + " (" + typeIfB + ")";
+		} else if(fB == transmitterFrequency) {  // method B
+			method = 'B';
+			if(fA != 0) afs.add(fA);
+			return "Method B: " + transmitterFrequency + " -> " + Station.frequencyToString(fA) + " (" + typeIfB + ")";
+		} else {  // method A
+			String res = "Method A: ";
+			if(fA != 0) {
+				afs.add(fA);
+				res += Station.frequencyToString(fA) + "  ";
+			}
+			if(fB != 0) {
+				afs.add(fB);
+				res += Station.frequencyToString(fB);
+			}
+			return res;
+		}
+	}
+	
+	public String toString() {
+		StringBuffer res = new StringBuffer("List[").append(method).append(", sz=").append(size-1).append("]: ");
+		res.append(Station.frequencyToString(transmitterFrequency)).append(" -> ");
+		for(int af : afs) {
+			res.append(Station.frequencyToString(af)).append("  ");
+		}
+		return res.toString();
+	}
 }
