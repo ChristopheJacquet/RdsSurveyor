@@ -64,7 +64,7 @@ public class OtherNetwork extends Station {
 		if(mappedAFs.size() == 0)
 			return super.afsToString();
 		
-		String res = "AF: ";
+		String res = "Mapped AFs: ";
 		for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
 			res += "[" + frequencyToString(e.getKey()) + " -> ";
 			for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
@@ -78,7 +78,7 @@ public class OtherNetwork extends Station {
 	
 	public String toString() {
 		StringBuffer res = new StringBuffer();
-		res.append(String.format("\tPI=%04X PS=\"%s\" ", pi, new String(ps))).append(afsToString());
+		res.append(String.format("\tPI=%04X PS*=\"%s\" ", pi, getStationName())).append(afsToString());
 		return res.toString();
 	}
 	
