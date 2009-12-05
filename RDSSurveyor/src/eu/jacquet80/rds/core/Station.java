@@ -163,16 +163,18 @@ public abstract class Station {
 	
 	public String addAFPair(int a, int b) {
 		if(a >= 224 && a <= 249) {
-			currentAFList = afs.get(b);
-			if(currentAFList == null) {
-				currentAFList = new AFList(b, a - 224);
-				afs.put(b, currentAFList);
-			}
+			if(b >= 0 && b <= 205) {
+				currentAFList = afs.get(b);
+				if(currentAFList == null) {
+					currentAFList = new AFList(b);
+					afs.put(b, currentAFList);
+				}
 			
-			return "AF: #" + (a-224) + ", freq=" + frequencyToString(currentAFList.getTransmitterFrequency());
+				return "AF: #" + (a-224) + ", freq=" + frequencyToString(currentAFList.getTransmitterFrequency());
+			} else return "No AF information";
 		} else {
 			if(currentAFList == null) {
-				currentAFList = new AFList(0, 0);
+				currentAFList = new AFList(-1);
 			}
 			if(a >= 0 && a <= 205 && b >= 0 && b <= 205) {
 				String res = currentAFList.addPair(a, b);
@@ -239,13 +241,11 @@ public abstract class Station {
 
 class AFList {
 	private final int transmitterFrequency;
-	private final int size;
 	private final Set<Integer> afs = new HashSet<Integer>(24);
-	private char method = 'A';
+	private char method = '?';
 	
-	public AFList(int transmitterFrequency, int size) {
+	public AFList(int transmitterFrequency) {
 		this.transmitterFrequency = Station.channelToFrequency(transmitterFrequency);
-		this.size = size;
 	}
 	
 	public int getTransmitterFrequency() {
@@ -259,13 +259,14 @@ class AFList {
 		if(fA == transmitterFrequency) {  // method B
 			method = 'B';
 			if(fB != 0) afs.add(fB);
-			return "Method B: " + transmitterFrequency + " -> " + Station.frequencyToString(fB) + " (" + typeIfB + ")";
+			return "Method B: " + Station.frequencyToString(transmitterFrequency) + " -> " + Station.frequencyToString(fB) + " (" + typeIfB + ")";
 		} else if(fB == transmitterFrequency) {  // method B
 			method = 'B';
 			if(fA != 0) afs.add(fA);
-			return "Method B: " + transmitterFrequency + " -> " + Station.frequencyToString(fA) + " (" + typeIfB + ")";
+			return "Method B: " + Station.frequencyToString(transmitterFrequency) + " -> " + Station.frequencyToString(fA) + " (" + typeIfB + ")";
 		} else {  // method A
-			String res = "Method A: ";
+			if(transmitterFrequency != 0) method = 'A';
+			String res = (method == 'A' ? "Method A: " : "Unknown method: ");
 			if(fA != 0) {
 				afs.add(fA);
 				res += Station.frequencyToString(fA) + "  ";
@@ -279,7 +280,7 @@ class AFList {
 	}
 	
 	public String toString() {
-		StringBuffer res = new StringBuffer("List[").append(method).append(", sz=").append(size-1).append("]: ");
+		StringBuffer res = new StringBuffer("List[").append(method).append(", sz=").append(afs.size()).append("]: ");
 		res.append(Station.frequencyToString(transmitterFrequency)).append(" -> ");
 		for(int af : afs) {
 			res.append(Station.frequencyToString(af)).append("  ");
