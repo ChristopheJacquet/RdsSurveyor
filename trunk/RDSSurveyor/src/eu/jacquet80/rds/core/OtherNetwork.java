@@ -60,7 +60,7 @@ public class OtherNetwork extends Station {
 	}
 	
 	@Override
-	protected String afsToString() {
+	public String afsToString() {
 		if(mappedAFs.size() == 0)
 			return super.afsToString();
 		

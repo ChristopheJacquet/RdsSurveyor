@@ -31,6 +31,8 @@
 package eu.jacquet80.rds.oda;
 
 public class AlertC extends ODA {
+	public static final int AID = 0xCD46;
+	
 	private String[] providerName = {"????", "????"};
 	
 	public AlertC() {
@@ -127,5 +129,10 @@ public class AlertC extends ODA {
 	@Override
 	public String getName() {
 		return "TMC/Alert-C";
+	}
+	
+	@Override
+	public int getAID() {
+		return AID;
 	}
 }

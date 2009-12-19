@@ -35,11 +35,12 @@ import java.io.PrintStream;
 import java.util.LinkedList;
 
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 
 
-public class StreamLevelDecoder {
+public class StreamLevelDecoder implements RDSDecoder {
 	private final static int SYNC_THRESHOLD = 2;  // need 2 blocks after initial block to confirm synchronization
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
@@ -60,7 +61,7 @@ public class StreamLevelDecoder {
 				nbSyncAtOffset[i][j] = new LinkedList<Integer>();
 	}
 		
-	public void processStream(BitReader reader, Log log) throws IOException { 
+	public void processStream(RDSReader rdsReader, Log log) throws IOException { 
 		int block = 0;        // block contents
 		int blockCount = 0;   // block counter within group
 		int bitCount = 0;     // bit count within block
@@ -73,6 +74,8 @@ public class StreamLevelDecoder {
 		int groupCount = 0;
 		int bitTime = 0;
 		@SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][] = new LinkedList[26][4];
+		
+		BitReader reader = (BitReader) rdsReader;
 		
 		eraseSyncArray(nbSyncAtOffset);
 		

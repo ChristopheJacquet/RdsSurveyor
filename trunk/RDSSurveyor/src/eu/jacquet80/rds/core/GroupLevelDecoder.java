@@ -1,24 +1,28 @@
 package eu.jacquet80.rds.core;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
 
+import eu.jacquet80.rds.input.GroupReader;
+import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.log.ClockTime;
 import eu.jacquet80.rds.log.EONReturn;
 import eu.jacquet80.rds.log.EONSwitch;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
+import eu.jacquet80.rds.oda.AlertC;
 import eu.jacquet80.rds.oda.ODA;
 
-public class GroupLevelDecoder {
+public class GroupLevelDecoder implements RDSDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
 	private double time = 0.0;
-	private TunedStation station = new TunedStation(0);
+	private TunedStation station = new TunedStation(0), realStation = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
 	
 	private final String[] RP_TNGD_VALUES = {
@@ -70,6 +74,7 @@ public class GroupLevelDecoder {
 	}
 	
 	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime, Log log) {
+		realStation = null;
 		time += 104 / 1187.5;
 		
 		qualityHistory[historyPtr] = nbOk;
@@ -78,20 +83,31 @@ public class GroupLevelDecoder {
 		for(int i=0; i < qualityHistory.length; i++) sum += qualityHistory[i];
 		//float quality = sum / (4f * qualityHistory.length);
 		
+		int pi = 0;
 		if(blocksOk[0]) {
-			int pi = blocks[0];
+			pi = blocks[0];
 			console.printf("PI=%04X, ", pi);
 			if(station.getPI() == pi) {
+				// same PI as before => same station
 				station.pingPI(bitTime);
 				synced = true;
+			} else {
+				// different PI => new station or PI error
+				if(! station.setPI(pi) ) {
+					// several different PIs in a row => new station
+					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
+					log.addMessage(new StationTuned(bitTime, station));
+					station = new TunedStation(bitTime);
+					station.setPI(pi);
+				} else {
+					// not enough different PIs => guess it's just an error
+					// use a dummy TunedStation to silently ignore this group's info
+					console.print("Ign, ");  // for ignore
+					realStation = station;
+					station = new TunedStation(bitTime); // dummy station
+				}
+				
 			}
-			int oldPI = station.getPI();
-			if(! station.setPI(pi) ) {
-				log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-				station = new TunedStation(bitTime);
-				return;
-			}
-			if(station.getPI() != oldPI) log.addMessage(new StationTuned(bitTime, station));
 		} else console.print("         ");
 		
 		if(!synced) return;   // after a sync loss, we wait for a PI before processing further data
@@ -105,10 +121,12 @@ public class GroupLevelDecoder {
 			station.addGroupToStats(type, version, nbOk);
 			
 			int tp = (blocks[1]>>10) & 1;
+			station.setTP(tp == 1);
+			
 			int pty = (blocks[1]>>5) & 0x1F;
+			station.setPTY(pty);
 			
 			console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
-			station.setPTY(pty);
 		} else station.addUnknownGroupToStats();
 		
 		// Groups 0A & 0B
@@ -148,7 +166,7 @@ public class GroupLevelDecoder {
 			int day = (pin>>11) & 0x1F;
 			int hour = (pin>>6) & 0x1F;
 			int min = pin & 0x3F;
-			console.print("PIN=" + pin + " [D=" + day + " H=" + hour + ":" + min + "] ");
+			console.printf("PIN=%04X [D=%d, H=%d:%d] ", pin, day, hour, min);
 		}
 		
 		// Group 1A: to extract slow labeling codes, we need blocks 1 and 3
@@ -161,6 +179,29 @@ public class GroupLevelDecoder {
 				int opc = (blocks[2] >> 8) & 0xF;
 				int ecc = blocks[2] & 0xFF;
 				console.printf("OPC=%01X ECC=%02X ", opc, ecc);
+				if(pi != 0) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
+				break;
+				
+			case 1:
+				int tmcid = blocks[2] & 0xFFF;
+				console.printf("TMC (old way) ID=%03X", tmcid);
+				
+				// TODO need a cleaner way to connect application to specific groups (more general than ODA)
+				// connect 8A groups with the TMC application
+				ODA appTMC = new AlertC();
+				station.setODAforGroup(8, 0, appTMC);
+				appTMC.setStation(station);
+				appTMC.setConsole(console);
+				break;
+				
+			case 3:
+				int langID = blocks[2] & 0xFF;
+				console.printf("Language: %02X [%s]", langID, 
+						langID < RDS.languages.length ? RDS.languages[langID][1] : "");
+				break;
+				
+			default:
+				console.printf("Unhandled data %03X", blocks[2] & 0xFFF);
 			}
 		}
 		
@@ -194,11 +235,26 @@ public class GroupLevelDecoder {
 			if(aid == 0) console.print("NO AID: ");
 			else console.printf("AID #%04X ", aid);
 			
-			ODA oda = ODA.forAID(aid);
+			// return the ODA
+			ODA oda = station.getODAforGroup(odaG, odaV);
 			if(oda != null) {
-				station.setODAforGroup(odaG, odaV, oda);
-				oda.setStation(station);
-				oda.setConsole(console);
+				if(oda.getAID() != aid) {
+					console.printf("Current AID for group (%04X) does not match new AID (%04X)", oda.getAID(), aid);
+					oda = null;
+				}
+			} else {
+				oda = ODA.forAID(aid);
+				
+				if(oda != null) {
+					console.print("Unknown AID!");
+					
+					station.setODAforGroup(odaG, odaV, oda);
+					oda.setStation(station);
+					oda.setConsole(console);
+				}
+			}
+			
+			if(oda != null) {
 				console.print("(" + oda.getName() + "): ");
 			}
 			else console.print(" ");
@@ -304,7 +360,32 @@ public class GroupLevelDecoder {
 			if((blocks[1] & 0xF) == 0) console.print("Beep: " + addrStr);
 		}
 		
-		// Groups 14A: to extract variant we need only block 1
+		
+		// Groups 10A: PTYN, we need blocks 1, 2 and 3
+		if(type == 10 && version == 0 && blocksOk[1]) {
+			int ab = (blocks[1] >> 4) & 1;
+			int pos = blocks[1] & 1;
+			
+			console.print("PTYN, flag=" + (char)('A' + ab) + ", pos=" + pos + ": \"");
+			
+			if(blocksOk[2]) {
+				char c1 = (char)((blocks[2]>>8) & 0xFF);
+				char c2 = (char)(blocks[2] & 0xFF);
+				station.setPTYNChars(pos*2, c1, c2);
+				console.print(c1 + "" + c2);
+			} else console.print("??");
+			
+			if(blocksOk[3]) {
+				char c1 = (char)((blocks[3]>>8) & 0xFF);
+				char c2 = (char)(blocks[3] & 0xFF);
+				station.setPTYNChars(pos*2+1, c1, c2);
+				console.print(c1 + "" + c2);
+			} else console.print("??");
+			
+			console.print("\"");
+		}
+		
+		// Groups 14: to extract variant we need only block 1
 		if(type == 14) {
 			Station on = null;
 			console.print("EON, ");
@@ -330,6 +411,7 @@ public class GroupLevelDecoder {
 			}
 			
 			int ontp = (blocks[1]>>4) & 1;
+			if(on != null) on.setTP(ontp == 1);
 			console.print("ON.TP=" + ontp + ", ");
 			
 			if(version == 0) { // info about ON only in 14A groups
@@ -366,7 +448,10 @@ public class GroupLevelDecoder {
 						int onpty = (blocks[2]>>11) & 0x1F;
 						int onta = (blocks[2]) & 1;
 						console.printf("ON.PTY=%d, ON.TA=%d ", onpty, onta);
-						if(on != null) on.setPTY(onpty);
+						if(on != null) {
+							on.setPTY(onpty);
+							on.setTA(onta == 1);
+						}
 					}
 					
 					if(variant == 14) {
@@ -389,12 +474,28 @@ public class GroupLevelDecoder {
 			if(blocksOk[3]) processBasicTuningBits(blocks[3]);
 		}
 		
-		return; // true;
-		
+
+		// restore the real station in case 'station' was a dummy one
+		if(realStation != null) station = realStation;
 	}
 	
 	
 	public TunedStation getTunedStation() {
 		return station;
+	}
+
+	public void processStream(RDSReader rdsReader, Log log) throws IOException {
+		int bitTime = 0;
+		GroupReader reader = (GroupReader)rdsReader;
+		final boolean[] allOk = {true, true, true, true};
+		
+		for(;;) {
+			int[] blocks = reader.getGroup();
+			console.printf("%04d: [%04X %04X-%04X %04X] ", bitTime / 26, blocks[0], blocks[1], blocks[2], blocks[3]);
+			processGroup(4, allOk, blocks, bitTime, log);
+			console.println();
+			bitTime += 104;  // 104 bits per group
+			if(log != null) log.notifyGroup();
+		}
 	}
 }

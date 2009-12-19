@@ -14,14 +14,20 @@ import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
+import eu.jacquet80.rds.core.GroupLevelDecoder;
+import eu.jacquet80.rds.core.RDSDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.GroupReader;
+import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
+import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
 import eu.jacquet80.rds.ui.TimeLine;
 
@@ -46,7 +52,7 @@ public class RDSSurveyor {
 	public static void main(String[] args) throws IOException {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009.");
 		
-		BitReader reader = null;
+		RDSReader reader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		Segmenter segmenter = null;
@@ -54,7 +60,7 @@ public class RDSSurveyor {
 		PrintStream console = System.out;
 		
 		for(int i=0; i<args.length; i++) {
-			BitReader newReader = null;
+			RDSReader newReader = null;
 			if("-inaudio".equals(args[i])) {
 				newReader = new LiveAudioBitReader();
 				liveInput = true;
@@ -62,6 +68,8 @@ public class RDSSurveyor {
 				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
 			} else if("-inbinstrfile".equals(args[i])) {
 				newReader = new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i)));
+			} else if("-ingrouphexfile".equals(args[i])) {
+				newReader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
@@ -80,6 +88,7 @@ public class RDSSurveyor {
 				System.out.println("  -inbinfile <file>        Use the given binary file as input");
 				System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
+				System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
 				System.out.println("  -noconsole               No console analysis");
@@ -109,14 +118,15 @@ public class RDSSurveyor {
 		}
 		
 		// use the output file if defined
-		if(outFile != null) {
+		if(outFile != null && reader instanceof BitReader) {
 			System.out.println("Binary output file is " + outFile.getAbsoluteFile());
-			reader = new TeeBitReader(reader, outFile);
+			reader = new TeeBitReader((BitReader)reader, outFile);
 		}
 		
 
 		Log log = new Log();
-		final StreamLevelDecoder streamLevelDecoder = new StreamLevelDecoder(console);
+		final RDSDecoder streamLevelDecoder = 
+			reader instanceof BitReader ? new StreamLevelDecoder(console) : new GroupLevelDecoder(console);
 		
 		if(showGui) {
 			JFrame frame = new JFrame("RDS Surveyor");
@@ -136,6 +146,10 @@ public class RDSSurveyor {
 			fTL.setPreferredSize(new Dimension(1000, 200));
 			fTL.pack();
 			fTL.setVisible(true);
+			
+			// TODO uncomment
+			//MainWindow mainWindow = new MainWindow(log);
+			//mainWindow.setVisible(true);
 			
 			log.addGroupListener(new Runnable() {
 				public void run() {
