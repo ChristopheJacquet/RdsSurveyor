@@ -43,6 +43,7 @@ public abstract class ODA {
 	
 	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk);
 	public abstract String getName();
+	public abstract int getAID();
 	
 	public void setStation(TunedStation station) {
 		this.station = station;
@@ -69,7 +70,7 @@ public abstract class ODA {
 	}
 	
 	static {
-		register(0x4BD7, RTPlus.class);
-		register(0xCD46, AlertC.class);
+		register(RTPlus.AID, RTPlus.class);
+		register(AlertC.AID, AlertC.class);
 	}
 }

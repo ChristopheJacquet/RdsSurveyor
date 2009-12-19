@@ -31,8 +31,8 @@
 package eu.jacquet80.rds.core;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import eu.jacquet80.rds.oda.ODA;
 
@@ -40,10 +40,9 @@ import eu.jacquet80.rds.oda.ODA;
 public class TunedStation extends Station {
 	private char[][] rt = new char[2][64];
 	private char[] latestRT = null;
-	private Map<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
+	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] blockCount = new int[17][2];
 	private Date date = null;
-	private int timeOfLastPI = 0;
 	private ODA[] odas = new ODA[32];
 	private boolean usesRP = false;
 	private int di = 0;
@@ -67,7 +66,9 @@ public class TunedStation extends Station {
 			Arrays.fill(rt[i], '?');
 		}
 		
-		otherNetworks = new HashMap<Integer, Station>();
+		synchronized(this) {
+			otherNetworks = new TreeMap<Integer, Station>();
+		}
 		
 		for(int i=0; i<16; i++)
 			for(int j=0; j<2; j++)
@@ -105,7 +106,9 @@ public class TunedStation extends Station {
 			}
 		}
 		
-		for(Station on : otherNetworks.values()) res.append("\nON: ").append(on);
+		synchronized(this) {
+			for(Station on : otherNetworks.values()) res.append("\nON: ").append(on);
+		}
 		
 		// AFs
 		res.append("\n").append(afsToString());
@@ -117,6 +120,7 @@ public class TunedStation extends Station {
 		if(date != null) res.append("\nLatest CT: " + date);
 		
 		res.append("\nPTY: " + pty + " -> " + ptyLabels[pty]);
+		if(ptyn != null) res.append(", PTYN=" + new String(ptyn));
 		
 		res.append("\nDI: ")
 				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
@@ -139,10 +143,6 @@ public class TunedStation extends Station {
 
 	public int getTimeOfLastPI() {
 		return timeOfLastPI;
-	}
-	
-	public void pingPI(int time) {
-		timeOfLastPI = time;
 	}
 	
 	public void addGroupToStats(int type, int version, int nbOk) {
@@ -180,12 +180,25 @@ public class TunedStation extends Station {
 		this.date = date;
 	}
 	
-	public void addON(Station on) {
+	public synchronized void addON(Station on) {
 		otherNetworks.put(on.getPI(), on);
 	}
 	
-	public Station getON(int onpi) {
+	public synchronized Station getON(int onpi) {
 		return otherNetworks.get(onpi);
+	}
+	
+	public synchronized int getONcount() {
+		return otherNetworks.size();
+	}
+	
+	public synchronized Station getONbyIndex(int idx) {
+		int i = 0;
+		for(Station s : otherNetworks.values()) {
+			if(i == idx) return s;
+			i++;
+		}
+		return null;
 	}
 	
 	public void setDIbit(int pos, int val) {

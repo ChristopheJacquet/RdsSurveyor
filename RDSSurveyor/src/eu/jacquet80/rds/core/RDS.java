@@ -111,6 +111,183 @@ public class RDS {
 		0x0FC, 0x198, 0x168, 0x1B4
 	};
 	
+	public final static String[][] languages = {
+		{"Unknown", "??"},
+		{"Albanian", "sq"},
+		{"Breton", "br"},
+		{"Catalan", "ca"},
+		{"Croatian", "hr"},
+		{"Welsh", "cy"},
+		{"Czech", "cs"},
+		{"Danish", "da"},
+		{"German", "de"},
+		{"English", "en"},
+		{"Spanish", "es"},
+		{"Esperanto", "eo"},
+		{"Estonian", "et"},
+		{"Basque", "eu"},
+		{"Faroese", "fo"},
+		{"French", "fr"},
+		{"Frisian","fy"},
+		{"Irish", "ga"},
+		{"Gaelic", "gd"},
+		{"Galician", "gl"},
+		{"Icelandic", "is"},
+		{"Italian", "it"},
+		{"Lappish", "-lappish-"},
+		{"Latin", "la"},
+		{"Latvian", "lv"},
+		{"Luxembourgian", "lb"},
+		{"Lithuanian", "lt"},
+		{"Hungarian", "hu"},
+		{"Maltese", "mt"},
+		{"Dutch", "nl"},
+		{"Norwegian", "nn"},
+		{"Occitan", "oc"},
+		{"Polish", "pl"},
+		{"Portuguese", "pt"},
+		{"Romanian", "ro"},
+		{"Romansh", "rm"},
+		{"Serbian", "sr"},
+		{"Slovak", "sk"},
+		{"Slovene", "sl"},
+		{"Finnish", "fi"},
+		{"Swedish", "sv"},
+		{"Turkish", "tr"},
+		{"Flemish", "-flemish-"},
+		{"Walloon", "wa"},
+		{"<2C>", "2C"},
+		{"<2D>", "2D"},
+		{"<2E>", "2E"},
+		{"<2F>", "2F"},
+		{"<30>", "30"},
+		{"<31>", "31"},
+		{"<32>", "32"},
+		{"<33>", "33"},
+		{"<34>", "34"},
+		{"<35>", "35"},
+		{"<36>", "36"},
+		{"<37>", "37"},
+		{"<38>", "38"},
+		{"<39>", "39"},
+		{"Void", "-void-"},
+		{"<41>", "41"},
+		{"<42>", "42"},
+		{"<43>", "43"},
+		{"<44>", "44"},
+		{"Zulu", "zu"}, 
+		{"Vietnamese", "vi"},
+		{"Uzbek", "uz"},
+		{"Urdu", "ur"},
+		{"Ukrainian", "uk"},
+		{"Thai", "th"},
+		{"Telugu", "te"},
+		{"Tatar", "tt"},
+		{"Tamil", "ta"},
+		{"Tadzhik", "tg"},
+		{"Swahili", "sw"},
+		{"Sranan Tongo", "-sranan-tongo-"},
+		{"Somali", "so"},
+		{"Sinhalese", "si"},
+		{"Shona", "sn"},
+		{"Serbo-Croat", "sh"},
+		{"Ruthenian", "-ruthenian-"},
+		{"Russian", "ru"},
+		{"Quechua", "qu"},
+		{"Pushtu", "ps"},
+		{"Punjabi", "pa"},
+		{"Persian", "fa"},
+		{"Papamiento", "-papamiento-"},
+		{"Oriya", "or"},
+		{"Nepali", "ne"},
+		{"Ndebele", "nr"},
+		{"Marathi", "mr"},
+		{"Moldavian", "mo"},
+		{"Malaysian", "ms"},
+		{"Malagasay", "mg"},
+		{"Macedonian", "mk"},
+		{"Laotian", "lo"},
+		{"Korean", "ko"},
+		{"Khmer", "km"},
+		{"Kazakh", "kk"},
+		{"Kannada", "kn"},
+		{"Japanese", "ja"},
+		{"Indonesian", "id"},
+		{"Hindi", "hi"},
+		{"Hebrew", "he"},
+		{"Hausa", "ha"},
+		{"Gurani", "gn"},
+		{"Gujurati", "gu"},
+		{"Greek", "el"},
+		{"Georgian", "ka"},
+		{"Fulani", "ff"},
+		{"Dari", "fa"},
+		{"Churash", "cv"},
+		{"Chinese", "zh"},
+		{"Burmese", "my"},
+		{"Bulgarian", "bg"},
+		{"Bengali", "bn"},
+		{"Belorussian", "be"},
+		{"Bambora", "bm"},
+		{"Azerbijani", "az"},
+		{"Assamese", "as"},
+		{"Armenian", "hy"},
+		{"Arabic", "ar"},
+		{"Amharic", "am"}
+	};
+	
+	private final static String[] ecc_E0 = {"  ", "DE", "DZ", "AD", "IL", "IT", "BE", "RU", "PS", "AL", "AT", "HU", "MT", "DE", "  ", "EG"};
+	private final static String[] ecc_E1 = {"  ", "GR", "CY", "SM", "CH", "JO", "FI", "LU", "BG", "DK", "GI", "IQ", "GB", "LY", "RO", "FR"};
+	private final static String[] ecc_E2 = {"  ", "MA", "CZ", "PL", "VA", "SK", "SY", "TN", "  ", "LI", "IS", "MC", "LT", "RS/YU", "ES", "NO"};
+	private final static String[] ecc_E3 = {"  ", "ME", "IE", "TR", "MK", "TJ", "  ", "  ", "NL", "LV", "LB", "AZ", "HR", "KZ", "SE", "BY"};
+	private final static String[] ecc_E4 = {"  ", "MD", "EE", "KG", "  ", "  ", "UA", "KS", "PT", "SI", "AM", "UZ", "GE", "  ", "TM", "BA"};
+	private final static String[] ecc_D0 = {"  ", "CM", "DZ/CF", "DJ", "MG", "ML", "AO", "GQ", "GA", "  ", "ZA", "BF", "CG", "TG", "BJ", "MW"};
+	private final static String[] ecc_D1 = {"  ", "NA", "LR", "GH", "MR", "CV/ST", "  ", "SN", "GM", "BI", "??", "BW", "KM", "TZ", "ET", "NG"};
+	private final static String[] ecc_D2 = {"  ", "SL", "ZW", "MZ", "UG", "SZ", "GN", "SO", "NE", "TD", "GW", "CD", "CI", "  ", "ZM", "ER"};
+	private final static String[] ecc_D3 = {"  ", "  ", "  ", "EH", "??", "RW", "LS", "  ", "SC", "  ", "MU", "  ", "SD", "  ", "  ", "  "};
+	private final static String[] ecc_A0 = {"US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "  ", "US/VI/PR", "US/VI/PR"};
+
+	private final static String[] ecc_A1 = {"  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "CA", "CA", "CA", "CA", "GL"};
+	private final static String[] ecc_A2 = {"  ", "AI", "AG", "EC", "  ", "BB", "BZ", "KY", "CR", "CU", "AR", "BR", "BM", "AN", "GP", "BS"};
+	private final static String[] ecc_A3 = {"  ", "BO", "CO", "JM", "MQ", "GF", "PY", "NI", "  ", "PA", "DM", "DO", "CL", "GD", "  ", "GY"};
+	private final static String[] ecc_A4 = {"  ", "GT", "HN", "AW", "  ", "MS", "TT", "PE", "SR", "UY", "KN", "LC", "SV", "HT", "VE", "  "};
+	private final static String[] ecc_A5 = {"  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "MX", "VC", "MX", "MX", "MX/VG"};
+	private final static String[] ecc_A6 = {"  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "PM"};
+	private final static String[] ecc_F0 = {"  ", "AU", "AU", "AU", "AU", "AU", "AU", "AU", "AU", "SA", "AF", "MM", "CN", "KP", "BH", "MY"};
+	private final static String[] ecc_F1 = {"  ", "KI", "BT", "BD", "PK", "FJ", "OM", "NR", "IR", "NZ", "SB", "BN", "LK", "TW", "KR", "HK"};
+	private final static String[] ecc_F2 = {"  ", "KW", "QA", "KH", "WS", "IN", "MO", "VN", "PH", "JP", "SG", "MV", "ID", "AE", "NP", "VU"};
+	private final static String[] ecc_F3 = {"  ", "LA", "TH", "TO", "  ", "  ", "  ", "  ", "  ", "PG", "  ", "YE", "  ", "  ", "FM", "MN"};
+	private final static String[] ecc_F4 = {"  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  "};
+
+	
+	public final static String getISOCountryCode(int piCC, int ecc) {
+		switch(ecc) {
+		case 0: return "None";
+		case 0xE0: return ecc_E0[piCC];
+		case 0xE1: return ecc_E1[piCC];
+		case 0xE2: return ecc_E2[piCC];
+		case 0xE3: return ecc_E3[piCC];
+		case 0xE4: return ecc_E4[piCC];
+		case 0xD0: return ecc_D0[piCC];
+		case 0xD1: return ecc_D1[piCC];
+		case 0xD2: return ecc_D2[piCC];
+		case 0xD3: return ecc_D3[piCC];
+		case 0xA0: return ecc_A0[piCC];
+		case 0xA1: return ecc_A1[piCC];
+		case 0xA2: return ecc_A2[piCC];
+		case 0xA3: return ecc_A3[piCC];
+		case 0xA4: return ecc_A4[piCC];
+		case 0xA5: return ecc_A5[piCC];
+		case 0xA6: return ecc_A6[piCC];
+		case 0xF0: return ecc_F0[piCC];
+		case 0xF1: return ecc_F1[piCC];
+		case 0xF2: return ecc_F2[piCC];
+		case 0xF3: return ecc_F3[piCC];
+		case 0xF4: return ecc_F4[piCC];
+		default: return "Invalid";
+		}
+	}
+	
 	public final static int calcSyndrome(int bloc) {
 		int synd = 0;
 		for(int i=0; i<26; i++) {

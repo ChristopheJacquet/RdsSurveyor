@@ -32,6 +32,8 @@
 package eu.jacquet80.rds.oda;
 
 public class RTPlus extends ODA {
+	public static int AID = 0x4BD7;
+	
 	private static String[] classNames = {
 		"DUMMY_CLASS",
 		"ITEM.TITLE",
@@ -159,6 +161,11 @@ public class RTPlus extends ODA {
 				}
 			}
 		}
+	}
+
+	@Override
+	public int getAID() {
+		return AID;
 	}
 
 }

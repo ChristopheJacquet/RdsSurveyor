@@ -51,6 +51,9 @@ public abstract class Station {
 	private String[] psPage;
 	private String dynamicPSmessage;
 	protected int pty = 0;
+	protected char[] ptyn = null;
+	private boolean tp, ta;
+	protected int timeOfLastPI = 0;
 	
 	protected static String[] ptyLabels = {
 		"No programme type or undefined",
@@ -134,6 +137,12 @@ public abstract class Station {
 		}
 	}
 	
+	public void setPTYNChars(int position, char ... characters) {
+		if(ptyn == null) ptyn = new char[8];
+		
+		setChars(ptyn, position, characters);
+	}
+	
 	protected boolean setPI(int pi) {
 		// initially, we try to acquire PI
 		if(this.pi == 0) {
@@ -150,6 +159,11 @@ public abstract class Station {
 			}
 		} else badPI = 0;
 		return true;
+	}
+	
+	public void pingPI(int time) {
+		timeOfLastPI = time;
+		badPI = 0;
 	}
 
 	protected static int channelToFrequency(int channel) {
@@ -183,7 +197,7 @@ public abstract class Station {
 		}
 	}
 	
-	protected String afsToString() {
+	public String afsToString() {
 		StringBuffer res = new StringBuffer();
 		for(AFList l : afs.values()) {
 			if(l.getTransmitterFrequency() == 0) continue;
@@ -231,10 +245,30 @@ public abstract class Station {
 	public int getPTY() {
 		return pty;
 	}
+	
+	public String getPTYlabel() {
+		return ptyLabels[pty];
+	}
 
 	public String addMappedFreq(int channel, int mappedChannel) {
 		// not implemented here, mapped frequencies only exist for other networks
 		return null;
+	}
+	
+	public void setTP(boolean tp) {
+		this.tp = tp;
+	}
+	
+	public void setTA(boolean ta) {
+		this.ta = ta;
+	}
+	
+	public boolean getTP() {
+		return tp;
+	}
+	
+	public boolean getTA() {
+		return ta;
 	}
 
 }
