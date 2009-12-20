@@ -135,8 +135,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 			
 			// Groups 0A & 0B: to extract PS segment we need blocks 1 and 3
 			if(blocksOk[3]) {
-				char ch1 = (char) ( (blocks[3]>>8) & 0xFF);
-				char ch2 = (char) (blocks[3] & 0xFF);
+				char ch1 = RDS.toChar( (blocks[3]>>8) & 0xFF);
+				char ch2 = RDS.toChar(blocks[3] & 0xFF);
 				console.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
 				station.setPSChars(addr, ch1, ch2);
 			}
@@ -179,12 +179,13 @@ public class GroupLevelDecoder implements RDSDecoder {
 				int opc = (blocks[2] >> 8) & 0xF;
 				int ecc = blocks[2] & 0xFF;
 				console.printf("OPC=%01X ECC=%02X ", opc, ecc);
+				station.setECC(ecc);
 				if(pi != 0) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
 				break;
 				
 			case 1:
 				int tmcid = blocks[2] & 0xFFF;
-				console.printf("TMC (old way) ID=%03X", tmcid);
+				console.printf("TMC (old way) ID=0x%03X / (dec)%d", tmcid, tmcid);
 				
 				// TODO need a cleaner way to connect application to specific groups (more general than ODA)
 				// connect 8A groups with the TMC application
@@ -193,9 +194,12 @@ public class GroupLevelDecoder implements RDSDecoder {
 				appTMC.setStation(station);
 				appTMC.setConsole(console);
 				break;
+			
+			
 				
 			case 3:
 				int langID = blocks[2] & 0xFF;
+				station.setLanguage(langID);
 				console.printf("Language: %02X [%s]", langID, 
 						langID < RDS.languages.length ? RDS.languages[langID][1] : "");
 				break;
@@ -212,14 +216,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 			char ch1 = '?', ch2 = '?', ch3 = '?', ch4 = '?';
 			
 			if(blocksOk[2]) {
-				ch1 = (char) ( (blocks[2]>>8) & 0xFF);
-				ch2 = (char) (blocks[2] & 0xFF);
+				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
+				ch2 = RDS.toChar(blocks[2] & 0xFF);
 				station.setRTChars(ab, addr*2, ch1, ch2);
 			}
 			
 			if(blocksOk[3]) {
-				ch3 = (char) ( (blocks[3]>>8) & 0xFF);
-				ch4 = (char) (blocks[3] & 0xFF);
+				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
+				ch4 = RDS.toChar(blocks[3] & 0xFF);
 				station.setRTChars(ab, addr*2+1, ch3, ch4);
 			}
 			
@@ -246,11 +250,11 @@ public class GroupLevelDecoder implements RDSDecoder {
 				oda = ODA.forAID(aid);
 				
 				if(oda != null) {
-					console.print("Unknown AID!");
-					
 					station.setODAforGroup(odaG, odaV, oda);
 					oda.setStation(station);
 					oda.setConsole(console);
+				} else {
+					console.print("Unknown AID!");
 				}
 			}
 			
@@ -342,8 +346,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				else {
 					console.print("Alpha message: msg[" + idx + "]=\"");
 					for(int i=2; i<=3; i++) {
-						console.print((char)((blocks[i]>>8) & 0xFF));
-						console.print((char)(blocks[i] & 0xFF));
+						console.print(RDS.toChar((blocks[i]>>8) & 0xFF));
+						console.print(RDS.toChar(blocks[i] & 0xFF));
 					}
 					console.print("\"");
 				}
@@ -369,15 +373,15 @@ public class GroupLevelDecoder implements RDSDecoder {
 			console.print("PTYN, flag=" + (char)('A' + ab) + ", pos=" + pos + ": \"");
 			
 			if(blocksOk[2]) {
-				char c1 = (char)((blocks[2]>>8) & 0xFF);
-				char c2 = (char)(blocks[2] & 0xFF);
+				char c1 = RDS.toChar((blocks[2]>>8) & 0xFF);
+				char c2 = RDS.toChar(blocks[2] & 0xFF);
 				station.setPTYNChars(pos*2, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
 			
 			if(blocksOk[3]) {
-				char c1 = (char)((blocks[3]>>8) & 0xFF);
-				char c2 = (char)(blocks[3] & 0xFF);
+				char c1 = RDS.toChar((blocks[3]>>8) & 0xFF);
+				char c2 = RDS.toChar(blocks[3] & 0xFF);
 				station.setPTYNChars(pos*2+1, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
@@ -421,8 +425,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				// to extract ON info we need block 2
 				if(blocksOk[2]) {
 					if(variant >= 0 && variant <= 3) {  // ON PS
-						char ch1 = (char) ( (blocks[2]>>8) & 0xFF);
-						char ch2 = (char) ( blocks[2] & 0xFF);
+						char ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
+						char ch2 = RDS.toChar( blocks[2] & 0xFF);
 						console.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
 						
 						if(on != null) on.setPSChars(variant, ch1, ch2);
@@ -488,11 +492,34 @@ public class GroupLevelDecoder implements RDSDecoder {
 		int bitTime = 0;
 		GroupReader reader = (GroupReader)rdsReader;
 		final boolean[] allOk = {true, true, true, true};
+		final boolean[] noneOk = {false, false, false, false};
+		int[] nextBlocks = reader.getGroup();
+		int lastPI = 0;
+		int lastPTY = 0;
 		
 		for(;;) {
-			int[] blocks = reader.getGroup();
+			int[] blocks = nextBlocks;
+			nextBlocks = reader.getGroup();
+			
 			console.printf("%04d: [%04X %04X-%04X %04X] ", bitTime / 26, blocks[0], blocks[1], blocks[2], blocks[3]);
-			processGroup(4, allOk, blocks, bitTime, log);
+			boolean[] blocksOk = allOk;
+			
+			// detect isolated groups with wrong PI
+			if(lastPI == nextBlocks[0] && lastPI != blocks[0]) {
+				blocksOk = noneOk;
+			} else lastPI = blocks[0];
+			
+			// detect isolated groups with wrong PTY/TP
+			if(lastPTY == ((nextBlocks[1]>>5) & 0x3F) && lastPTY != ((blocks[1]>>5) & 0x3F)) {
+				blocksOk = noneOk;
+			} else lastPTY = ((blocks[1]>>5) & 0x3F);
+			
+			// detect spurious B-type groups
+			if(((blocks[1]>>11) & 1) == 1) {
+				if(blocks[0] != blocks[2]) blocksOk = noneOk;
+			}
+			
+			processGroup(4, blocksOk, blocks, bitTime, log);
 			console.println();
 			bitTime += 104;  // 104 bits per group
 			if(log != null) log.notifyGroup();

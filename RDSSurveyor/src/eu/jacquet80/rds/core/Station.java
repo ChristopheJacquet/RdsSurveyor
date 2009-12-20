@@ -172,6 +172,7 @@ public abstract class Station {
 	}
 	
 	protected static String frequencyToString(int freq) {
+		if(freq == 875) return "Illegal";
 		return String.format("%d.%d", freq/10, freq%10);
 	}
 	
