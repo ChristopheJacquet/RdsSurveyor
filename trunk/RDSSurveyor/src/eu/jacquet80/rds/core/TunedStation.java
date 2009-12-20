@@ -47,6 +47,7 @@ public class TunedStation extends Station {
 	private boolean usesRP = false;
 	private int di = 0;
 	private int totalBlocks, totalBlocksOk;
+	private int ecc, language;
 	
 	
 	public TunedStation(int pi, int time) {
@@ -98,7 +99,7 @@ public class TunedStation extends Station {
 					res.append(String.format("\nRT %c = \"", (char)('a'+ab)));
 					for(int j=0; j<64; j++) {
 						if(rt[ab][j] == 0x0D) break;
-						res.append(rt[ab][j]);
+						res.append(rt[ab][j] >= 32 ? rt[ab][j] : "\\x" + ((int)rt[ab][j]));
 					}
 					res.append('\"');
 					break;
@@ -126,7 +127,14 @@ public class TunedStation extends Station {
 				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
 				.append((di & 2) == 0 ? "Not artificial head" : "Artificial head").append(", ")
 				.append((di & 4) == 0 ? "Not compressed" : "Compressed").append(", ")
-				.append((di & 8) == 0 ? "Static PTY" : "Dynamic PTY");
+				.append((di & 8) == 0 ? "Static PTY" : "Dynamic PTY")
+				.append("\n");
+		
+		if(ecc != 0) {
+			res.append("Country: " + RDS.getISOCountryCode((pi>>12)&0xF, ecc)).append("\n");
+		}
+		
+		if(language < RDS.languages.length) res.append("Language: ").append(RDS.languages[language][0]).append("\n");
 				
 		
 		return res.toString();
@@ -208,7 +216,7 @@ public class TunedStation extends Station {
 	
 	public String getRT() {
 		if(latestRT == null) return null;
-		else return new String(latestRT);
+		else return new String(latestRT).split("\n")[0];
 	}
 
 	public int getTotalBlocks() {
@@ -217,5 +225,13 @@ public class TunedStation extends Station {
 	
 	public int getTotalBlocksOk() {
 		return totalBlocksOk;
+	}
+	
+	public void setECC(int ecc) {
+		this.ecc = ecc;
+	}
+	
+	public void setLanguage(int lang) {
+		this.language = lang;
 	}
 }
