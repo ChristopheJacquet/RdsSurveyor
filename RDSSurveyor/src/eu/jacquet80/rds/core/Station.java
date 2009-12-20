@@ -143,22 +143,8 @@ public abstract class Station {
 		setChars(ptyn, position, characters);
 	}
 	
-	protected boolean setPI(int pi) {
-		// initially, we try to acquire PI
-		if(this.pi == 0) {
-			this.pi = pi;
-			return true;
-		}
-		
-		// after that, react to PI changes
-		if(this.pi != pi) {
-			badPI++;
-			if(badPI > 3) {
-				///reset(pi);
-				return false;
-			}
-		} else badPI = 0;
-		return true;
+	protected void setPI(int pi) {
+		this.pi = pi;
 	}
 	
 	public void pingPI(int time) {

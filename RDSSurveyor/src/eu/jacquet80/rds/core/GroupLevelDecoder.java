@@ -24,6 +24,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 	private double time = 0.0;
 	private TunedStation station = new TunedStation(0), realStation = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
+	private int badPIcount = 0;
 	
 	private final String[] RP_TNGD_VALUES = {
 		"No RP",
@@ -87,13 +88,18 @@ public class GroupLevelDecoder implements RDSDecoder {
 		if(blocksOk[0]) {
 			pi = blocks[0];
 			console.printf("PI=%04X, ", pi);
+			if(station.getPI() == 0) {
+				station.setPI(pi);
+			}
 			if(station.getPI() == pi) {
 				// same PI as before => same station
 				station.pingPI(bitTime);
+				badPIcount = 0;
 				synced = true;
 			} else {
 				// different PI => new station or PI error
-				if(! station.setPI(pi) ) {
+				badPIcount++;
+				if(badPIcount > 3 ) {
 					// several different PIs in a row => new station
 					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
 					log.addMessage(new StationTuned(bitTime, station));
