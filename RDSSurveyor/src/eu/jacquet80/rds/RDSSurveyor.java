@@ -25,6 +25,7 @@ import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
+import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
@@ -66,6 +67,8 @@ public class RDSSurveyor {
 				liveInput = true;
 			} else if("-inbinfile".equals(args[i])) {
 				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
+			} else if("-insyncbinfile".equals(args[i])) {
+				newReader = new SyncBinaryFileBitReader(new File(getParam("insyncbinfile", args, ++i)));
 			} else if("-inbinstrfile".equals(args[i])) {
 				newReader = new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i)));
 			} else if("-ingrouphexfile".equals(args[i])) {
@@ -139,6 +142,7 @@ public class RDSSurveyor {
 			frame.pack();
 			frame.setVisible(true);
 		
+			/*
 			JFrame fTL = new JFrame("Timeline");
 			final TimeLine timeLine = new TimeLine(log);
 			fTL.setLayout(new BorderLayout());
@@ -146,15 +150,15 @@ public class RDSSurveyor {
 			fTL.setPreferredSize(new Dimension(1000, 200));
 			fTL.pack();
 			fTL.setVisible(true);
+			*/
 			
-			// TODO uncomment
-			//MainWindow mainWindow = new MainWindow(log);
-			//mainWindow.setVisible(true);
+			MainWindow mainWindow = new MainWindow(log);
+			mainWindow.setVisible(true);
 			
 			log.addGroupListener(new Runnable() {
 				public void run() {
 					area.setText(streamLevelDecoder.getTunedStation().toString().replace("\n", "\r\n"));
-					timeLine.update();
+					//timeLine.update();
 				}
 			});
 		}

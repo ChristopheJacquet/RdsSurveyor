@@ -28,42 +28,44 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.ui;
+package eu.jacquet80.rds.ui.app;
 
-import java.io.PrintStream;
+import java.awt.BorderLayout;
+import java.awt.Font;
 
-import eu.jacquet80.rds.core.TunedStation;
-import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.Log;
-import eu.jacquet80.rds.log.StationLost;
-import eu.jacquet80.rds.log.StationTuned;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
 
-public class Segmenter {
-	private final PrintStream console;
-	private final Visitor visitor = new Visitor();
-	private int startTime = 0;
+import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.app.oda.AlertC;
+
+public class AlertCPanel extends AppPanel {
+	private static final long serialVersionUID = 4835434126469108572L;
+	private AlertC app;
+
+	private final JLabel lblProviderName = new JLabel();
 	
-	public Segmenter(PrintStream console) {
-		this.console = console;
-	}
-	
-	public void registerAtLog(Log log) {
-		log.addNewMessageListener(visitor);
-	}
-	
-	private class Visitor extends DefaultLogMessageVisitor {
-		public void visit(StationLost stationLost) {
-			int endTime = stationLost.getBitTime();
-			TunedStation station = stationLost.getStation();
-			console.println((int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
-					String.format("%04X", station.getPI()) + "\t " + 
-					String.format("%10s", station.getTotalBlocksOk() + "/" + station.getTotalBlocks()) + "\t " +
-					station.getPS() + "\t " + station.getStationName() + "\t " + station.getDynamicPSmessage());
-		}
-
-		public void visit(StationTuned stationTuned) {
-			startTime = stationTuned.getBitTime();
-		}
+	public AlertCPanel() {
+		super(new BorderLayout());
 		
+		lblProviderName.setHorizontalAlignment(SwingConstants.CENTER);
+		lblProviderName.setFont(new Font("monospaced", Font.PLAIN, 20));
+		add(lblProviderName, BorderLayout.NORTH);
+	}
+	
+	public AlertCPanel(Application app) {
+		this();
+		setApplication(app);
+	}
+
+	@Override
+	public void setApplication(Application app) {
+		super.setApplication(app);
+		this.app = (AlertC)app;
+	}
+	
+	@Override
+	public void notifyChange() {
+		lblProviderName.setText(app.getProviderName());
 	}
 }

@@ -29,7 +29,7 @@
 */
 
 
-package eu.jacquet80.rds.oda;
+package eu.jacquet80.rds.app.oda;
 
 public class RTPlus extends ODA {
 	public static int AID = 0x4BD7;
@@ -108,7 +108,7 @@ public class RTPlus extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk) {
+	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
 		// Main RT+ group handling
 		if(type == 3 && version == 0 && blocksOk[2]) {
 			int ert = (blocks[2]>>13) & 1;

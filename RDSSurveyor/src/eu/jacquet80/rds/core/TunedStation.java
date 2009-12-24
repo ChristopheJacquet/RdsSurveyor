@@ -30,11 +30,13 @@
 
 package eu.jacquet80.rds.core;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import eu.jacquet80.rds.oda.ODA;
+import eu.jacquet80.rds.app.Application;
 
 
 public class TunedStation extends Station {
@@ -43,11 +45,11 @@ public class TunedStation extends Station {
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] blockCount = new int[17][2];
 	private Date date = null;
-	private ODA[] odas = new ODA[32];
-	private boolean usesRP = false;
+	private Application[] applications = new Application[32];
 	private int di = 0;
 	private int totalBlocks, totalBlocksOk;
 	private int ecc, language;
+	private int dateBitTime = -1;
 	
 	
 	public TunedStation(int pi, int time) {
@@ -83,8 +85,7 @@ public class TunedStation extends Station {
 		totalBlocks = 0;
 		totalBlocksOk = 0;
 		
-		odas = new ODA[32];
-		usesRP = false;
+		applications = new Application[32];
 		di = 0;
 	}
 	
@@ -163,29 +164,22 @@ public class TunedStation extends Station {
 		blockCount[16][0]++;
 	}
 	
-	public void setUsesRP(boolean usesRP) {
-		this.usesRP = usesRP;
-	}
-	
-	public boolean isUsingRP() {
-		return usesRP;
-	}
-	
 	public void setRTChars(int ab, int position, char ... characters) {
 		setChars(rt[ab], position, characters);
 		latestRT = rt[ab];
 	}
 	
-	public void setODAforGroup(int type, int version, ODA oda) {
-		odas[type<<1 | version] = oda;
+	public void setApplicationForGroup(int type, int version, Application app) {
+		applications[(type<<1) | version] = app;
 	}
 	
-	public ODA getODAforGroup(int type, int version) {
-		 return odas[type<<1 | version];
+	public Application getApplicationForGroup(int type, int version) {
+		 return applications[(type<<1) | version];
 	}
 	
-	public void setDate(Date date) {
+	public void setDate(Date date, int bitTime) {
 		this.date = date;
+		this.dateBitTime = bitTime;
 	}
 	
 	public synchronized void addON(Station on) {
@@ -233,5 +227,13 @@ public class TunedStation extends Station {
 	
 	public void setLanguage(int lang) {
 		this.language = lang;
+	}
+	
+	public Date getDateForBitTime(int bitTime) {
+		if(date == null) return null;
+		Calendar c = new GregorianCalendar();
+		c.setTime(date);
+		c.add(Calendar.SECOND, (int)((bitTime - dateBitTime) / 1187.5f));
+		return c.getTime();
 	}
 }
