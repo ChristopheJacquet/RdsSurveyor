@@ -16,4 +16,7 @@ public class DefaultLogMessageVisitor implements LogMessageVisitor {
 	public void visit(StationTuned stationTuned) {
 	}
 
+	public void visit(ApplicationChanged appChanged) {
+	}
+
 }

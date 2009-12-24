@@ -40,11 +40,11 @@ import java.text.SimpleDateFormat;
 import javax.swing.JPanel;
 
 import eu.jacquet80.rds.log.ClockTime;
+import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EONReturn;
 import eu.jacquet80.rds.log.EONSwitch;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.LogMessage;
-import eu.jacquet80.rds.log.LogMessageVisitor;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
 
@@ -81,7 +81,7 @@ public class TimeLine extends JPanel {
 	
 	private final static DateFormat timeFormat = new SimpleDateFormat("HH:mm");
 
-	class LogMessagePainter implements LogMessageVisitor {
+	class LogMessagePainter extends DefaultLogMessageVisitor {
 		private final Graphics2D g;
 
 		public LogMessagePainter(Graphics g) {

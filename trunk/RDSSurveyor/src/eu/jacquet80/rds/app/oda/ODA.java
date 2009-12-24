@@ -28,42 +28,36 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.ui;
+package eu.jacquet80.rds.app.oda;
 
-import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
 
-import eu.jacquet80.rds.core.TunedStation;
-import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.Log;
-import eu.jacquet80.rds.log.StationLost;
-import eu.jacquet80.rds.log.StationTuned;
+import eu.jacquet80.rds.app.Application;
 
-public class Segmenter {
-	private final PrintStream console;
-	private final Visitor visitor = new Visitor();
-	private int startTime = 0;
+public abstract class ODA extends Application {
+	private static Map<Integer, Class<? extends ODA>> odas = new HashMap<Integer, Class<? extends ODA>>();
 	
-	public Segmenter(PrintStream console) {
-		this.console = console;
+	public abstract int getAID();
+	
+	private static void register(int aid, Class<? extends ODA> oda) {
+		odas.put(aid, oda);
 	}
 	
-	public void registerAtLog(Log log) {
-		log.addNewMessageListener(visitor);
+	public static ODA forAID(int aid) {
+		try {
+			Class<? extends ODA> theClass = odas.get(aid);
+			if(theClass != null) return theClass.newInstance();
+			else return null;
+		} catch (InstantiationException e) {
+			return null;
+		} catch (IllegalAccessException e) {
+			return null;
+		}
 	}
 	
-	private class Visitor extends DefaultLogMessageVisitor {
-		public void visit(StationLost stationLost) {
-			int endTime = stationLost.getBitTime();
-			TunedStation station = stationLost.getStation();
-			console.println((int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
-					String.format("%04X", station.getPI()) + "\t " + 
-					String.format("%10s", station.getTotalBlocksOk() + "/" + station.getTotalBlocks()) + "\t " +
-					station.getPS() + "\t " + station.getStationName() + "\t " + station.getDynamicPSmessage());
-		}
-
-		public void visit(StationTuned stationTuned) {
-			startTime = stationTuned.getBitTime();
-		}
-		
+	static {
+		register(RTPlus.AID, RTPlus.class);
+		register(AlertC.AID, AlertC.class);
 	}
 }

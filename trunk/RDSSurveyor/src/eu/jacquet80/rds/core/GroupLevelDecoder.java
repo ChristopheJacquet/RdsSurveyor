@@ -7,16 +7,19 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
 
+import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.app.Paging;
+import eu.jacquet80.rds.app.oda.AlertC;
+import eu.jacquet80.rds.app.oda.ODA;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.RDSReader;
+import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.ClockTime;
 import eu.jacquet80.rds.log.EONReturn;
 import eu.jacquet80.rds.log.EONSwitch;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
-import eu.jacquet80.rds.oda.AlertC;
-import eu.jacquet80.rds.oda.ODA;
 
 public class GroupLevelDecoder implements RDSDecoder {
 	private int[] qualityHistory = new int[40];
@@ -47,19 +50,6 @@ public class GroupLevelDecoder implements RDSDecoder {
 		synced = false;
 	}
 	
-	private char decodeBCD(int bcd, int pos) {
-		int val =  ((bcd>>(pos*4)) & 0xF);
-		if(val < 10) return (char)('0' + val);
-		else if(val == 10) return ' ';
-		else return '!';
-	}
-	
-	private String decodeBCDWord(int word) {
-		String res = "";
-		for(int i=3; i>=0; i--) res += decodeBCD(word, i);
-		return res;
-	}
-	
 	private int processBasicTuningBits(int block1) {
 		// Groups 0A, 0B, 15B : for TA, M/S and DI we need only block 1 (or block 3 for 15B)
 		int ta = (block1>>4) & 1;
@@ -75,6 +65,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 	}
 	
 	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime, Log log) {
+		Application newApp = null;
+		
 		realStation = null;
 		time += 104 / 1187.5;
 		
@@ -89,7 +81,9 @@ public class GroupLevelDecoder implements RDSDecoder {
 			pi = blocks[0];
 			console.printf("PI=%04X, ", pi);
 			if(station.getPI() == 0) {
+				// new station
 				station.setPI(pi);
+				log.addMessage(new StationTuned(bitTime, station));
 			}
 			if(station.getPI() == pi) {
 				// same PI as before => same station
@@ -159,7 +153,15 @@ public class GroupLevelDecoder implements RDSDecoder {
 			int bsi = (blocks[1]) & 3;       // battery saving interval sync and id
 			console.print("RP Config: [" + RP_TNGD_VALUES[tngd]);
 			if(tngd > 0) {   // print the rest only if there IS RP
-				station.setUsesRP(true);
+				Application app = station.getApplicationForGroup(7, 0);
+				if(app == null) {
+					newApp = app = new Paging(station, console);
+					
+					station.setApplicationForGroup(7, 0, app);
+				} else if(!(app instanceof Paging)) {
+					console.print("Error: this group indicates the presence of paging, while group 7A is used for '" + app.getName() + "'!");
+				}
+
 				if((bsi & 2) > 0) console.print(", Start of Interval");
 				else console.print(", Interval number bit=" + (bsi & 1));
 			}
@@ -195,8 +197,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				
 				// TODO need a cleaner way to connect application to specific groups (more general than ODA)
 				// connect 8A groups with the TMC application
-				ODA appTMC = new AlertC();
-				station.setODAforGroup(8, 0, appTMC);
+				Application appTMC = new AlertC();
+				station.setApplicationForGroup(8, 0, appTMC);
 				appTMC.setStation(station);
 				appTMC.setConsole(console);
 				break;
@@ -246,26 +248,29 @@ public class GroupLevelDecoder implements RDSDecoder {
 			else console.printf("AID #%04X ", aid);
 			
 			// return the ODA
-			ODA oda = station.getODAforGroup(odaG, odaV);
-			if(oda != null) {
-				if(oda.getAID() != aid) {
-					console.printf("Current AID for group (%04X) does not match new AID (%04X)", oda.getAID(), aid);
-					oda = null;
+			Application app = station.getApplicationForGroup(odaG, odaV);
+			if(app != null) {
+				if(!(app instanceof ODA)) {
+					console.printf("Currently group assigned to '%s' (non-ODA); it should not be assigned to AID %04X", app.getName(), aid);
+				} else if(((ODA)app).getAID() != aid) { 
+					console.printf("Current AID for group (%04X) does not match new AID (%04X)", ((ODA)app).getAID(), aid);
+					app = null;
 				}
 			} else {
-				oda = ODA.forAID(aid);
+				app = ODA.forAID(aid);
 				
-				if(oda != null) {
-					station.setODAforGroup(odaG, odaV, oda);
-					oda.setStation(station);
-					oda.setConsole(console);
+				if(app != null) {
+					newApp = app;
+					station.setApplicationForGroup(odaG, odaV, app);
+					app.setStation(station);
+					app.setConsole(console);
 				} else {
 					console.print("Unknown AID!");
 				}
 			}
 			
-			if(oda != null) {
-				console.print("(" + oda.getName() + "): ");
+			if(app != null) {
+				console.print("(" + app.getName() + "): ");
 			}
 			else console.print(" ");
 			
@@ -274,12 +279,12 @@ public class GroupLevelDecoder implements RDSDecoder {
 			else console.print("group " + odaG + (char)('A' + odaV) + "   ");
 			
 			// if data ok, pass it to the ODA handler
-			if(oda != null && blocksOk[2]) {
+			if(app != null && blocksOk[2]) {
 				console.printf("ODA data=%04X", blocks[2]);
 				
 				console.println();
 				console.print("\t--> ");
-				oda.receiveGroup(type, version, blocks, blocksOk);
+				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
 			}
 		}
 		
@@ -305,14 +310,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 			Date date = cal.getTime();
 			
 			console.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
-			station.setDate(date);
+			station.setDate(date, bitTime);
 			log.addMessage(new ClockTime(bitTime, date));
 			
 		}
 		
 		// Groups 5A-9A, 11A-13A: TDC, we need blocks 1, 2 and 3
 		// but don't handle 7A groups here if using RP
-		if(((type >= 5 && type <= 9) || (type >= 11 && type <= 13)) && version == 0 && !(station.isUsingRP() && type==7)) {
+		if(((type >= 5 && type <= 9) || (type >= 11 && type <= 13)) && version == 0) {
 			int a = (blocks[1] & 0x1F);
 
 			switch(type) {
@@ -329,46 +334,22 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[2] && blocksOk[3])
 				console.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
 			
-			ODA oda = station.getODAforGroup(type, version);
-			if(oda != null) {
+			Application app = station.getApplicationForGroup(type, version);
+			if(app != null) {
 				console.println();
-				console.print("\t" + oda.getName() +  " --> ");
-				oda.receiveGroup(type, version, blocks, blocksOk);
+				console.print("\t" + app.getName() +  " --> ");
+				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
+			} else {
+				/*if(blocksOk[2] && blocksOk[3])
+					console.printf(" [%c%c%c%c]", 
+							RDS.toChar((blocks[2]>>8) & 0xFF),
+							RDS.toChar(blocks[2] & 0xFF),
+							RDS.toChar((blocks[3]>>8) & 0xFF),
+							RDS.toChar(blocks[3] & 0xFF));
+							*/
 			}
 		}
 		
-		// Groups 7A used for RP
-		if(type == 7 && version == 0 && station.isUsingRP() && blocksOk[2] && blocksOk[3]) {
-			String addrStr = "addr=" + 
-				decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
-				decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
-
-			console.print("RP: flag=" + (char)('A' + ((blocks[1]>>5) & 1)) + ", ");
-			
-			if((blocks[1] & 0x8) == 8) {
-				int idx = blocks[1] & 0x7;
-				if(idx == 0)
-					console.print("Alpha message: " + addrStr);
-				else {
-					console.print("Alpha message: msg[" + idx + "]=\"");
-					for(int i=2; i<=3; i++) {
-						console.print(RDS.toChar((blocks[i]>>8) & 0xFF));
-						console.print(RDS.toChar(blocks[i] & 0xFF));
-					}
-					console.print("\"");
-				}
-				
-			}
-			if((blocks[1] & 0xC) == 4) console.print("18/15-digit numeric msg: " + addrStr);
-			if((blocks[1] & 0xE) == 2) {
-				console.print("10-digit msg " + (1+(blocks[1] & 1)) + "/2: ");
-				if((blocks[1] & 1) == 0) console.print(addrStr +
-						(", msg=" + decodeBCD(blocks[3], 1)) + (decodeBCD(blocks[3], 0) + "..."));
-				else console.print("msg=..." + decodeBCDWord(blocks[2]) + decodeBCDWord(blocks[3]));
-			}
-			if((blocks[1] & 0xF) == 1) console.print("Part of func");
-			if((blocks[1] & 0xF) == 0) console.print("Beep: " + addrStr);
-		}
 		
 		
 		// Groups 10A: PTYN, we need blocks 1, 2 and 3
@@ -487,6 +468,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 
 		// restore the real station in case 'station' was a dummy one
 		if(realStation != null) station = realStation;
+		
+		if(newApp != null) log.addMessage(new ApplicationChanged(bitTime, null, newApp));
 	}
 	
 	

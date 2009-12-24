@@ -36,4 +36,5 @@ public interface LogMessageVisitor {
 	void visit(EONSwitch eonSwitch);
 	void visit(StationLost stationLost);
 	void visit(StationTuned stationTuned);
+	void visit(ApplicationChanged appChanged);
 }

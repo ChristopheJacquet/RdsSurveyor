@@ -28,56 +28,36 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.ui;
+package eu.jacquet80.rds.app;
 
-import javax.swing.table.AbstractTableModel;
+import java.io.PrintStream;
+import java.util.LinkedList;
 
-import eu.jacquet80.rds.core.Station;
 import eu.jacquet80.rds.core.TunedStation;
 
-public class EONTableModel extends AbstractTableModel {
-	private static final long serialVersionUID = 7466888480643372873L;
-	
-	private static final String[] columnNames = {"PI", "PS*", "PTY", "Traffic", "AF"};
-	
-	private TunedStation station = null;
-	
-	public void setTunedStation(TunedStation station) {
+public abstract class Application {
+	protected TunedStation station = null;
+	protected PrintStream console = System.out;
+	private LinkedList<ChangeListener> changeListeners = new LinkedList<ChangeListener>();
+
+	public void setStation(TunedStation station) {
 		this.station = station;
 	}
-
-	public Class<?> getColumnClass(int columnIndex) {
-		return String.class;
+	
+	public void setConsole(PrintStream console) {
+		this.console = console;
 	}
+	
+	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime);
+	public abstract String getName();
 
-	public int getColumnCount() {
-		return columnNames.length;
+	public void addChangeListener(ChangeListener l) {
+		changeListeners.addLast(l);
 	}
-
-	public String getColumnName(int columnIndex) {
-		return columnNames[columnIndex];
-	}
-
-	public int getRowCount() {
-		return station != null ? station.getONcount() : 0;
-	}
-
-	public Object getValueAt(int rowIndex, int columnIndex) {
-		Station on = station != null ? station.getONbyIndex(rowIndex) : null;
-		if(on == null) return null;
-		
-		switch(columnIndex) {
-		case 0: return String.format("%04X", on.getPI());
-		case 1: return on.getStationName();
-		case 2: return on.getPTY() + " (" + on.getPTYlabel() + ")";
-		case 3: return (on.getTP() ? "TP " : "") + (on.getTA() ? "TA" : "");
-		case 4: return on.afsToString();
-		default: return null;
+	
+	protected void fireChangeListeners() {
+		for(ChangeListener l : changeListeners) {
+			l.notifyChange();
 		}
 	}
-
-	public boolean isCellEditable(int rowIndex, int columnIndex) {
-		return false;
-	}
-
 }

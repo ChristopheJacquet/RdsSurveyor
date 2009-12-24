@@ -46,7 +46,6 @@ public abstract class Station {
 	protected char[] ps = new char[8];
 	protected final Map<Integer, AFList> afs = new HashMap<Integer, AFList>();
 	protected AFList currentAFList = null;
-	private int badPI = 0;
 	private HashMap<String, Integer>[] psSegments;
 	private String[] psPage;
 	private String dynamicPSmessage;
@@ -149,7 +148,6 @@ public abstract class Station {
 	
 	public void pingPI(int time) {
 		timeOfLastPI = time;
-		badPI = 0;
 	}
 
 	protected static int channelToFrequency(int channel) {

@@ -28,7 +28,7 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.oda;
+package eu.jacquet80.rds.app.oda;
 
 import eu.jacquet80.rds.core.RDS;
 
@@ -41,7 +41,7 @@ public class AlertC extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk) {
+	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
 		// in all cases, we need all blocks to proceed
 		if(!blocksOk[2] || !blocksOk[3]) return;
 		
@@ -126,6 +126,8 @@ public class AlertC extends ODA {
 				}
 			}
 		}
+		
+		fireChangeListeners();
 	}
 
 	@Override
@@ -136,5 +138,9 @@ public class AlertC extends ODA {
 	@Override
 	public int getAID() {
 		return AID;
+	}
+	
+	public String getProviderName() {
+		return providerName[0] + providerName[1];
 	}
 }

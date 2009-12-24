@@ -28,49 +28,35 @@
  OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package eu.jacquet80.rds.oda;
+package eu.jacquet80.rds.ui.app;
 
-import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.awt.LayoutManager;
 
-import eu.jacquet80.rds.core.TunedStation;
+import javax.swing.JPanel;
 
-public abstract class ODA {
-	private static Map<Integer, Class<? extends ODA>> odas = new HashMap<Integer, Class<? extends ODA>>();
-	protected TunedStation station = null;
-	protected PrintStream console = System.out;
+import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.app.ChangeListener;
+import eu.jacquet80.rds.app.Paging;
+import eu.jacquet80.rds.app.oda.AlertC;
+
+public abstract class AppPanel extends JPanel implements ChangeListener {
+	private static final long serialVersionUID = -6735379516008375660L;
 	
-	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk);
-	public abstract String getName();
-	public abstract int getAID();
-	
-	public void setStation(TunedStation station) {
-		this.station = station;
+	public void setApplication(Application app) {
+		app.addChangeListener(this);
 	}
 	
-	public void setConsole(PrintStream console) {
-		this.console = console;
+	protected AppPanel(LayoutManager layout) {
+		super(layout);
 	}
 	
-	private static void register(int aid, Class<? extends ODA> oda) {
-		odas.put(aid, oda);
+	public void notifyChange() {
+		repaint();
 	}
 	
-	public static ODA forAID(int aid) {
-		try {
-			Class<? extends ODA> theClass = odas.get(aid);
-			if(theClass != null) return theClass.newInstance();
-			else return null;
-		} catch (InstantiationException e) {
-			return null;
-		} catch (IllegalAccessException e) {
-			return null;
-		}
-	}
-	
-	static {
-		register(RTPlus.AID, RTPlus.class);
-		register(AlertC.AID, AlertC.class);
+	public static AppPanel forApp(Application app) {
+		if(app instanceof Paging) return new PagingPanel(app);
+		if(app instanceof AlertC) return new AlertCPanel(app);
+		return null;
 	}
 }
