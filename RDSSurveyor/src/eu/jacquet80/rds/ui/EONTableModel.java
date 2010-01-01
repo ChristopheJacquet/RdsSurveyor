@@ -70,7 +70,7 @@ public class EONTableModel extends AbstractTableModel {
 		case 0: return String.format("%04X", on.getPI());
 		case 1: return on.getStationName();
 		case 2: return on.getPTY() + " (" + on.getPTYlabel() + ")";
-		case 3: return (on.getTP() ? "TP " : "") + (on.getTA() ? "TA" : "");
+		case 3: return on.trafficInfoString();
 		case 4: return on.afsToString();
 		default: return null;
 		}

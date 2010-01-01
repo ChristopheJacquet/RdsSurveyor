@@ -70,9 +70,9 @@ public class Paging extends Application {
 
 			// Groups 7A used for RP
 			if(type == 7 && version == 0 && blocksOk[2] && blocksOk[3]) {
-				String addrStr = "addr=" + 
-				decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
-				decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
+				String addrStr = 
+					decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
+					decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
 
 				console.print("RP: flag=" + (char)('A' + ((blocks[1]>>5) & 1)) + ", ");
 

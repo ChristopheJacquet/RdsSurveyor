@@ -57,6 +57,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 		int addr = block1 & 3;
 		
 		station.setDIbit(addr, (block1>>2) & 1);
+		station.setTA(ta == 1);
 		
 		console.print("TA=" + ta + ", M/S=" + ms + ", ");
 		
