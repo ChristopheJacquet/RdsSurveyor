@@ -31,6 +31,7 @@
 
 package eu.jacquet80.rds.input;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -50,6 +51,7 @@ public class BinStringFileBitReader implements BitReader {
 			switch(c) {
 			case '0': return false;
 			case '1': return true;
+			case -1: throw new EOFException();
 			}
 		}
 	}

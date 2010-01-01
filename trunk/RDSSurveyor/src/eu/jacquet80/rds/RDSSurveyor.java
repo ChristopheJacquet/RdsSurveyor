@@ -21,7 +21,6 @@ import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
-import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
@@ -30,7 +29,6 @@ import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
-import eu.jacquet80.rds.ui.TimeLine;
 
 public class RDSSurveyor {
 	/**

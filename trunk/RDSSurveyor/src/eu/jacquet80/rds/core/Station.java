@@ -231,6 +231,10 @@ public abstract class Station {
 		return pty;
 	}
 	
+	public String getPTYN() {
+		return ptyn == null ? "" : new String(ptyn);
+	}
+	
 	public String getPTYlabel() {
 		return ptyLabels[pty];
 	}
@@ -256,6 +260,15 @@ public abstract class Station {
 		return ta;
 	}
 
+	
+	public String trafficInfoString() {
+		if(tp) {
+			return "TP" + (ta ? " + TA" : "");
+		} else {
+			if(ta) return "ON with TP";
+			else return "";
+		}
+	}
 }
 
 class AFList {

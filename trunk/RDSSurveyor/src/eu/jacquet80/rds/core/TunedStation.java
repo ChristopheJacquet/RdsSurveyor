@@ -41,6 +41,7 @@ import eu.jacquet80.rds.app.Application;
 
 public class TunedStation extends Station {
 	private char[][] rt = new char[2][64];
+	private boolean[] touchedRT;
 	private char[] latestRT = null;
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] blockCount = new int[17][2];
@@ -87,6 +88,8 @@ public class TunedStation extends Station {
 		
 		applications = new Application[32];
 		di = 0;
+		
+		touchedRT = new boolean[] {false, false};
 	}
 	
 	public String toString() {
@@ -167,6 +170,7 @@ public class TunedStation extends Station {
 	public void setRTChars(int ab, int position, char ... characters) {
 		setChars(rt[ab], position, characters);
 		latestRT = rt[ab];
+		touchedRT[ab] = true;
 	}
 	
 	public void setApplicationForGroup(int type, int version, Application app) {
@@ -180,6 +184,10 @@ public class TunedStation extends Station {
 	public void setDate(Date date, int bitTime) {
 		this.date = date;
 		this.dateBitTime = bitTime;
+	}
+	
+	public Date getDate() {
+		return date;
 	}
 	
 	public synchronized void addON(Station on) {
@@ -208,9 +216,21 @@ public class TunedStation extends Station {
 		di |= val<<(3-pos);				// set it if needed
 	}
 	
+	public String getRT(int idx) {
+		//if(rt[idx] == null) return null;
+		if(!touchedRT[idx]) return "";
+		else return new String(rt[idx]).split("\n")[0];
+	}
+	
 	public String getRT() {
 		if(latestRT == null) return null;
 		else return new String(latestRT).split("\n")[0];
+	}
+	
+	public int whichRT() {
+		if(latestRT == rt[0]) return 0;
+		if(latestRT == rt[1]) return 1;
+		return -1;
 	}
 
 	public int getTotalBlocks() {
