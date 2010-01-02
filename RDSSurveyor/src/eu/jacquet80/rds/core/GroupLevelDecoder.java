@@ -218,8 +218,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 			}
 		}
 		
-		// Groups 2A: to extract 2 RT characters we need blocks 1 and (2 or 3)
-		if(type == 2 && version == 0 && (blocksOk[2] || blocksOk[3])) {
+		// Groups 2A and 2B: to extract RT characters we need blocks 1 and (2 or 3)
+		if(type == 2 && (blocksOk[2] || blocksOk[3])) {
 			int addr = blocks[1] & 0xF;
 			int ab = (blocks[1]>>4) & 1;
 			char ch1 = '?', ch2 = '?', ch3 = '?', ch4 = '?';
@@ -227,16 +227,19 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[2]) {
 				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
 				ch2 = RDS.toChar(blocks[2] & 0xFF);
-				station.setRTChars(ab, addr*2, ch1, ch2);
+				
+				station.setRTChars(ab, version == 0 ? addr*2 : addr, ch1, ch2);
 			}
 			
-			if(blocksOk[3]) {
+			if(blocksOk[3] && version == 0) {
 				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				ch4 = RDS.toChar(blocks[3] & 0xFF);
 				station.setRTChars(ab, addr*2+1, ch3, ch4);
 			}
 			
-			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2 + ch3 + ch4 + "\"");
+			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2);
+			if(version == 0) console.print(ch3 + "" + ch4);
+			console.print('\"');
 		}
 		
 		// Groups 3A: to extract AID we need blocks 1 and 3
