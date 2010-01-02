@@ -70,7 +70,7 @@ public class Paging extends Application {
 
 			// Groups 7A used for RP
 			if(type == 7 && version == 0 && blocksOk[2] && blocksOk[3]) {
-				String addrStr = 
+				String addrStr = "" +
 					decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
 					decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
 
