@@ -122,7 +122,7 @@ public class TunedStation extends Station {
 		
 		//res.append("\n\t\tquality = " + quality);
 		
-		res.append("\n" + stats());
+		res.append("\n" + groupStats());
 		
 		if(date != null) res.append("\nLatest CT: " + date);
 		
@@ -146,7 +146,7 @@ public class TunedStation extends Station {
 		return res.toString();
 	}
 	
-	private String stats() {
+	public String groupStats() {
 		StringBuffer res = new StringBuffer();
 		for(int i=0; i<16; i++)
 			for(int j=0; j<2; j++)

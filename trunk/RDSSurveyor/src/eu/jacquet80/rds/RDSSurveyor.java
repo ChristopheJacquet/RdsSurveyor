@@ -1,18 +1,11 @@
 package eu.jacquet80.rds;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 
 import eu.jacquet80.rds.core.GroupLevelDecoder;
 import eu.jacquet80.rds.core.RDSDecoder;
@@ -130,6 +123,7 @@ public class RDSSurveyor {
 			reader instanceof BitReader ? new StreamLevelDecoder(console) : new GroupLevelDecoder(console);
 		
 		if(showGui) {
+			/*
 			JFrame frame = new JFrame("RDS Surveyor");
 			final JTextArea area = new JTextArea();
 			area.setFont(new Font("Monospaced", Font.PLAIN, 14));
@@ -139,6 +133,7 @@ public class RDSSurveyor {
 			frame.setPreferredSize(new Dimension(800, 400));
 			frame.pack();
 			frame.setVisible(true);
+			*/
 		
 			/*
 			JFrame fTL = new JFrame("Timeline");
@@ -153,12 +148,14 @@ public class RDSSurveyor {
 			MainWindow mainWindow = new MainWindow(log);
 			mainWindow.setVisible(true);
 			
+			/*
 			log.addGroupListener(new Runnable() {
 				public void run() {
 					area.setText(streamLevelDecoder.getTunedStation().toString().replace("\n", "\r\n"));
 					//timeLine.update();
 				}
 			});
+			*/
 		}
 		
 		if(segmenter != null) {
