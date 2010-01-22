@@ -152,15 +152,18 @@ public abstract class Station {
 
 	protected static int channelToFrequency(int channel) {
 		if(channel >= 0 && channel <= 204) return 875 + channel;
+		else if(channel == 205) return -1;		// -1 = filler code
 		else return 0;
 	}
 	
 	protected static String frequencyToString(int freq) {
 		if(freq == 875) return "Illegal";
+		else if(freq == 0) return "Unhandled";
+		else if(freq == -1) return "None";
 		return String.format("%d.%d", freq/10, freq%10);
 	}
 	
-	public String addAFPair(int a, int b) {
+	public synchronized String addAFPair(int a, int b) {
 		if(a >= 224 && a <= 249) {
 			if(b >= 0 && b <= 205) {
 				currentAFList = afs.get(b);
@@ -182,12 +185,16 @@ public abstract class Station {
 		}
 	}
 	
-	public String afsToString() {
+	public synchronized String afsToString() {
 		StringBuffer res = new StringBuffer();
+		int i = 0;
 		for(AFList l : afs.values()) {
+			i++;
 			if(l.getTransmitterFrequency() == 0) continue;
-			res.append("AF ").append(l).append("  ");
+			res.append("AF ").append(l);
+			if(i < afs.size()) res.append("\n");
 		}
+
 		return res.toString();
 	}
 	
@@ -288,27 +295,27 @@ class AFList {
 		int fA = Station.channelToFrequency(a);
 		int fB = Station.channelToFrequency(b);
 		String typeIfB = fA < fB ? "same" : "variant"; 
-		if(fA == transmitterFrequency) {  // method B
+		if(fA == transmitterFrequency && fA > 0) {  // method B
 			method = 'B';
-			if(fB != 0) afs.add(fB);
+			if(fB > 0) afs.add(fB);
 			return "Method B: " + Station.frequencyToString(transmitterFrequency) + " -> " + Station.frequencyToString(fB) + " (" + typeIfB + ")";
-		} else if(fB == transmitterFrequency) {  // method B
+		} else if(fB == transmitterFrequency && fB > 0) {  // method B
 			method = 'B';
-			if(fA != 0) afs.add(fA);
+			if(fA > 0) afs.add(fA);
 			return "Method B: " + Station.frequencyToString(transmitterFrequency) + " -> " + Station.frequencyToString(fA) + " (" + typeIfB + ")";
-		} else {  // method A
+		} else if(fA > 0 || fB > 0){  // method A
 			if(transmitterFrequency != 0) method = 'A';
 			String res = (method == 'A' ? "Method A: " : "Unknown method: ");
-			if(fA != 0) {
+			if(fA > 0) {
 				afs.add(fA);
 				res += Station.frequencyToString(fA) + "  ";
 			}
-			if(fB != 0) {
+			if(fB > 0) {
 				afs.add(fB);
 				res += Station.frequencyToString(fB);
 			}
 			return res;
-		}
+		} else return "No info";
 	}
 	
 	public String toString() {

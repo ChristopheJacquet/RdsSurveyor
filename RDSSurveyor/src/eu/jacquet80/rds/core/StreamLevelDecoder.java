@@ -45,7 +45,7 @@ public class StreamLevelDecoder implements RDSDecoder {
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
 
-	private final static int syndromes[][] = {{0xF600, 0xF600}, {0xF500, 0xF500}, {0x9700, 0xF300}, {0x9600, 0x9600}};
+	final static int syndromes[][] = {{0xF600, 0xF600}, {0xF500, 0xF500}, {0x9700, 0xF300}, {0x9600, 0x9600}};
 
 	private final PrintStream console;
 	private final GroupLevelDecoder groupLevelDecoder;
@@ -101,7 +101,7 @@ public class StreamLevelDecoder implements RDSDecoder {
 
 				for(int i=0; i<4; i++) {
 					if(synd == syndromes[i][0] || synd == syndromes[i][1]) {
-						console.print("[" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
+						console.print("[" + ((char)('A'+i)) + ":" + (bitTime%26) + "/" + ((bitTime/26+4-i)%4) + "]");
 						int offset = bitTime % 26;
 						int pseudoBlock = (bitTime / 26 + 4 - i) % 4;
 						

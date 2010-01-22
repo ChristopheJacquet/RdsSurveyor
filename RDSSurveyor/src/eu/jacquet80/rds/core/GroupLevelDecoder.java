@@ -144,6 +144,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			
 			// Groups 0A: to extract AFs we need blocks 1 and 2
 			if(version == 0 && blocksOk[2]) {
+				//console.printf("Raw AF: %d %d", (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF);
 				console.print(station.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
 			}
 		}

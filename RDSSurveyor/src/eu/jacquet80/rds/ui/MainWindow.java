@@ -46,7 +46,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
@@ -75,7 +74,9 @@ public class MainWindow extends JFrame {
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 30),
 			txtRTa = new JTextArea(1, 64),
-			txtRTb = new JTextArea(1, 64);
+			txtRTb = new JTextArea(1, 64),
+			txtAF = new JTextArea(3, 64),
+			txtGroupStats = new JTextArea(1, 64);
 	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRTa, txtRTb};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
@@ -136,42 +137,10 @@ public class MainWindow extends JFrame {
 				lblRTb = new JLabel("RTB"),
 				lblPS = new JLabel("PS"),
 				lblPSName = new JLabel("Station name"),
-				lblPI = new JLabel("PI");
+				lblPI = new JLabel("PI"),
+				lblAF = new JLabel("Alternative Frequencies"),
+				lblGroupStats = new JLabel("Group statistics");
 		
-		/*
-		JPanel pnl1 = new JPanel();
-		
-		GroupLayout lyt1 = new GroupLayout(pnl1);
-		pnl1.setLayout(lyt1);
-		lyt1.setAutoCreateGaps(true);
-		lyt1.setAutoCreateContainerGaps(true);
-		
-		lyt1.setHorizontalGroup(
-				lyt1.createSequentialGroup()
-					.addGroup(lyt1.createParallelGroup(GroupLayout.Alignment.LEADING)
-							.addComponent(lblPS)
-							.addComponent(txtPS))
-					.addGroup(lyt1.createParallelGroup(GroupLayout.Alignment.LEADING)
-							.addComponent(lblPSName)
-							.addComponent(txtPSName))
-					.addGroup(lyt1.createParallelGroup(GroupLayout.Alignment.LEADING)
-							.addComponent(lblPI)
-							.addComponent(txtPI)));
-		
-		lyt1.setVerticalGroup(
-				lyt1.createSequentialGroup()
-					.addGroup(lyt1.createParallelGroup(GroupLayout.Alignment.BASELINE)
-							.addComponent(lblPS)
-							.addComponent(lblPSName)
-							.addComponent(lblPI))
-					.addGroup(lyt1.createParallelGroup(GroupLayout.Alignment.BASELINE)
-							.addComponent(txtPS)
-							.addComponent(txtPSName)
-							.addComponent(txtPI)));
-		
-		//pnl1.add(lblPS); pnl1.add(lblPSName); pnl1.add(lblPI);
-		//pnl1.add(txtPS); pnl1.add(txtPSName); pnl1.add(txtPI);
-*/
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblPS, lblPSName, lblPI},
@@ -198,6 +167,15 @@ public class MainWindow extends JFrame {
 				{lblRTb, txtRTb},
 		}));
 
+		mainPanel.add(createArrangedPanel(new Component[][] {
+				{lblAF},
+				{txtAF},
+		}));
+
+		mainPanel.add(createArrangedPanel(new Component[][] {
+				{lblGroupStats},
+				{txtGroupStats},
+		}));
 
 		
 		final JPanel pnlEON = new JPanel(new BorderLayout());
@@ -212,6 +190,12 @@ public class MainWindow extends JFrame {
 		for(JTextArea txt : bigTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, 20));
 		}
+		
+		txtGroupStats.setLineWrap(true);
+		txtGroupStats.setWrapStyleWord(true);
+		
+		txtAF.setLineWrap(true);
+		txtAF.setWrapStyleWord(true);
 		
 		setPreferredSize(new Dimension(1000, 800));
 		
@@ -270,6 +254,8 @@ public class MainWindow extends JFrame {
 						
 						Date date = station.getDate();
 						txtTime.setText(date != null ? date.toString() : "");
+						txtAF.setText(station.afsToString());
+						txtGroupStats.setText(station.groupStats());
 					}
 				}
 				eonTableModel.fireTableDataChanged();
@@ -279,5 +265,7 @@ public class MainWindow extends JFrame {
 		});
 		
 		pack();
+		
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 }
