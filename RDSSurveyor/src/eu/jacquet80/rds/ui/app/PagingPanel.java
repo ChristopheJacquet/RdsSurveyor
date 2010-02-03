@@ -70,7 +70,7 @@ public class PagingPanel extends AppPanel {
 	private class PagingTableModel extends AbstractTableModel {
 		private static final long serialVersionUID = 4494094179345299991L;
 		
-		private final String[] columnNames = {"Time", "Address", "Type", "Contents"};
+		private final String[] columnNames = {"A/B", "Time", "Address", "Type", "Contents"};
 
 		public int getColumnCount() {
 			return columnNames.length;
@@ -90,10 +90,11 @@ public class PagingPanel extends AppPanel {
 			synchronized(pagingApp) {
 				Message m = pagingApp.getMessages().get(rowIndex);
 				switch(columnIndex) {
-				case 0: return m.getTime();
-				case 1: return m.getAddress();
-				case 2: return m.getType().toString();
-				case 3: return m.getContents();
+				case 0: return (char)('A' + m.getAB());
+				case 1: return m.getTime();
+				case 2: return m.getAddress();
+				case 3: return m.getType().toString();
+				case 4: return m.getContents();
 				default: return "ERR";
 				}
 			}

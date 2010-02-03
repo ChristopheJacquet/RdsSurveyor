@@ -25,7 +25,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
 	private double time = 0.0;
-	private TunedStation station = new TunedStation(0), realStation = null;  // realStation is used in case station is a dummy one
+	private TunedStation station = new TunedStation(0);  // realStation is used in case station is a dummy one
 	private boolean synced = true;
 	private int badPIcount = 0;
 	
@@ -66,9 +66,10 @@ public class GroupLevelDecoder implements RDSDecoder {
 	}
 	
 	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime, Log log) {
+		//console.print(" (" + (station == null ? null : station.getStationName() ) + ") ");
 		Application newApp = null;
 		
-		realStation = null;
+		TunedStation workingStation = station;
 		time += 104 / 1187.5;
 		
 		qualityHistory[historyPtr] = nbOk;
@@ -97,15 +98,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 				if(badPIcount > 3 ) {
 					// several different PIs in a row => new station
 					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-					log.addMessage(new StationTuned(bitTime, station));
 					station = new TunedStation(bitTime);
+					log.addMessage(new StationTuned(bitTime, station));
 					station.setPI(pi);
 				} else {
 					// not enough different PIs => guess it's just an error
 					// use a dummy TunedStation to silently ignore this group's info
 					console.print("Ign, ");  // for ignore
-					realStation = station;
-					station = new TunedStation(bitTime); // dummy station
+					workingStation = new TunedStation(bitTime); // dummy station
 				}
 				
 			}
@@ -119,16 +119,16 @@ public class GroupLevelDecoder implements RDSDecoder {
 			type = ((blocks[1]>>12) & 0xF);
 			version = ((blocks[1]>>11) & 1);
 			
-			station.addGroupToStats(type, version, nbOk);
+			workingStation.addGroupToStats(type, version, nbOk);
 			
 			int tp = (blocks[1]>>10) & 1;
-			station.setTP(tp == 1);
+			workingStation.setTP(tp == 1);
 			
 			int pty = (blocks[1]>>5) & 0x1F;
-			station.setPTY(pty);
+			workingStation.setPTY(pty);
 			
 			console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
-		} else station.addUnknownGroupToStats();
+		} else workingStation.addUnknownGroupToStats();
 		
 		// Groups 0A & 0B
 		if(type == 0) {
@@ -139,13 +139,13 @@ public class GroupLevelDecoder implements RDSDecoder {
 				char ch1 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				char ch2 = RDS.toChar(blocks[3] & 0xFF);
 				console.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
-				station.setPSChars(addr, ch1, ch2);
+				workingStation.setPSChars(addr, ch1, ch2);
 			}
 			
 			// Groups 0A: to extract AFs we need blocks 1 and 2
 			if(version == 0 && blocksOk[2]) {
 				//console.printf("Raw AF: %d %d", (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF);
-				console.print(station.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
+				console.print(workingStation.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
 			}
 		}
 
@@ -155,17 +155,16 @@ public class GroupLevelDecoder implements RDSDecoder {
 			int bsi = (blocks[1]) & 3;       // battery saving interval sync and id
 			console.print("RP Config: [" + RP_TNGD_VALUES[tngd]);
 			if(tngd > 0) {   // print the rest only if there IS RP
-				Application app = station.getApplicationForGroup(7, 0);
+				Application app = workingStation.getApplicationForGroup(7, 0);
 				if(app == null) {
-					newApp = app = new Paging(station, console);
+					newApp = app = new Paging(workingStation, console);
 					
-					station.setApplicationForGroup(7, 0, app);
+					workingStation.setApplicationForGroup(7, 0, app);
 				} else if(!(app instanceof Paging)) {
 					console.print("Error: this group indicates the presence of paging, while group 7A is used for '" + app.getName() + "'!");
 				}
 
-				if((bsi & 2) > 0) console.print(", Start of Interval");
-				else console.print(", Interval number bit=" + (bsi & 1));
+				console.print(", " + ((Paging)app).syncInfo((bsi >> 1) & 1, bsi & 1));
 			}
 			console.print("], ");
 		}
@@ -189,7 +188,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				int opc = (blocks[2] >> 8) & 0xF;
 				int ecc = blocks[2] & 0xFF;
 				console.printf("OPC=%01X ECC=%02X ", opc, ecc);
-				station.setECC(ecc);
+				workingStation.setECC(ecc);
 				if(pi != 0) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
 				break;
 				
@@ -200,8 +199,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				// TODO need a cleaner way to connect application to specific groups (more general than ODA)
 				// connect 8A groups with the TMC application
 				Application appTMC = new AlertC();
-				station.setApplicationForGroup(8, 0, appTMC);
-				appTMC.setStation(station);
+				workingStation.setApplicationForGroup(8, 0, appTMC);
+				appTMC.setStation(workingStation);
 				appTMC.setConsole(console);
 				break;
 			
@@ -209,7 +208,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				
 			case 3:
 				int langID = blocks[2] & 0xFF;
-				station.setLanguage(langID);
+				workingStation.setLanguage(langID);
 				console.printf("Language: %02X [%s]", langID, 
 						langID < RDS.languages.length ? RDS.languages[langID][1] : "");
 				break;
@@ -229,13 +228,13 @@ public class GroupLevelDecoder implements RDSDecoder {
 				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
 				ch2 = RDS.toChar(blocks[2] & 0xFF);
 				
-				station.setRTChars(ab, version == 0 ? addr*2 : addr, ch1, ch2);
+				workingStation.setRTChars(ab, version == 0 ? addr*2 : addr, ch1, ch2);
 			}
 			
 			if(blocksOk[3] && version == 0) {
 				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				ch4 = RDS.toChar(blocks[3] & 0xFF);
-				station.setRTChars(ab, addr*2+1, ch3, ch4);
+				workingStation.setRTChars(ab, addr*2+1, ch3, ch4);
 			}
 			
 			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2);
@@ -253,7 +252,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			else console.printf("AID #%04X ", aid);
 			
 			// return the ODA
-			Application app = station.getApplicationForGroup(odaG, odaV);
+			Application app = workingStation.getApplicationForGroup(odaG, odaV);
 			if(app != null) {
 				if(!(app instanceof ODA)) {
 					console.printf("Currently group assigned to '%s' (non-ODA); it should not be assigned to AID %04X", app.getName(), aid);
@@ -266,8 +265,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				
 				if(app != null) {
 					newApp = app;
-					station.setApplicationForGroup(odaG, odaV, app);
-					app.setStation(station);
+					workingStation.setApplicationForGroup(odaG, odaV, app);
+					app.setStation(workingStation);
 					app.setConsole(console);
 				} else {
 					console.print("Unknown AID!");
@@ -315,8 +314,15 @@ public class GroupLevelDecoder implements RDSDecoder {
 			Date date = cal.getTime();
 			
 			console.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
-			station.setDate(date, bitTime);
+			workingStation.setDate(date, bitTime);
 			log.addMessage(new ClockTime(bitTime, date));
+			
+			// is there paging ?
+			Application app = workingStation.getApplicationForGroup(7, 0);
+			if(app != null && app instanceof Paging) {
+				// then the 4A group act as 1A - start of interval
+				console.print(", [RT: " + ((Paging)app).syncInfo(1, 0) + "]");
+			}
 			
 		}
 		
@@ -339,7 +345,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[2] && blocksOk[3])
 				console.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
 			
-			Application app = station.getApplicationForGroup(type, version);
+			Application app = workingStation.getApplicationForGroup(type, version);
 			if(app != null) {
 				console.println();
 				console.print("\t" + app.getName() +  " --> ");
@@ -367,14 +373,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[2]) {
 				char c1 = RDS.toChar((blocks[2]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[2] & 0xFF);
-				station.setPTYNChars(pos*2, c1, c2);
+				workingStation.setPTYNChars(pos*2, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
 			
 			if(blocksOk[3]) {
 				char c1 = RDS.toChar((blocks[3]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[3] & 0xFF);
-				station.setPTYNChars(pos*2+1, c1, c2);
+				workingStation.setPTYNChars(pos*2+1, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
 			
@@ -389,20 +395,20 @@ public class GroupLevelDecoder implements RDSDecoder {
 			// in both version if we have block 3 we have ON PI
 			if(blocksOk[3]) {
 				int onPI = blocks[3];
-				console.printf("ON.PI=%04X%s, ", onPI, onPI == station.getPI() ? " (self)" : "");
+				console.printf("ON.PI=%04X%s, ", onPI, onPI == workingStation.getPI() ? " (self)" : "");
 				
-				if(onPI != station.getPI()) {
-					on = station.getON(onPI);
+				if(onPI != workingStation.getPI()) {
+					on = workingStation.getON(onPI);
 					if(on == null) {
 						on = new OtherNetwork(onPI);
-						station.addON(on);
+						workingStation.addON(on);
 					}
 				} else { 
 					// ON.PI may be equal to TN.PI in case of variant 12: it
 					// is used to transmit linkage information for the
 					// transmitting network. In this case we must surely not
 					// create a new OtherNetwork instance.
-					on = station;
+					on = workingStation;
 				}
 			}
 			
@@ -471,9 +477,6 @@ public class GroupLevelDecoder implements RDSDecoder {
 		}
 		
 
-		// restore the real station in case 'station' was a dummy one
-		if(realStation != null) station = realStation;
-		
 		if(newApp != null) log.addMessage(new ApplicationChanged(bitTime, null, newApp));
 	}
 	

@@ -45,6 +45,11 @@ public class Paging extends Application {
 	private Message currentMessage = null;
 	private int lastIdx;
 	
+	private int lastB1 = -1;
+	private int nextInterval = -1;
+	private int currentInterval = -1;
+	private int intervalBitNumber = -1;
+	
 	private final DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
 	public Paging(TunedStation station, PrintStream console) {
@@ -74,7 +79,12 @@ public class Paging extends Application {
 					decodeBCD(blocks[2], 3) + decodeBCD(blocks[2], 2) + "/" +
 					decodeBCD(blocks[2], 1) + "" + decodeBCD(blocks[2], 0) + "" + decodeBCD(blocks[3], 3) + "" + decodeBCD(blocks[3], 2);
 
-				console.print("RP: flag=" + (char)('A' + ((blocks[1]>>5) & 1)) + ", ");
+				int ab = (blocks[1]>>4) & 1;
+				console.print("RP: flag=" + (char)('A' + ab) + ", ");
+				if(currentMessage != null && currentMessage.getAB() != ab) {
+					currentMessage.setComplete();
+					currentMessage = null;
+				}
 
 				if((blocks[1] & 0x8) == 8) {
 					int idx = blocks[1] & 0x7;
@@ -82,12 +92,12 @@ public class Paging extends Application {
 						// address of an alpha message
 						console.print("Alpha message: " + addrStr);
 
-						newMessage = currentMessage = new Message(time, addrStr, MessageType.ALPHA);
+						newMessage = currentMessage = new Message(time, addrStr, MessageType.ALPHA, ab);
 						lastIdx = 0;
 					} else {
 						if(currentMessage == null || currentMessage.getType() != MessageType.ALPHA) {
 							// part of an alpha message with missed address
-							newMessage = currentMessage = new Message(time, null, MessageType.ALPHA);
+							newMessage = currentMessage = new Message(time, null, MessageType.ALPHA, ab);
 							lastIdx = 0;
 						}
 
@@ -121,14 +131,14 @@ public class Paging extends Application {
 						console.print(addrStr +
 								", msg=" + msg + "...");
 
-						newMessage = currentMessage = new Message(time, addrStr, MessageType.NUMERIC_10);
+						newMessage = currentMessage = new Message(time, addrStr, MessageType.NUMERIC_10, ab);
 						currentMessage.addText(msg);
 					} else {
 						String msg = decodeBCDWord(blocks[2]) + decodeBCDWord(blocks[3]);
 						console.print("msg=..." + msg);
 
 						if(currentMessage == null || currentMessage.getType() != MessageType.NUMERIC_10) {
-							newMessage = currentMessage = new Message(time, null, MessageType.NUMERIC_10);
+							newMessage = currentMessage = new Message(time, null, MessageType.NUMERIC_10, ab);
 							currentMessage.addText("...");
 						}
 
@@ -138,7 +148,7 @@ public class Paging extends Application {
 				if((blocks[1] & 0xF) == 1) console.print("Part of func");
 				if((blocks[1] & 0xF) == 0) {
 					console.print("Beep: " + addrStr);
-					newMessage = currentMessage = new Message(time, addrStr, MessageType.BEEP);
+					newMessage = currentMessage = new Message(time, addrStr, MessageType.BEEP, ab);
 				}
 
 
@@ -176,12 +186,18 @@ public class Paging extends Application {
 		private String mesg;
 		private boolean complete = false;
 		private final String time;
+		private final int ab;
 
-		public Message(String time, String addr, MessageType type) {
+		public Message(String time, String addr, MessageType type, int ab) {
 			this.time = time;
 			this.addr = addr;
 			this.type = type;
+			this.ab = ab;
 			mesg = "";
+		}
+
+		public int getAB() {
+			return ab;
 		}
 
 		public void addText(String text) {
@@ -225,6 +241,39 @@ public class Paging extends Application {
 		}
 
 		private final String caption;
+	}
+
+	public String syncInfo(int b1, int b0) {
+		String res = "Unexpected termination (#" + intervalBitNumber + ", b1=" + b1 + ", b0=" + b0 + ")";
+		
+		if(lastB1 == 0  && b1 == 1 && b0 == 0) {
+			res = "SOI (#1)";
+			if(nextInterval != -1) res += " Int?=" + nextInterval;
+			currentInterval = 0;
+			intervalBitNumber = 2;
+		}
+		
+		else if(intervalBitNumber == 2 && b1 == 0)
+			return "Err, B1 should be 1 for 1A #2 in interval";
+		
+		else if(intervalBitNumber > 2 && b1 == 1)
+			return "Err, B1 should be 0 for 1A #" + intervalBitNumber + " in interval";
+		
+		else if(intervalBitNumber >= 2 && intervalBitNumber <= 5) {
+			currentInterval = (currentInterval << 1) | b0;
+			res = "b0=" + b0 + " (#" + intervalBitNumber + ")";
+			intervalBitNumber++;
+		}
+		
+		else if(intervalBitNumber > 5) {
+			res = "#" + intervalBitNumber + ", Int=" + currentInterval;
+			nextInterval = (currentInterval + 1) % 10;
+			intervalBitNumber++;
+		}
+		
+		lastB1 = b1;
+		
+		return res;
 	}
 
 }
