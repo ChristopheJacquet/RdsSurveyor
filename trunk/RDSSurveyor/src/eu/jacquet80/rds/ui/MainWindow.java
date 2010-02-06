@@ -185,10 +185,12 @@ public class MainWindow extends JFrame {
 		
 		for(JTextArea txt : smallTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, txt.getFont().getSize()));
+			txt.setEditable(false);
 		}
 		
 		for(JTextArea txt : bigTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, 20));
+			txt.setEditable(false);
 		}
 		
 		txtGroupStats.setLineWrap(true);

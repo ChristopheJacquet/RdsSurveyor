@@ -157,7 +157,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(tngd > 0) {   // print the rest only if there IS RP
 				Application app = workingStation.getApplicationForGroup(7, 0);
 				if(app == null) {
-					newApp = app = new Paging(workingStation, console);
+					newApp = app = new Paging(workingStation, console, RP_TNGD_VALUES[tngd]);
 					
 					workingStation.setApplicationForGroup(7, 0, app);
 				} else if(!(app instanceof Paging)) {
@@ -321,7 +321,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			Application app = workingStation.getApplicationForGroup(7, 0);
 			if(app != null && app instanceof Paging) {
 				// then the 4A group act as 1A - start of interval
-				console.print(", [RT: " + ((Paging)app).syncInfo(1, 0) + "]");
+				console.print(", [RT: " + ((Paging)app).fullMinute() + "]");
 			}
 			
 		}

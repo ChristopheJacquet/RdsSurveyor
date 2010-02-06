@@ -49,12 +49,16 @@ public class Paging extends Application {
 	private int nextInterval = -1;
 	private int currentInterval = -1;
 	private int intervalBitNumber = -1;
+	private int intervalResult = Integer.MIN_VALUE;
+	
+	private String tngd;
 	
 	private final DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
-	public Paging(TunedStation station, PrintStream console) {
+	public Paging(TunedStation station, PrintStream console, String tngd) {
 		setStation(station);
 		setConsole(console);
+		this.tngd = tngd;
 	}
 
 	@Override
@@ -243,21 +247,32 @@ public class Paging extends Application {
 		private final String caption;
 	}
 
-	public String syncInfo(int b1, int b0) {
+	public synchronized String syncInfo(int b1, int b0) {
+		int oldIntervalResult = intervalResult;
+		
 		String res = "Unexpected termination (#" + intervalBitNumber + ", b1=" + b1 + ", b0=" + b0 + ")";
 		
 		if(lastB1 == 0  && b1 == 1 && b0 == 0) {
 			res = "SOI (#1)";
-			if(nextInterval != -1) res += " Int?=" + nextInterval;
+			if(nextInterval != -1) {
+				res += " Int?=" + nextInterval;
+				intervalResult = -1-nextInterval;
+			} else intervalResult = Integer.MIN_VALUE;
 			currentInterval = 0;
 			intervalBitNumber = 2;
 		}
 		
-		else if(intervalBitNumber == 2 && b1 == 0)
+		else if(intervalBitNumber == 2 && b1 == 0) {
+			intervalResult = Integer.MIN_VALUE;
+			fireChangeListeners();
 			return "Err, B1 should be 1 for 1A #2 in interval";
+		}
 		
-		else if(intervalBitNumber > 2 && b1 == 1)
+		else if(intervalBitNumber > 2 && b1 == 1) {
+			intervalResult = Integer.MIN_VALUE;
+			fireChangeListeners();
 			return "Err, B1 should be 0 for 1A #" + intervalBitNumber + " in interval";
+		}
 		
 		else if(intervalBitNumber >= 2 && intervalBitNumber <= 5) {
 			currentInterval = (currentInterval << 1) | b0;
@@ -268,12 +283,35 @@ public class Paging extends Application {
 		else if(intervalBitNumber > 5) {
 			res = "#" + intervalBitNumber + ", Int=" + currentInterval;
 			nextInterval = (currentInterval + 1) % 10;
+			intervalResult = currentInterval;
 			intervalBitNumber++;
 		}
 		
 		lastB1 = b1;
 		
+		if(oldIntervalResult != intervalResult) fireChangeListeners();
+		
 		return res;
 	}
+	
+	public synchronized String fullMinute() {
+		intervalResult = nextInterval = 0; 
+		currentInterval = 0;
+		intervalBitNumber = 2;
+		lastB1 = 1;
+		fireChangeListeners();
+		return "SOI (#1) Int=" + nextInterval;
+	}
 
+	public synchronized int getInterval() {
+		return intervalResult;
+	}
+
+	public void setTNGD(String tngd) {
+		this.tngd = tngd;
+	}
+	
+	public String getTNGD() {
+		return tngd;
+	}
 }
