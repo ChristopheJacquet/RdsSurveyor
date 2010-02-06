@@ -42,7 +42,7 @@ public class RDSSurveyor {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009.");
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009-2010.");
 		
 		RDSReader reader = null;
 		boolean showGui = true;

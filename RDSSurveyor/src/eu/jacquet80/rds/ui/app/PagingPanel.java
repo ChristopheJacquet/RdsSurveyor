@@ -31,9 +31,17 @@
 package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.table.AbstractTableModel;
 
 import eu.jacquet80.rds.app.Application;
@@ -47,11 +55,14 @@ public class PagingPanel extends AppPanel {
 	private Paging pagingApp;
 	private final PagingTableModel tableModel;
 	private final JTable table;
+	private final JTextField txtInterval;
+	private final JLabel lblTNGD;
 
 	@Override
 	public void setApplication(Application app) {
 		super.setApplication(app);
 		pagingApp = (Paging)app;
+		lblTNGD.setText(pagingApp.getTNGD());
 	}
 
 	public PagingPanel() {
@@ -59,7 +70,29 @@ public class PagingPanel extends AppPanel {
 		tableModel = new PagingTableModel();
 		table = new JTable(tableModel);
 		table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		add(new JScrollPane(table), BorderLayout.CENTER);
+		JPanel pnlTable = new JPanel(new BorderLayout());
+		pnlTable.add(new JScrollPane(table), BorderLayout.CENTER);
+		pnlTable.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+		add(pnlTable, BorderLayout.CENTER);
+		
+		JPanel pnlTop = new JPanel();
+		pnlTop.setLayout(new BoxLayout(pnlTop, BoxLayout.LINE_AXIS));
+		pnlTop.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+		add(pnlTop, BorderLayout.NORTH);
+		
+		txtInterval = new JTextField(); //, SwingConstants.CENTER);
+		txtInterval.setEditable(false);
+		txtInterval.setPreferredSize(new Dimension(50, 20));
+		txtInterval.setMaximumSize(new Dimension(50, 20));
+		txtInterval.setBorder(BorderFactory.createEtchedBorder());
+		txtInterval.setHorizontalAlignment(JTextField.CENTER);
+		
+		lblTNGD = new JLabel();
+		
+		pnlTop.add(lblTNGD);
+		pnlTop.add(Box.createHorizontalGlue());
+		pnlTop.add(new JLabel("Interval: "));
+		pnlTop.add(txtInterval);
 	}
 	
 	public PagingPanel(Application app) {
@@ -112,6 +145,22 @@ public class PagingPanel extends AppPanel {
 	public void notifyChange() {
 		tableModel.fireTableDataChanged();
 		Util.packColumns(table);
-
+		
+		String  interval;
+		if(pagingApp.getInterval() >= 0) {
+			interval = Integer.toString(pagingApp.getInterval());
+			txtInterval.setBackground(Color.GREEN);
+			txtInterval.setForeground(Color.BLACK);
+		} else if(pagingApp.getInterval() == Integer.MIN_VALUE) {
+			interval = "ERR";
+			txtInterval.setBackground(Color.RED);
+			txtInterval.setForeground(Color.WHITE);
+		} else {
+			interval = Integer.toString(- pagingApp.getInterval() - 1);
+			txtInterval.setBackground(Color.YELLOW);
+			txtInterval.setForeground(Color.BLACK);
+		}
+		
+		txtInterval.setText(interval);
 	}
 }
