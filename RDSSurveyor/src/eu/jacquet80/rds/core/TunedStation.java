@@ -44,7 +44,7 @@ public class TunedStation extends Station {
 	private boolean[] touchedRT;
 	private int latestRT;
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
-	private int[][] blockCount = new int[17][2];
+	private int[][] groupStats = new int[17][2];
 	private Date date = null;
 	private Application[] applications = new Application[32];
 	private int di = 0;
@@ -76,13 +76,13 @@ public class TunedStation extends Station {
 		
 		for(int i=0; i<16; i++)
 			for(int j=0; j<2; j++)
-				blockCount[i][j] = 0;
+				groupStats[i][j] = 0;
 		
 		date = null;
 		
-		for(int i=0; i<blockCount.length; i++)
+		for(int i=0; i<groupStats.length; i++)
 			for(int j=0; j<2; j++)
-				blockCount[i][j] = 0;
+				groupStats[i][j] = 0;
 		totalBlocks = 0;
 		totalBlocksOk = 0;
 		
@@ -150,9 +150,13 @@ public class TunedStation extends Station {
 		StringBuffer res = new StringBuffer();
 		for(int i=0; i<16; i++)
 			for(int j=0; j<2; j++)
-				if(blockCount[i][j] > 0) res.append(String.format("%d%c: %d,   ", i, (char)('A' + j), blockCount[i][j]));
-		res.append("U: " + blockCount[16][0]);
+				if(groupStats[i][j] > 0) res.append(String.format("%d%c: %d,   ", i, (char)('A' + j), groupStats[i][j]));
+		res.append("U: " + groupStats[16][0]);
 		return res.toString();
+	}
+	
+	public int[][] numericGroupStats() {
+		return groupStats;
 	}
 
 	public int getTimeOfLastPI() {
@@ -160,13 +164,13 @@ public class TunedStation extends Station {
 	}
 	
 	public void addGroupToStats(int type, int version, int nbOk) {
-		blockCount[type][version]++;
+		groupStats[type][version]++;
 		totalBlocks += 4;
 		totalBlocksOk += nbOk;
 	}
 	
 	public void addUnknownGroupToStats() {
-		blockCount[16][0]++;
+		groupStats[16][0]++;
 	}
 	
 	public void setRTChars(int ab, int position, char ... characters) {

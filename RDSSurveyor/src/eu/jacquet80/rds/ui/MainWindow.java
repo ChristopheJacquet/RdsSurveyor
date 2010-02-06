@@ -35,8 +35,10 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.util.Date;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
@@ -46,6 +48,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
@@ -75,8 +78,10 @@ public class MainWindow extends JFrame {
 			txtTime = new JTextArea(1, 30),
 			txtRTa = new JTextArea(1, 64),
 			txtRTb = new JTextArea(1, 64),
-			txtAF = new JTextArea(3, 64),
-			txtGroupStats = new JTextArea(1, 64);
+			txtAF = new JTextArea(3, 64);
+	private final GroupPanel groupStats = new GroupPanel();
+			
+			//txtGroupStats = new JTextArea(1, 64);
 	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRTa, txtRTb};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
@@ -174,7 +179,7 @@ public class MainWindow extends JFrame {
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblGroupStats},
-				{txtGroupStats},
+				{groupStats},
 		}));
 
 		
@@ -193,8 +198,8 @@ public class MainWindow extends JFrame {
 			txt.setEditable(false);
 		}
 		
-		txtGroupStats.setLineWrap(true);
-		txtGroupStats.setWrapStyleWord(true);
+		//txtGroupStats.setLineWrap(true);
+		//txtGroupStats.setWrapStyleWord(true);
 		
 		txtAF.setLineWrap(true);
 		txtAF.setWrapStyleWord(true);
@@ -235,33 +240,40 @@ public class MainWindow extends JFrame {
 			public void run() {
 				synchronized(MainWindow.this) {
 					if(station != null) {
-						txtPS.setText(station.getPS());
-						txtPSName.setText(station.getStationName());
-						txtPI.setText(String.format("%04X", station.getPI()));
-						txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
-						txtPTYN.setText(station.getPTYN());
-						txtRTa.setText(station.getRT(0));
-						txtRTb.setText(station.getRT(1));
-						txtTraffic.setText(station.trafficInfoString());
-						if(station.whichRT() == 0) {
-							lblRTa.setForeground(Color.RED);
-							lblRTb.setForeground(Color.BLACK);
-						} else if(station.whichRT() == 1) {
-							lblRTa.setForeground(Color.BLACK);
-							lblRTb.setForeground(Color.RED);							
-						} else {
-							lblRTa.setForeground(Color.BLACK);
-							lblRTb.setForeground(Color.BLACK);
-						}
-						
-						Date date = station.getDate();
-						txtTime.setText(date != null ? date.toString() : "");
-						txtAF.setText(station.afsToString());
-						txtGroupStats.setText(station.groupStats());
+						SwingUtilities.invokeLater(new Runnable() {
+							public void run() {
+								txtPS.setText(station.getPS());
+								txtPSName.setText(station.getStationName());
+								txtPI.setText(String.format("%04X", station.getPI()));
+								txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
+								txtPTYN.setText(station.getPTYN());
+								txtRTa.setText(station.getRT(0));
+								txtRTb.setText(station.getRT(1));
+								txtTraffic.setText(station.trafficInfoString());
+								if(station.whichRT() == 0) {
+									lblRTa.setForeground(Color.RED);
+									lblRTb.setForeground(Color.BLACK);
+								} else if(station.whichRT() == 1) {
+									lblRTa.setForeground(Color.BLACK);
+									lblRTb.setForeground(Color.RED);							
+								} else {
+									lblRTa.setForeground(Color.BLACK);
+									lblRTb.setForeground(Color.BLACK);
+								}
+								
+								Date date = station.getDate();
+								txtTime.setText(date != null ? date.toString() : "");
+								txtAF.setText(station.afsToString());
+								//txtGroupStats.setText(station.groupStats());
+								groupStats.update(station.numericGroupStats());
+								
+								eonTableModel.fireTableDataChanged();
+								Util.packColumns(tblEON);
+
+							};
+						});
 					}
 				}
-				eonTableModel.fireTableDataChanged();
-				Util.packColumns(tblEON);
 			}
 			
 		});
@@ -269,5 +281,42 @@ public class MainWindow extends JFrame {
 		pack();
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	}
+}
+
+class GroupPanel extends JPanel {
+	private static final long serialVersionUID = -8242758630674812962L;
+	private final JTextField[][] txtGroup = new JTextField[17][2];
+	
+	public GroupPanel() {
+		GridLayout layout = new GridLayout(3, 16);
+		setLayout(layout);
+		
+		add(new JLabel(""));
+		for(int i=0; i<16; i++) add(new JLabel(Integer.toString(i), JLabel.CENTER));
+		add(new JLabel("Unk", JLabel.CENTER));
+		for(int j=0; j<2; j++) {
+			add(new JLabel(Character.toString((char)('A' + j))));
+			for(int i=0; i<17; i++) {
+				txtGroup[i][j] = new JTextField();
+				txtGroup[i][j].setHorizontalAlignment(JTextField.CENTER);
+				txtGroup[i][j].setEditable(false);
+				txtGroup[i][j].setBorder(BorderFactory.createEtchedBorder());
+				//txtGroup[i][j].setPreferredSize(preferredSize)
+				if(!(i == 16 && j == 1)) add(txtGroup[i][j]);
+			}
+		}
+		
+		layout.setHgap(5);
+		layout.setVgap(5);
+	}
+	
+	public void update(int[][] blockCount) {
+		for(int i=0; i<17; i++)
+			for(int j=0; j<2; j++) {
+				txtGroup[i][j].setText(Integer.toString(blockCount[i][j]));
+				if(blockCount[i][j] == 0) txtGroup[i][j].setBackground(Color.GRAY);
+				else txtGroup[i][j].setBackground(Color.GREEN);
+			}
 	}
 }
