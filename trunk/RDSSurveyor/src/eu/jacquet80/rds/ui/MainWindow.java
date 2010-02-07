@@ -36,6 +36,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
 
 import javax.swing.BorderFactory;
@@ -209,18 +210,24 @@ public class MainWindow extends JFrame {
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationTuned stationTuned) {
-				synchronized (MainWindow.this) {
+				synchronized(MainWindow.this) {
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
+				}
 					
-					// reset the tabs displayed
-					SwingUtilities.invokeLater(new Runnable() {
+				// reset the tabs displayed
+				try {
+					SwingUtilities.invokeAndWait(new Runnable() {
 						public void run() {
 							tabbedPane.removeAll();
 							tabbedPane.addTab("EON", pnlEON);
+							repaint();
 						}
 					});
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
+
 			}
 			
 			@Override
@@ -228,11 +235,16 @@ public class MainWindow extends JFrame {
 				final Application newApp = appChanged.getNewApplication();
 				final AppPanel panel = AppPanel.forApp(newApp);
 				if(panel == null) return;
-				SwingUtilities.invokeLater(new Runnable() {
-					public void run() {
-						tabbedPane.addTab(newApp.getName(), panel);
-					};
-				});
+				try {
+					SwingUtilities.invokeAndWait(new Runnable() {
+						public void run() {
+							tabbedPane.addTab(newApp.getName(), panel);
+							repaint();
+						};
+					});
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		});
 		

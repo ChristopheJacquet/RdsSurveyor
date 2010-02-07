@@ -36,6 +36,7 @@ import javax.swing.JPanel;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.ChangeListener;
+import eu.jacquet80.rds.app.InHouse;
 import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 
@@ -57,6 +58,7 @@ public abstract class AppPanel extends JPanel implements ChangeListener {
 	public static AppPanel forApp(Application app) {
 		if(app instanceof Paging) return new PagingPanel(app);
 		if(app instanceof AlertC) return new AlertCPanel(app);
+		if(app instanceof InHouse) return new InHousePanel(app);
 		return null;
 	}
 }
