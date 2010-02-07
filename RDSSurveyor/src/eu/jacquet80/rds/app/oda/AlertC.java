@@ -30,12 +30,18 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
+import eu.jacquet80.rds.core.Station;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
 	
 	private String[] providerName = {"????", "????"};
+	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	
 	public AlertC() {
 	}
@@ -120,8 +126,18 @@ public class AlertC extends ODA {
 				switch(addr) {
 				case 4: case 5:
 					providerName[addr-4] = String.format("%c%c%c%c", RDS.toChar((blocks[2]>>8) & 0xFF), RDS.toChar(blocks[2] & 0xFF), RDS.toChar((blocks[3]>>8) & 0xFF), RDS.toChar(blocks[3] & 0xFF));
-					console.printf("Prov.name[%d]=\"%s\" ", addr-4, providerName[addr-4]); 
-				break;
+					console.printf("Prov.name[%d]=\"%s\" ", addr-4, providerName[addr-4]);
+					break;
+					
+				case 6:
+					int af1 = (blocks[2] >> 8) & 0xFF;
+					int af2 = blocks[2] & 0xFF;
+					Station on = otherNetworks.get(blocks[3]);
+					if(on == null) on = new OtherNetwork(blocks[3]);
+					console.printf("Other Network, ON.PI=%04X", blocks[3]);
+					console.print(", ON." + on.addAFPair(af1, af2));
+					break;
+					
 				default: console.print("addr=" + addr);
 				}
 			}

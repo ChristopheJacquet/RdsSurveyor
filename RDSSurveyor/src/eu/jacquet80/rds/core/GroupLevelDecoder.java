@@ -8,6 +8,7 @@ import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
 
 import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.app.InHouse;
 import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.ODA;
@@ -346,18 +347,18 @@ public class GroupLevelDecoder implements RDSDecoder {
 				console.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
 			
 			Application app = workingStation.getApplicationForGroup(type, version);
+			
+			if(app == null) {
+				if(type == 6) {
+					newApp = new InHouse(console);
+					workingStation.setApplicationForGroup(6, 0, newApp);
+				}
+			}
+			
 			if(app != null) {
 				console.println();
 				console.print("\t" + app.getName() +  " --> ");
 				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
-			} else {
-				/*if(blocksOk[2] && blocksOk[3])
-					console.printf(" [%c%c%c%c]", 
-							RDS.toChar((blocks[2]>>8) & 0xFF),
-							RDS.toChar(blocks[2] & 0xFF),
-							RDS.toChar((blocks[3]>>8) & 0xFF),
-							RDS.toChar(blocks[3] & 0xFF));
-							*/
 			}
 		}
 		
