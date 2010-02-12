@@ -482,7 +482,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 					console.print(Character.toString(ch1) + Character.toString(ch2));
 				} else console.print("??");
 			}
-			console.print("\"");
+			console.print("\", TA=" + ((blocks[1]>>4) & 1));
 		}
 		
 		// For 15B we need only group 1, and possibly group 3
