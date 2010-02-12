@@ -471,6 +471,20 @@ public class GroupLevelDecoder implements RDSDecoder {
 			
 		}
 		
+		// Type 15A
+		if(type == 15 && version == 0) {
+			int addr = blocks[1] & 1;
+			console.print("DEPRECATED RBDS-only fast PS, pos=" + addr + ": \"");
+			for(int i=2; i<=3; i++) {
+				if(blocksOk[i]) {
+					char ch1 = RDS.toChar( (blocks[i]>>8) & 0xFF);
+					char ch2 = RDS.toChar(blocks[i] & 0xFF);
+					console.print(Character.toString(ch1) + Character.toString(ch2));
+				} else console.print("??");
+			}
+			console.print("\"");
+		}
+		
 		// For 15B we need only group 1, and possibly group 3
 		if(type == 15 && version == 1) {
 			processBasicTuningBits(blocks[1]);
