@@ -4,28 +4,23 @@
    http://www.jacquet80.eu/
    http://rds-surveyor.sourceforge.net/
  
- Copyright (c) 2009 Christophe Jacquet
+ Copyright (c) 2009, 2010 Christophe Jacquet
 
- Permission is hereby granted, free of charge, to any person
- obtaining a copy of this software and associated documentation
- files (the "Software"), to deal in the Software without
- restriction, including without limitation the rights to use,
- copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the
- Software is furnished to do so, subject to the following
- conditions:
+ This file is part of RDS Surveyor.
 
- The above copyright notice and this permission notice shall be
- included in all copies or substantial portions of the Software.
+ RDS Surveyor is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- OTHER DEALINGS IN THE SOFTWARE.
+ RDS Surveyor is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser Public License for more details.
+
+ You should have received a copy of the GNU Lesser Public License
+ along with RDS Surveyor.  If not, see <http://www.gnu.org/licenses/>.
+
 */
 
 package eu.jacquet80.rds.app.oda;
@@ -42,6 +37,11 @@ public class AlertC extends ODA {
 	
 	private String[] providerName = {"????", "????"};
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
+	private Message currentMessage;
+	private Bitstream multiGroupBits;
+	private int currentContIndex = -1;
+	private int nextGroupExpected = -1;
+	private int totalGroupsExpected = -1;
 	
 	public AlertC() {
 	}
@@ -110,14 +110,52 @@ public class AlertC extends ODA {
 						int event = blocks[2] & 0x7FF;
 						int location = blocks[3];
 						console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-
+						
+						// TODO find a message to possibly update
+						currentMessage = new Message(dir, extent, event, location);
+						multiGroupBits = new Bitstream();
+						currentContIndex = idx;
+						nextGroupExpected = 2;
 					} else {
 						int second = (blocks[2]>>14) & 1;
 						int remaining = (blocks[2]>>12) & 3;
 						if(second == 1) {
-							console.print("2nd");
+							totalGroupsExpected = 2 + remaining;
 						} else console.print("later");
-						console.print("[rem=" + remaining + "]");
+						
+						int groupNumber = totalGroupsExpected-remaining;
+						
+						console.print("#" + groupNumber + "/" + totalGroupsExpected + 
+								" [rem=" + remaining + "]");
+						
+						if(groupNumber != nextGroupExpected) {
+							console.print(" ignoring, next expected is #" + nextGroupExpected);
+						} else {
+							nextGroupExpected++;
+							if(nextGroupExpected > totalGroupsExpected) nextGroupExpected = -1;
+							
+							multiGroupBits.add(blocks[2] & 0xFFF, 12);
+							multiGroupBits.add(blocks[3], 16);
+							
+							console.print("  ");
+							
+							console.print(" [" + multiGroupBits + "] ");
+							
+							while(multiGroupBits.count() >= 4) {
+								int label = multiGroupBits.peek(4);
+								if(multiGroupBits.count() < 4 + Message.labelSizes[label]) {
+									break;
+								} else {
+									multiGroupBits.take(4);
+									int value = multiGroupBits.take(Message.labelSizes[label]);
+									if(!(label == 0 && value == 0)) {
+										console.print(label + "->" + value + ", ");
+										currentMessage.addField(label, value);
+									}
+								}
+							}
+							
+						}
 					}
 				}
 			} else {
@@ -146,6 +184,7 @@ public class AlertC extends ODA {
 		fireChangeListeners();
 	}
 
+
 	@Override
 	public String getName() {
 		return "TMC/Alert-C";
@@ -158,5 +197,116 @@ public class AlertC extends ODA {
 	
 	public String getProviderName() {
 		return providerName[0] + providerName[1];
+	}
+	
+	private static class Bitstream {
+		private long bits;
+		private int count;
+		
+		public Bitstream() {
+			bits = 0L;
+		}
+		
+		public int peek(int count) {
+			return (int) ( ( bits >> (this.count - count) ) & ( (1 << count) - 1 ) );
+		}
+		
+		public int take(int count) {
+			int res = peek(count);
+			this.count -= count;
+			return res;
+		}
+		
+		public void add(int bits, int count) {
+			this.count += count;
+			this.bits <<= count;
+			this.bits |= bits;
+		}
+		
+		public int count() {
+			return count;
+		}
+		
+		@Override
+		public String toString() {
+			return count + "/" + Long.toBinaryString(bits);
+		}
+	}
+	
+	private static class Message {
+		private final int direction;
+		private final int extent;
+		private final int event;
+		private final int location;
+		private int diversion = 0;
+		private int duration = 0;
+		private int urgency = 0;
+		private boolean directional = true;  // TODO default
+		private boolean dynamic = true;      // TODO default
+		private boolean spoken = false;      // TODO default
+		private int steps = 0;               // TODO default
+		private int length = 0;
+		private int speed = 0;
+		private int quantifier = 0;
+		private int suppInfo = 0;
+		
+		public final static int[] labelSizes = {3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0};
+		
+		public Message(int direction, int extent, int event, int location) {
+			this.direction = direction;
+			this.extent = extent;
+			this.event = event;
+			this.location = location;
+		}
+		
+		public Message(int direction, int extent, int event, int location, int diversion, int duration) {
+			this(direction, extent, event, location);
+			this.diversion = diversion;
+			this.duration = duration;
+		}
+		
+		public void addField(int label, int value) {
+			switch(label) {
+			// duration
+			case 0: duration = value; break;
+			
+			// control code
+			case 1:
+				switch(value) {
+				case 0: urgency++; break;
+				case 1: urgency--; break;
+				case 2: directional = !directional; break;
+				case 3: dynamic = !dynamic; break;
+				case 4: spoken = !spoken; break;
+				case 5: diversion = 1; break;
+				case 6: steps += 8; break;
+				case 7: steps += 16; break;
+				}
+				break;
+
+			
+			case 2:
+				if(value == 0) length = 100;
+				else if(value <= 10) length = value;
+				else if(value <= 15) length = 10 + (value-10)*2;
+				else length = 20 + (value-15)*5;
+				break;
+			
+			case 3:
+				speed = 5*value;
+				break;
+			
+			case 4:
+			case 5:
+				quantifier = value;
+				break;
+				
+			case 6:
+				suppInfo = value;
+				break;
+				
+			// TODO complete!
+			}
+		}
 	}
 }
