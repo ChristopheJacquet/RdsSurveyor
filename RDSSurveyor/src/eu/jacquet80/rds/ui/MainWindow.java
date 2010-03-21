@@ -55,6 +55,7 @@ import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationTuned;
 import eu.jacquet80.rds.ui.app.AppPanel;
+import eu.jacquet80.rds.ui.input.InputToolBar;
 
 public class MainWindow extends JFrame {
 	private static final long serialVersionUID = -5219617213305143171L;
@@ -111,7 +112,7 @@ public class MainWindow extends JFrame {
 		return panel;
 	}
 	
-	public MainWindow(Log log) {
+	public MainWindow(Log log, InputToolBar toolbar) {
 		super("RDS Surveyor");
 		
 		this.log = log;
@@ -120,10 +121,15 @@ public class MainWindow extends JFrame {
 		
 		setLayout(new BorderLayout());
 		
+		JPanel globalPanel = new JPanel(new BorderLayout());
+		add(globalPanel, BorderLayout.CENTER);
+		
+		if(toolbar != null) add(toolbar, BorderLayout.NORTH);
+		
 		JPanel mainPanel = new JPanel();
 		BoxLayout boxLayout = new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS);
 		mainPanel.setLayout(boxLayout);
-		add(mainPanel, BorderLayout.NORTH);
+		globalPanel.add(mainPanel, BorderLayout.NORTH);
 		
 		// Main panel
 		final JLabel 
@@ -181,7 +187,7 @@ public class MainWindow extends JFrame {
 		final JPanel pnlEON = new JPanel(new BorderLayout());
 		pnlEON.add(new JScrollPane(tblEON = new JTable(eonTableModel)), BorderLayout.CENTER);
 		
-		add(tabbedPane, BorderLayout.CENTER);
+		globalPanel.add(tabbedPane, BorderLayout.CENTER);
 		
 		for(JTextArea txt : smallTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, txt.getFont().getSize()));
@@ -288,6 +294,7 @@ public class MainWindow extends JFrame {
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
+
 }
 
 class GroupPanel extends JPanel {
