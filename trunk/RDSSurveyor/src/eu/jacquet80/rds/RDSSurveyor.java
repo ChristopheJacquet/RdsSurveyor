@@ -44,9 +44,11 @@ import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
+import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
+import eu.jacquet80.rds.ui.input.InputToolBar;
 
 public class RDSSurveyor {
 	/**
@@ -89,6 +91,10 @@ public class RDSSurveyor {
 				newReader = new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i)));
 			} else if("-ingrouphexfile".equals(args[i])) {
 				newReader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
+			} else if("-inusbkey".equals(args[i])) {
+				newReader  = new USBFMRadioGroupReader();
+				((USBFMRadioGroupReader)newReader).init();
+				((USBFMRadioGroupReader)newReader).setFrequency(105500);
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
@@ -170,7 +176,9 @@ public class RDSSurveyor {
 			fTL.setVisible(true);
 			*/
 			
-			MainWindow mainWindow = new MainWindow(log);
+			InputToolBar toolbar = InputToolBar.forReader(reader);
+			
+			MainWindow mainWindow = new MainWindow(log, toolbar);
 			mainWindow.setVisible(true);
 			
 			/*
