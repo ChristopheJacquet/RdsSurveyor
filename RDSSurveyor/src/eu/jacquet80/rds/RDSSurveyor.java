@@ -40,6 +40,7 @@ import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
+import eu.jacquet80.rds.input.InverterBitReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
@@ -74,6 +75,7 @@ public class RDSSurveyor {
 		RDSReader reader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
+		boolean invert = false;
 		Segmenter segmenter = null;
 		File outFile = null;
 		PrintStream console = System.out;
@@ -95,6 +97,8 @@ public class RDSSurveyor {
 				newReader  = new USBFMRadioGroupReader();
 				((USBFMRadioGroupReader)newReader).init();
 				((USBFMRadioGroupReader)newReader).setFrequency(105500);
+			} else if("-invert".equals(args[i])) {
+				invert = true;
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
@@ -114,6 +118,7 @@ public class RDSSurveyor {
 				System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 				System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
+				System.out.println("  -invert                  Inverts bit data (depends on your configuration)");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
 				System.out.println("  -noconsole               No console analysis");
@@ -146,6 +151,12 @@ public class RDSSurveyor {
 		if(outFile != null && reader instanceof BitReader) {
 			System.out.println("Binary output file is " + outFile.getAbsoluteFile());
 			reader = new TeeBitReader((BitReader)reader, outFile);
+		}
+		
+		// inverts if necessary
+		if(invert && reader instanceof BitReader) {
+			System.out.println("Inverting bit data.");
+			reader = new InverterBitReader((BitReader)reader);
 		}
 		
 

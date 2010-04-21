@@ -369,4 +369,6 @@ public class RDS {
 	public static char toChar(int code) {
 		return charmap[code];
 	}
+	
+	public static float RDS_BITRATE = 1187.5f;
 }
