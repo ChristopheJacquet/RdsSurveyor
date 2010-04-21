@@ -34,6 +34,8 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
+import eu.jacquet80.rds.core.RDS;
+
 public class LiveAudioBitReader implements BitReader {
 	private final static int frameLength = 2000;
 	private static byte[] 
@@ -46,6 +48,9 @@ public class LiveAudioBitReader implements BitReader {
 	//private byte prevClock = 0;
 	private static final float SAMPLE_RATE = 8000f; //11025f; //11025f;
 	private static final Semaphore semReady = new Semaphore(0);
+	
+	private static final int LOWEST_THEORICAL_BIT_DURATION = (int)Math.floor(SAMPLE_RATE / RDS.RDS_BITRATE);
+	
 	private TargetDataLine line;
 	
 	private final int LATEST_WINDOW_LEN = (int)(SAMPLE_RATE *.5f); // length .5s
@@ -56,9 +61,13 @@ public class LiveAudioBitReader implements BitReader {
 	private final byte[] latestClock = new byte[LATEST_WINDOW_LEN];
 	private int latestClockSum = 0;
 	
+	//private int latestBitPos = 0, latestBitPosOffset = 0;
+	
 	
 	// need to be here, because CLOCK MUST NOT BE RESET
 	byte data, clock = -1;
+	
+	boolean processingComplete = true;
 	
 	public LiveAudioBitReader() throws IOException {
 		/*
@@ -99,6 +108,13 @@ public class LiveAudioBitReader implements BitReader {
 					// swap frames
 					byte[] temp = receiveFrame;
 					receiveFrame = decodeFrame;
+					
+					synchronized(this) {
+						if(!processingComplete) {
+							System.err.println("Warning, decoding not done in real-time, you will get errors.");
+						}
+					}
+					
 					decodeFrame = temp;
 					
 					// signal
@@ -138,6 +154,7 @@ public class LiveAudioBitReader implements BitReader {
 		//byte[] smpl = new byte[frameSize];
 		float clockAvg, dataAvg;
 		byte prevClock;
+		int bitDuration = 0;
 
 		do {
 			prevClock = clock;
@@ -145,12 +162,18 @@ public class LiveAudioBitReader implements BitReader {
 			// possibly wait for a frame to be ready
 			if(pos >= 2 * frameLength) {
 				//System.out.print("<W>");
+				
+				synchronized(this) { processingComplete = true; }
+				
 				try {
 					semReady.acquire();
 				} catch (InterruptedException e) {
 					System.err.println("InterruptedException.");
 				}
 				pos = 0;
+				//latestBitPosOffset = (int)(2 * SAMPLE_RATE);
+				
+				synchronized(this) { processingComplete = false; }
 			}			
 			
 			data = decodeFrame[pos]; //(0xFF & (int)smpl[0]) + ((int)smpl[1]) * 256;
@@ -165,19 +188,15 @@ public class LiveAudioBitReader implements BitReader {
 			
 			clockAvg = ((float)latestClockSum) / LATEST_WINDOW_LEN;
 			dataAvg = ((float)latestDataSum) / LATEST_WINDOW_LEN;
-			
-			
-			//if(latestPos == 0)
-			//	System.out.print("\nClock: " + clockAvg + " l=" + clock + ", data: " + dataAvg + " l=" + data);
-
-			
-			//System.out.print("[" + clock + "/" + data + "|" + prevClock + "]");
+						
 			pos += 2;
 			globalPos += 2;
-		} while(! (prevClock >= clockAvg && clock < clockAvg) );   /// (prevClock >= 0) && (clock < 0));   ///
-		//long delta = (globalPos - lastPos);
-		//System.out.print("avg=" + clockAvg + ", " + dataAvg + "  " + (delta == 18 || delta == 20 ? "(" + delta + ")" : "{%" + delta + "%}"));
-		//lastPos = globalPos;
+			bitDuration++;
+		} while(! (prevClock >= clockAvg && clock < clockAvg && bitDuration >= LOWEST_THEORICAL_BIT_DURATION) );
+		
+		if(bitDuration < 6 || bitDuration > 7) System.out.println("!! WARNING: bit duration was " + bitDuration + ", theorical " + SAMPLE_RATE / RDS.RDS_BITRATE);
+		bitDuration = 0;
+
 		return data > dataAvg;   /// data > 0; ///
 	}
 
