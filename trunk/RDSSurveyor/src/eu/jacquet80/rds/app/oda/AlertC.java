@@ -34,6 +34,8 @@ import eu.jacquet80.rds.core.Station;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
+	public static final int AID_WITH_ALERT_PLUS = 0x4B02; // Alert-C with Alert-Plus
+	// I have no info on this, I only have France Inter samples from 2000 that made use of this AID
 	
 	private String[] providerName = {"????", "????"};
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
@@ -78,15 +80,15 @@ public class AlertC extends ODA {
 				int tw = (blocks[2]>>2) & 3;
 				int td = blocks[2] & 3;
 				
-				console.printf("Gap=%d, SID=%d", gap, sid);
-				if(mode == 1) console.printf("mode=1 (enh) => Ta=%d, Tw=%d, Td=%d", ta, tw, td);
+				console.printf("SID=%d", sid);
+				if(mode == 1) console.printf(", mode=1 (enhanced) => gap=%d, Ta=%d, Tw=%d, Td=%d", gap, ta, tw, td);
 			}
 		}
 		
 		else
 		if(type == 8 && version == 0) {
 			int x4 = (blocks[1] & 0x10)>>4;
-			console.print("X4=" + x4 + " ");
+			console.print("T=" + x4 + " ");
 			
 			if(x4 == 0) {
 				int single_group = (blocks[1] & 0x8)>>3;
@@ -99,68 +101,88 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+					
+					// reset "expected" indicators
+					currentContIndex = -1;
+					nextGroupExpected = -1;
 				}
 				else {
 					int idx = blocks[1] & 7;
-					console.print("multi-group [" + idx + "]: ");
-					int first = (blocks[2]>>15) & 1;
-					if(first == 1) {
-						console.print("1st, ");
-						
-						int dir = (blocks[2]>>14) & 1;
-						int extent = (blocks[2]>>11) & 7;
-						int event = blocks[2] & 0x7FF;
-						int location = blocks[3];
-						console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-						
-						// TODO find a message to possibly update
-						currentMessage = new Message(dir, extent, event, location);
-						multiGroupBits = new Bitstream();
-						currentContIndex = idx;
-						nextGroupExpected = 2;
+					
+					if(idx == 0 || idx == 7) {
+						console.printf("non-standard message [F=0, CI=%d]: %04X-%04X", idx, blocks[2], blocks[3]);
 					} else {
-						int second = (blocks[2]>>14) & 1;
-						int remaining = (blocks[2]>>12) & 3;
-						if(second == 1) {
-							totalGroupsExpected = 2 + remaining;
-						} else console.print("later");
-						
-						int groupNumber = totalGroupsExpected-remaining;
-						
-						if(nextGroupExpected != -1) {
-							console.print("#" + groupNumber + "/" + totalGroupsExpected + 
-									" [rem=" + remaining + "]");
-							
-							if(groupNumber != nextGroupExpected) {
-								console.print(" ignoring, next expected is #" + nextGroupExpected);
-							} else {
-								nextGroupExpected++;
-								if(nextGroupExpected > totalGroupsExpected) nextGroupExpected = -1;
-								
-								multiGroupBits.add(blocks[2] & 0xFFF, 12);
-								multiGroupBits.add(blocks[3], 16);
-								
-								console.print("  ");
-								
-								console.print(" [" + multiGroupBits + "] ");
-								
-								while(multiGroupBits.count() >= 4) {
-									int label = multiGroupBits.peek(4);
-									if(multiGroupBits.count() < 4 + Message.labelSizes[label]) {
-										break;
-									} else {
-										multiGroupBits.take(4);
-										int value = multiGroupBits.take(Message.labelSizes[label]);
-										if(!(label == 0 && value == 0)) {
-											console.print(label + "->" + value + ", ");
-											currentMessage.addField(label, value);
+
+						console.print("multi-group [" + idx + "]: ");
+						int first = (blocks[2]>>15) & 1;
+						if(first == 1) {
+							console.print("1st, ");
+
+							int dir = (blocks[2]>>14) & 1;
+							int extent = (blocks[2]>>11) & 7;
+							int event = blocks[2] & 0x7FF;
+							int location = blocks[3];
+							console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+
+							// TODO find a message to possibly update
+							currentMessage = new Message(dir, extent, event, location);
+							multiGroupBits = new Bitstream();
+							currentContIndex = idx;
+							nextGroupExpected = 2;
+						} else {
+							int second = (blocks[2]>>14) & 1;
+							int remaining = (blocks[2]>>12) & 3;
+							if(second == 1) {
+								totalGroupsExpected = 2 + remaining;
+								console.print("2nd ");
+							} else console.print("later ");
+
+							int groupNumber = totalGroupsExpected-remaining;
+
+							if(nextGroupExpected >= 0) {
+								console.print("(#" + groupNumber + "/" + totalGroupsExpected + 
+										") [rem=" + remaining + "]");
+
+								if(idx != currentContIndex) {
+									console.printf(" ignoring, bad continuity index (was %d), probably missed groups", currentContIndex);
+									currentContIndex = -1;
+									nextGroupExpected = -1;
+								} else if(groupNumber != nextGroupExpected) {
+									console.print(" ignoring, next expected is #" + nextGroupExpected);
+								} else {
+									nextGroupExpected++;
+									if(nextGroupExpected > totalGroupsExpected) nextGroupExpected = -1;
+
+									multiGroupBits.add(blocks[2] & 0xFFF, 12);
+									multiGroupBits.add(blocks[3], 16);
+
+									console.print("  ");
+
+									console.print(" [" + multiGroupBits + "] ");
+
+									while(multiGroupBits.count() >= 4) {
+										int label = multiGroupBits.peek(4);
+										if(multiGroupBits.count() < 4 + Message.labelSizes[label]) {
+											break;
+										} else {
+											multiGroupBits.take(4);
+											int value = multiGroupBits.take(Message.labelSizes[label]);
+											if(!(label == 0 && value == 0)) {
+												console.print(label + "->" + value + ", ");
+												currentMessage.addField(label, value);
+											}
 										}
 									}
+
 								}
-								
+							} else {  /* if nextGroupExpected = -1 */
+								//console.printf("(#%d), ", groupNumber);
+								if(currentContIndex == idx) {
+									console.print("rem=" + remaining + ", ignoring repeated last group of multi-group message");
+								} else {
+									console.print("rem=" + remaining + ", ignoring (start of message missed)");
+								}
 							}
-						} else { /* if nextGroupExpected = -1 */
-							console.printf(", ignoring because first groups not received.");
 						}
 					}
 				}

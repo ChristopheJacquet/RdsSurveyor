@@ -54,5 +54,6 @@ public abstract class ODA extends Application {
 	static {
 		register(RTPlus.AID, RTPlus.class);
 		register(AlertC.AID, AlertC.class);
+		register(AlertC.AID_WITH_ALERT_PLUS, AlertC.class);
 	}
 }
