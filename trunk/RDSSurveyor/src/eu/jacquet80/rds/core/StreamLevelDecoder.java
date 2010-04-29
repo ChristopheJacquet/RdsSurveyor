@@ -42,16 +42,18 @@ public class StreamLevelDecoder implements RDSDecoder {
 
 	private final PrintStream console;
 	private final GroupLevelDecoder groupLevelDecoder;
+	private BitInversion inversion = BitInversion.AUTO;
 	
 	public StreamLevelDecoder(PrintStream console) {
 		this.console = console;
 		groupLevelDecoder = new GroupLevelDecoder(console);
 	}
 	
-	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][]) {
+	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][][]) {
 		for(int i=0; i<nbSyncAtOffset.length; i++)
 			for(int j=0; j<nbSyncAtOffset[i].length; j++)
-				nbSyncAtOffset[i][j] = new LinkedList<Integer>();
+				for(int k=0; k<nbSyncAtOffset[i][j].length; k++)
+					nbSyncAtOffset[i][j][k] = new LinkedList<Integer>();
 	}
 		
 	public void processStream(RDSReader rdsReader, Log log) throws IOException { 
@@ -66,7 +68,8 @@ public class StreamLevelDecoder implements RDSDecoder {
 		//TunedStation currentStation = new TunedStation();
 		int groupCount = 0;
 		int bitTime = 0;
-		@SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][] = new LinkedList[26][4];
+		boolean negativePolarity = false;
+		@SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][][] = new LinkedList[26][4][2];
 		
 		BitReader reader = (BitReader) rdsReader;
 		
@@ -88,47 +91,53 @@ public class StreamLevelDecoder implements RDSDecoder {
 			bitTime++;
 						
 			if(! synced) {
-				int synd = RDS.calcSyndrome(block);
+				int[] synd = { RDS.calcSyndrome(block), RDS.calcSyndrome(~block) };
 				
 				console.print(".");
 
 				for(int i=0; i<4; i++) {
-					if(synd == RDS.syndromes[i][0] || synd == RDS.syndromes[i][1]) {
-						int offset = bitTime % 26;
-						int pseudoBlock = (bitTime / 26 + 4 - i) % 4;
+					for(int j=0; j<2; j++) {
+						if(j==0 && inversion == BitInversion.INVERT ||
+								j==1 && inversion == BitInversion.NOINVERT) continue;
+						if(synd[j] == RDS.syndromes[i][0] || synd[j] == RDS.syndromes[i][1]) {
+							int offset = bitTime % 26;
+							int pseudoBlock = (bitTime / 26 + 4 - i) % 4;
 
-						console.print("[" + ((char)('A'+i)) + ":" + offset + "/" + pseudoBlock + "]");
-						
-						// add current time to the list of syndrome hits
-						nbSyncAtOffset[offset][pseudoBlock].addLast(bitTime);
-						
-						// weed out out-of-time hits
-						while(nbSyncAtOffset[offset][pseudoBlock].getFirst() < bitTime - SYNC_CONFIRM_DURATION * 104)
-							nbSyncAtOffset[offset][pseudoBlock].removeFirst();
-						
-						// are we above threshold
-						if(nbSyncAtOffset[offset][pseudoBlock].size() > SYNC_THRESHOLD) {
-							synced = true;
-							eraseSyncArray(nbSyncAtOffset);
-						
-							group[i] = (block>>10) & 0xFFFF;
-							blockCount = (i+1) % 4;
-							bitCount = 0;
-							nbOk = 1;
-							for(int j=0; j<4; j++) blocksOk[j] = false;
-							blocksOk[i] = true;
-							console.println("\nGot synchronization on block " + (char)('A' + i) + "!");
-							console.print("      ");
-							for(int j=0; j<i; j++) console.print(".");
-							console.print("S");
-							if(blockCount == 0) console.println();
+							console.print("[" + (j==0 ? "+" : "-") + ((char)('A'+i)) + ":" + offset + "/" + pseudoBlock + "]");
+
+							// add current time to the list of syndrome hits
+							nbSyncAtOffset[offset][pseudoBlock][j].addLast(bitTime);
+
+							// weed out out-of-time hits
+							while(nbSyncAtOffset[offset][pseudoBlock][j].getFirst() < bitTime - SYNC_CONFIRM_DURATION * 104)
+								nbSyncAtOffset[offset][pseudoBlock][j].removeFirst();
+
+							// are we above threshold
+							if(nbSyncAtOffset[offset][pseudoBlock][j].size() > SYNC_THRESHOLD) {
+								synced = true;
+								eraseSyncArray(nbSyncAtOffset);
+
+								group[i] = (block>>10) & 0xFFFF;
+								blockCount = (i+1) % 4;
+								bitCount = 0;
+								nbOk = 1;
+								for(int k=0; k<4; k++) blocksOk[k] = (k == i);
+								negativePolarity = (j==1);
+								
+								console.println("\nGot synchronization on block " + (char)('A' + i) + "! (" + (j==0 ? "positive" : "negative") + " polarity)");
+								console.print("      ");
+								for(int k=0; k<i; k++) console.print(".");
+								console.print("S");
+								if(blockCount == 0) console.println();
+							}
+							break;
+
 						}
-						break;
-						
 					}
 				}
 			} else {   // if synced
 				if(bitCount == 26) {
+					if(negativePolarity) block = ~block;    // invert block if polarity is negative
 					group[blockCount] = (block>>10) & 0xFFFF;
 					int synd = RDS.calcSyndrome(block);
 
@@ -193,7 +202,15 @@ public class StreamLevelDecoder implements RDSDecoder {
 		}
 	}
 	
+	public void forceInversion(BitInversion inversion) {
+		this.inversion = inversion;
+	}
+	
 	public TunedStation getTunedStation() {
 		return groupLevelDecoder.getTunedStation();
+	}
+	
+	public static enum BitInversion {
+		AUTO, INVERT, NOINVERT;
 	}
 }
