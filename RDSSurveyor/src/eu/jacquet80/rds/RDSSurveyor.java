@@ -35,6 +35,7 @@ import java.util.Date;
 import eu.jacquet80.rds.core.GroupLevelDecoder;
 import eu.jacquet80.rds.core.RDSDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
+import eu.jacquet80.rds.core.StreamLevelDecoder.BitInversion;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
@@ -75,10 +76,10 @@ public class RDSSurveyor {
 		RDSReader reader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
-		boolean invert = false;
 		Segmenter segmenter = null;
 		File outFile = null;
 		PrintStream console = System.out;
+		StreamLevelDecoder.BitInversion inversion = BitInversion.AUTO;
 		
 		for(int i=0; i<args.length; i++) {
 			RDSReader newReader = null;
@@ -98,7 +99,9 @@ public class RDSSurveyor {
 				((USBFMRadioGroupReader)newReader).init();
 				((USBFMRadioGroupReader)newReader).setFrequency(105500);
 			} else if("-invert".equals(args[i])) {
-				invert = true;
+				inversion = BitInversion.INVERT;
+			} else if("-noinvert".equals(args[i])) {
+				inversion = BitInversion.NOINVERT;
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
@@ -118,7 +121,7 @@ public class RDSSurveyor {
 				System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 				System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
-				System.out.println("  -invert                  Inverts bit data (depends on your configuration)");
+				System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
 				System.out.println("  -noconsole               No console analysis");
@@ -153,17 +156,16 @@ public class RDSSurveyor {
 			reader = new TeeBitReader((BitReader)reader, outFile);
 		}
 		
-		// inverts if necessary
-		if(invert && reader instanceof BitReader) {
-			System.out.println("Inverting bit data.");
-			reader = new InverterBitReader((BitReader)reader);
-		}
-		
-
 		Log log = new Log();
 		final RDSDecoder streamLevelDecoder = 
 			reader instanceof BitReader ? new StreamLevelDecoder(console) : new GroupLevelDecoder(console);
-		
+
+		// force inversion if necessary
+		if(streamLevelDecoder instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
+			((StreamLevelDecoder)streamLevelDecoder).forceInversion(inversion);
+		}
+
+			
 		if(showGui) {
 			/*
 			JFrame frame = new JFrame("RDS Surveyor");
