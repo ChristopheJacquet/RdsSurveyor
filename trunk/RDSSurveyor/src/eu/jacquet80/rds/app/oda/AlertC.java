@@ -39,6 +39,7 @@ public class AlertC extends ODA {
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
+	private int mode = 0;
 	private int currentContIndex = -1;
 	private int nextGroupExpected = -1;
 	private int totalGroupsExpected = -1;
@@ -58,7 +59,7 @@ public class AlertC extends ODA {
 			if(var == 0) {
 				int ltn = (blocks[2]>>6) & 0x3F;
 				int afi = (blocks[2]>>5) & 1;
-				int mode = (blocks[2]>>4) & 1;
+				mode = (blocks[2]>>4) & 1;
 				int scopeI = (blocks[2]>>3) & 1;
 				int scopeN = (blocks[2]>>2) & 1;
 				int scopeR = (blocks[2]>>1) & 1;
@@ -77,12 +78,13 @@ public class AlertC extends ODA {
 				int tw = (blocks[2]>>2) & 3;
 				int td = blocks[2] & 3;
 				
-				console.printf("Gap=%d, SID=%d, for mode 1: Ta=%d, Tw=%d, Td=%d", gap, sid, ta, tw, td);
+				console.printf("Gap=%d, SID=%d", gap, sid);
+				if(mode == 1) console.printf("mode=1 (enh) => Ta=%d, Tw=%d, Td=%d", ta, tw, td);
 			}
 		}
 		
 		else
-		if(version == 0) {
+		if(type == 8 && version == 0) {
 			int x4 = (blocks[1] & 0x10)>>4;
 			console.print("X4=" + x4 + " ");
 			
@@ -125,55 +127,75 @@ public class AlertC extends ODA {
 						
 						int groupNumber = totalGroupsExpected-remaining;
 						
-						console.print("#" + groupNumber + "/" + totalGroupsExpected + 
-								" [rem=" + remaining + "]");
-						
-						if(groupNumber != nextGroupExpected) {
-							console.print(" ignoring, next expected is #" + nextGroupExpected);
-						} else {
-							nextGroupExpected++;
-							if(nextGroupExpected > totalGroupsExpected) nextGroupExpected = -1;
+						if(nextGroupExpected != -1) {
+							console.print("#" + groupNumber + "/" + totalGroupsExpected + 
+									" [rem=" + remaining + "]");
 							
-							multiGroupBits.add(blocks[2] & 0xFFF, 12);
-							multiGroupBits.add(blocks[3], 16);
-							
-							console.print("  ");
-							
-							console.print(" [" + multiGroupBits + "] ");
-							
-							while(multiGroupBits.count() >= 4) {
-								int label = multiGroupBits.peek(4);
-								if(multiGroupBits.count() < 4 + Message.labelSizes[label]) {
-									break;
-								} else {
-									multiGroupBits.take(4);
-									int value = multiGroupBits.take(Message.labelSizes[label]);
-									if(!(label == 0 && value == 0)) {
-										console.print(label + "->" + value + ", ");
-										currentMessage.addField(label, value);
+							if(groupNumber != nextGroupExpected) {
+								console.print(" ignoring, next expected is #" + nextGroupExpected);
+							} else {
+								nextGroupExpected++;
+								if(nextGroupExpected > totalGroupsExpected) nextGroupExpected = -1;
+								
+								multiGroupBits.add(blocks[2] & 0xFFF, 12);
+								multiGroupBits.add(blocks[3], 16);
+								
+								console.print("  ");
+								
+								console.print(" [" + multiGroupBits + "] ");
+								
+								while(multiGroupBits.count() >= 4) {
+									int label = multiGroupBits.peek(4);
+									if(multiGroupBits.count() < 4 + Message.labelSizes[label]) {
+										break;
+									} else {
+										multiGroupBits.take(4);
+										int value = multiGroupBits.take(Message.labelSizes[label]);
+										if(!(label == 0 && value == 0)) {
+											console.print(label + "->" + value + ", ");
+											currentMessage.addField(label, value);
+										}
 									}
 								}
+								
 							}
-							
+						} else { /* if nextGroupExpected = -1 */
+							console.printf(", ignoring because first groups not received.");
 						}
 					}
 				}
 			} else {
 				int addr = blocks[1] & 0xF;
 				console.print("Tuning Info: ");
+				
+				OtherNetwork on = null;
+				if(addr >= 6 && addr <= 9){
+					on = otherNetworks.get(blocks[3]);
+					if(on == null) on = new OtherNetwork(blocks[3]);
+					otherNetworks.put(blocks[3], on);
+				}
+
+				
 				switch(addr) {
 				case 4: case 5:
 					providerName[addr-4] = String.format("%c%c%c%c", RDS.toChar((blocks[2]>>8) & 0xFF), RDS.toChar(blocks[2] & 0xFF), RDS.toChar((blocks[3]>>8) & 0xFF), RDS.toChar(blocks[3] & 0xFF));
 					console.printf("Prov.name[%d]=\"%s\" ", addr-4, providerName[addr-4]);
 					break;
-					
+										
 				case 6:
 					int af1 = (blocks[2] >> 8) & 0xFF;
 					int af2 = blocks[2] & 0xFF;
-					Station on = otherNetworks.get(blocks[3]);
-					if(on == null) on = new OtherNetwork(blocks[3]);
+					
 					console.printf("Other Network, ON.PI=%04X", blocks[3]);
 					console.print(", ON." + on.addAFPair(af1, af2));
+					break;
+					
+				case 9:
+					console.printf("Other Network, ON.PI=%04X", blocks[3]);
+					int ltn = (blocks[2]>>10) & 0x3F;
+					int mgs = (blocks[2]>>6) & 0xF;
+					int sid = blocks[2] & 0x3F;
+					console.printf(", ON.LTN=" + ltn + ", ON.MGS=" + mgs + ", ON.SID=" + sid);
 					break;
 					
 				default: console.print("addr=" + addr);
