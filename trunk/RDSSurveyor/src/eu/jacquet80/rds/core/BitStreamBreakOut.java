@@ -53,7 +53,7 @@ public class BitStreamBreakOut {
 			
 			for(int i=0; i<4; i++) {
 				for(int j=0; j<2; j++) {
-					if(synd == StreamLevelDecoder.syndromes[i][j]) {
+					if(synd == RDS.syndromes[i][j]) {
 						if(strBlock.length() > 26) {
 							System.out.print(strBlock.substring(0, strBlock.length() - 26 - 1));
 							System.out.print(strBlock.substring(strBlock.length() - 26));
