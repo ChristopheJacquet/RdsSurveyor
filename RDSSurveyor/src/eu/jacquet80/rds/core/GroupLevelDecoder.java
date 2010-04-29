@@ -238,6 +238,10 @@ public class GroupLevelDecoder implements RDSDecoder {
 				console.printf("Language: %02X [%s]", langID, 
 						langID < RDS.languages.length ? RDS.languages[langID][1] : "");
 				break;
+			
+			case 6:
+				console.printf("Broadcaster data %03X", blocks[2] & 0xFFF);
+				break;
 				
 			default:
 				console.printf("Unhandled data %03X", blocks[2] & 0xFFF);
@@ -313,7 +317,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				console.printf("ODA data=%04X", blocks[2]);
 				
 				console.println();
-				console.print("\t--> ");
+				console.print("\t" + app.getName()  + " --> ");
 				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
 			}
 		}
