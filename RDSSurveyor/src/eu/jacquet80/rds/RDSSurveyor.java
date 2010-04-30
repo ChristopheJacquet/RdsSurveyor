@@ -47,6 +47,7 @@ import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
+import eu.jacquet80.rds.input.V4LGroupReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
@@ -95,9 +96,11 @@ public class RDSSurveyor {
 			} else if("-ingrouphexfile".equals(args[i])) {
 				newReader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
 			} else if("-inusbkey".equals(args[i])) {
-				newReader  = new USBFMRadioGroupReader();
+				newReader = new USBFMRadioGroupReader();
 				((USBFMRadioGroupReader)newReader).init();
 				((USBFMRadioGroupReader)newReader).setFrequency(105500);
+			} else if("-inv4l".equals(args[i])) {
+				newReader = new V4LGroupReader(new File(getParam("inv4l", args, ++i)));
 			} else if("-invert".equals(args[i])) {
 				inversion = BitInversion.INVERT;
 			} else if("-noinvert".equals(args[i])) {
@@ -121,6 +124,7 @@ public class RDSSurveyor {
 				System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 				System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 				System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
+				System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 				System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
