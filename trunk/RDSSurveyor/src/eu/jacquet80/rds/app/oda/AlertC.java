@@ -212,6 +212,10 @@ public class AlertC extends ODA {
 					console.print(", ON." + on.addAFPair(af1, af2));
 					break;
 					
+				case 8:
+					console.printf("Other Networks, ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
+					break;
+					
 				case 9:
 					console.printf("Other Network, ON.PI=%04X", blocks[3]);
 					int ltn = (blocks[2]>>10) & 0x3F;
