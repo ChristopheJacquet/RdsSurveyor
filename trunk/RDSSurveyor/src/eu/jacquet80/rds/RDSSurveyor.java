@@ -123,6 +123,8 @@ public class RDSSurveyor {
 				showGui = false;         // implies -nogui
 				segmenter = new Segmenter(System.out);
 			} else {
+				System.out.println("Unknown argument: " + args[i]);
+				
 				System.out.println("Arguments:");
 				System.out.println("  -inaudio                 Use sound card audio as input");
 				System.out.println("  -inbinfile <file>        Use the given binary file as input");

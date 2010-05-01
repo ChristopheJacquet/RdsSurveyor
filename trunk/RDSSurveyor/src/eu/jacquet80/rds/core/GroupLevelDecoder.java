@@ -542,8 +542,15 @@ public class GroupLevelDecoder implements RDSDecoder {
 			int[] blocks = nextBlocks;
 			nextBlocks = reader.getGroup();
 			
-			console.printf("%04d: [%04X %04X-%04X %04X] ", bitTime / 26, blocks[0], blocks[1], blocks[2], blocks[3]);
-			boolean[] blocksOk = allOk;
+			console.printf("%04d: [", bitTime / 26);
+			//boolean[] blocksOk = allOk;
+			boolean[] blocksOk = new boolean[4];
+			for(int i=0; i<4; i++) {
+				blocksOk[i] = (blocks[i] >= 0);
+				if(blocksOk[i]) console.printf("%04X ", blocks[i]);
+				else console.print("---- ");
+			}
+			console.print("] ");
 			
 			// detect isolated groups with wrong PI
 			if(lastPI == nextBlocks[0] && lastPI != blocks[0]) {

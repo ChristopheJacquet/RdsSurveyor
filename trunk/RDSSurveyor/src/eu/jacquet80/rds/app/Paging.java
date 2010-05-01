@@ -153,7 +153,7 @@ public class Paging extends Application {
 
 				// update the list of messages
 				if(newMessage != null) messages.addLast(newMessage);    // add the new message
-				if(currentMessage.isComplete()) currentMessage = null;  // a completed message is no longer current
+				if(currentMessage != null && currentMessage.isComplete()) currentMessage = null;  // a completed message is no longer current
 			}
 
 			fireChangeListeners();
