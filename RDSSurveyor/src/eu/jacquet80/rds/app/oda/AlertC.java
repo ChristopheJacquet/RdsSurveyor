@@ -62,17 +62,16 @@ public class AlertC extends ODA {
 				int ltn = (blocks[2]>>6) & 0x3F;
 				int afi = (blocks[2]>>5) & 1;
 				mode = (blocks[2]>>4) & 1;
+				int mgs = blocks[2] & 0xF;
+				
+				/*
 				int scopeI = (blocks[2]>>3) & 1;
 				int scopeN = (blocks[2]>>2) & 1;
 				int scopeR = (blocks[2]>>1) & 1;
 				int scopeU = (blocks[2]) & 1;
+				*/
 				
-				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS[scope]=%c%c%c%c ",
-						ltn, afi, mode,
-						scopeI==1 ? 'I' : ' ',
-						scopeN==1 ? 'N' : ' ',
-						scopeR==1 ? 'R' : ' ',
-						scopeU==1 ? 'U' : ' ');
+				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS=%s ", ltn, afi, mode, decodeMGS(mgs));
 			} else if(var == 1) {
 				int gap = (blocks[2]>>12) & 3;
 				int sid = (blocks[2]>>6) & 0x3F;
@@ -221,7 +220,7 @@ public class AlertC extends ODA {
 					int ltn = (blocks[2]>>10) & 0x3F;
 					int mgs = (blocks[2]>>6) & 0xF;
 					int sid = blocks[2] & 0x3F;
-					console.printf(", ON.LTN=" + ltn + ", ON.MGS=" + mgs + ", ON.SID=" + sid);
+					console.printf(", ON.LTN=" + ltn + ", ON.MGS=" + decodeMGS(mgs) + ", ON.SID=" + sid);
 					break;
 					
 				default: console.print("addr=" + addr);
@@ -232,6 +231,13 @@ public class AlertC extends ODA {
 		fireChangeListeners();
 	}
 
+	private static String decodeMGS(int mgs) {
+		return
+			((mgs&8) != 0 ? "I" : "") +
+			((mgs&4) != 0 ? "N" : "") +
+			((mgs&2) != 0 ? "R" : "") +
+			((mgs&1) != 0 ? "U" : "");
+	}
 
 	@Override
 	public String getName() {

@@ -43,7 +43,11 @@ public class TeeGroupReader implements GroupReader {
 	@Override
 	public int[] getGroup() throws IOException {
 		int[] group = reader.getGroup();
-		writer.printf("%04X %04X %04X %04X\n", group[0], group[1], group[2], group[3]);
+		for(int i=0; i<4; i++) {
+			if(group[i]>=0) writer.printf("%04X ", group[i]);
+			else writer.print("---- ");
+		}
+		writer.println();
 		writer.flush();
 		return group;
 	}

@@ -48,12 +48,14 @@ public class HexFileGroupReader implements GroupReader {
 		} while(line.startsWith("%"));    // ignore lines beginning with '%' (metadata and possibly comments)
 		
 		
-		String[] components = line.split("\\s");
+		String[] components = line.trim().split("\\s+");
 		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
 		int[] res = new int[4];
 		
 		for(int i=0; i<4; i++) {
-			res[i] = Integer.parseInt(components[components.length-4+i], 16);
+			String s = components[components.length-4+i];
+			if("----".equals(s)) res[i] = -1;
+			else res[i] = Integer.parseInt(s, 16);
 		}
 		
 		return res;

@@ -33,39 +33,57 @@ public class V4LGroupReader implements GroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final FileInputStream reader;
-	private final byte[] recvBuffer = new byte[12];
+	private final byte[] recvBuffer = new byte[3];
 	
 	public V4LGroupReader(File f) throws IOException {
 		reader = new FileInputStream(f);
 		
+		/*
 		boolean gotD = false;
 		byte[] buf = new byte[3];
 		do {
 			if(reader.read(buf) != 3) throw new IOException("Could not read from Video4Linux radio device.");
 			if((buf[2] & 3) == 3) gotD = true;
 		} while(! gotD);
+		*/
 	}
 	
 	@Override
 	public int[] getGroup() throws IOException {
-		int[] res;
+		int[] res = new int[4];
 		boolean error;
 
-		do {
-			if(reader.read(recvBuffer) != 12) throw new IOException("Could not read from Video4Linux radio device.");
-		
-			res = new int[] {
-				(recvBuffer[0] & 0xFF) | ((recvBuffer[1] & 0xFF) << 8),
-				(recvBuffer[3] & 0xFF) | ((recvBuffer[4] & 0xFF) << 8),
-				(recvBuffer[6] & 0xFF) | ((recvBuffer[7] & 0xFF) << 8),
-				(recvBuffer[9] & 0xFF) | ((recvBuffer[10] & 0xFF) << 8) };
+		// read 4 blocks of offsets 0, 1, 2, 3
+		for(int i=0; i<4; i++) {
+			int numRead;
+			int blockOffset;
+			do {
+				do {
+					numRead = reader.read(recvBuffer);
+				} while(numRead != 3);
+				blockOffset = recvBuffer[2] & 0x3;
+				if(blockOffset != i) System.out.println("<SLIP got " + blockOffset + ", expecting " + i + ">");
+			} while(blockOffset != i);
 			
+			res[i] = (recvBuffer[0] & 0xFF) | ((recvBuffer[1] & 0xFF) << 8);
+			
+			if((recvBuffer[2] & 0xC0) != 0) res[i] = -1;
+			
+			/*
 			error =
 				(recvBuffer[2] & 0x80) != 0 || 
 				(recvBuffer[5] & 0x80) != 0 || 
 				(recvBuffer[8] & 0x80) != 0 || 
 				(recvBuffer[11] & 0x80) != 0;
-		} while(error);
+				*/
+			//error = false;
+			
+			/*
+			System.out.printf("ERR: %02X %02X %02X %02X\n", recvBuffer[2], recvBuffer[5], recvBuffer[8], recvBuffer[11]);
+			System.out.flush();
+			*/
+			
+		}
 		
 		return res;
 	}
