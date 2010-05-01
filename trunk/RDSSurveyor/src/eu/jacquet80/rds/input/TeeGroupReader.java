@@ -23,40 +23,29 @@
 
 */
 
+
 package eu.jacquet80.rds.input;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 
-public class HexFileGroupReader implements GroupReader {
-	private final BufferedReader br;
+public class TeeGroupReader implements GroupReader {
+	private final PrintWriter writer;
+	private final GroupReader reader;
 	
-	public HexFileGroupReader(File file) throws FileNotFoundException {
-		br = new BufferedReader(new FileReader(file));
+	public TeeGroupReader(GroupReader reader, File of) throws IOException {
+		this.reader = reader;
+		writer = new PrintWriter(of);
+		writer.println("% RDS hexgroups");
 	}
 	
-	
+	@Override
 	public int[] getGroup() throws IOException {
-		String line;
-		
-		do {
-			line = br.readLine();
-			if(line == null) throw new IOException("End of file");
-		} while(line.startsWith("%"));    // ignore lines beginning with '%' (metadata and possibly comments)
-		
-		
-		String[] components = line.split("\\s");
-		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
-		int[] res = new int[4];
-		
-		for(int i=0; i<4; i++) {
-			res[i] = Integer.parseInt(components[components.length-4+i], 16);
-		}
-		
-		return res;
+		int[] group = reader.getGroup();
+		writer.printf("%04X %04X %04X %04X\n", group[0], group[1], group[2], group[3]);
+		writer.flush();
+		return group;
 	}
 
 }
