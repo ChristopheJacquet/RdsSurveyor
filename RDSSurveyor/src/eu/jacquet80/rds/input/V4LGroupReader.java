@@ -48,21 +48,24 @@ public class V4LGroupReader implements GroupReader {
 	
 	@Override
 	public int[] getGroup() throws IOException {
-		if(reader.read(recvBuffer) != 12) throw new IOException("Could not read from Video4Linux radio device.");
+		int[] res;
+		boolean error;
+
+		do {
+			if(reader.read(recvBuffer) != 12) throw new IOException("Could not read from Video4Linux radio device.");
 		
-		int[] res = {
+			res = new int[] {
 				(recvBuffer[0] & 0xFF) | ((recvBuffer[1] & 0xFF) << 8),
 				(recvBuffer[3] & 0xFF) | ((recvBuffer[4] & 0xFF) << 8),
 				(recvBuffer[6] & 0xFF) | ((recvBuffer[7] & 0xFF) << 8),
-				(recvBuffer[9] & 0xFF) | ((recvBuffer[10] & 0xFF) << 8) };		
-		
-		/*
-		if((recvBuffer[2] & 0xC) != 0 || 
-				(recvBuffer[5] & 0xC) != 0 || 
-				(recvBuffer[8] & 0xC) != 0 || 
-				(recvBuffer[11] & 0xC) != 0) {
-			System.out.println("Bad RDS group");
-		}*/
+				(recvBuffer[9] & 0xFF) | ((recvBuffer[10] & 0xFF) << 8) };
+			
+			error =
+				(recvBuffer[2] & 0x80) != 0 || 
+				(recvBuffer[5] & 0x80) != 0 || 
+				(recvBuffer[8] & 0x80) != 0 || 
+				(recvBuffer[11] & 0x80) != 0;
+		} while(error);
 		
 		return res;
 	}
