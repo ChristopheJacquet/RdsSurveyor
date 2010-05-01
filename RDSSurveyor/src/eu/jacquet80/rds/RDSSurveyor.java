@@ -40,12 +40,14 @@ import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.InverterBitReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
+import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LGroupReader;
 import eu.jacquet80.rds.log.Log;
@@ -78,7 +80,8 @@ public class RDSSurveyor {
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		Segmenter segmenter = null;
-		File outFile = null;
+		File outBinFile = null;
+		File outGroupFile = null;
 		PrintStream console = System.out;
 		StreamLevelDecoder.BitInversion inversion = BitInversion.AUTO;
 		
@@ -108,7 +111,9 @@ public class RDSSurveyor {
 			} else if("-inaudiofile".equals(args[i])) {
 				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
 			} else if("-outbinfile".equals(args[i])) {
-				outFile = new File(getParam("outbinfile", args, ++i));
+				outBinFile = new File(getParam("outbinfile", args, ++i));
+			} else if("-outgrouphexfile".equals(args[i])) {
+				outGroupFile = new File(getParam("outgrouphexfile", args, ++i));
 			} else if("-nogui".equals(args[i])) {
 				showGui = false;
 			} else if("-noconsole".equals(args[i])) {
@@ -126,7 +131,8 @@ public class RDSSurveyor {
 				System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
 				System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 				System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
-				System.out.println("  -outbinfile <file>       Write output bitstream to binary file");
+				System.out.println("  -outbinfile <file>       Write bitstream to binary file (if applicable)");
+				System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
 				System.out.println("  -nogui                   Do not show the graphical user interface");
 				System.out.println("  -noconsole               No console analysis");
 				System.exit(1);
@@ -148,16 +154,22 @@ public class RDSSurveyor {
 		
 		// when input is "live", then always create an output file
 		// if there is no output file, create one in the temp directory
-		if(liveInput && outFile == null) {
+		if(liveInput && outBinFile == null) {
 			System.out.print("Using default output file. ");
 			String tempDir = System.getProperty("java.io.tmpdir");
-			outFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
+			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 		}
 		
-		// use the output file if defined
-		if(outFile != null && reader instanceof BitReader) {
-			System.out.println("Binary output file is " + outFile.getAbsoluteFile());
-			reader = new TeeBitReader((BitReader)reader, outFile);
+		// use the output binary file if defined
+		if(outBinFile != null && reader instanceof BitReader) {
+			System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
+			reader = new TeeBitReader((BitReader)reader, outBinFile);
+		}
+		
+		// use the output hex file if defined
+		if(outGroupFile != null && reader instanceof GroupReader) {
+			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
+			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
 		}
 		
 		Log log = new Log();
