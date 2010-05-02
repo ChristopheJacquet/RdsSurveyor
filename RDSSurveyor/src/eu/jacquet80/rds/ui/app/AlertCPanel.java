@@ -60,7 +60,7 @@ public class AlertCPanel extends AppPanel {
 	}
 	
 	@Override
-	public void notifyChange() {
+	public void doNotifyChange() {
 		lblProviderName.setText(app.getProviderName());
 	}
 }

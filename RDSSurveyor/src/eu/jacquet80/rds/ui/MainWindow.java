@@ -217,13 +217,13 @@ public class MainWindow extends JFrame {
 					
 				// reset the tabs displayed
 				try {
-					SwingUtilities.invokeAndWait(new Runnable() {
+					SwingUtilities.invokeLater(new Runnable() {
 						public void run() {
 							tabbedPane.removeAll();
 							tabbedPane.addTab("EON", pnlEON);
-							repaint();
 						}
 					});
+					repaint();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -236,12 +236,12 @@ public class MainWindow extends JFrame {
 				final AppPanel panel = AppPanel.forApp(newApp);
 				if(panel == null) return;
 				try {
-					SwingUtilities.invokeAndWait(new Runnable() {
+					SwingUtilities.invokeLater(new Runnable() {
 						public void run() {
 							tabbedPane.addTab(newApp.getName(), panel);
-							repaint();
 						};
 					});
+					repaint();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -249,7 +249,13 @@ public class MainWindow extends JFrame {
 		});
 		
 		log.addGroupListener(new Runnable() {
+			long previousTime = 0;
 			public void run() {
+				long currentTime = System.currentTimeMillis();
+				if(currentTime - previousTime > 500) {  // refresh every 1s only
+					previousTime = currentTime;
+				} else return;
+				
 				synchronized(MainWindow.this) {
 					if(station != null) {
 						SwingUtilities.invokeLater(new Runnable() {
@@ -284,15 +290,18 @@ public class MainWindow extends JFrame {
 
 							};
 						});
+						
+						// does not work here groupStats.update(station.numericGroupStats());
+						repaint();
 					}
 				}
 			}
 			
 		});
 		
-		pack();
-		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		pack();
 	}
 
 }

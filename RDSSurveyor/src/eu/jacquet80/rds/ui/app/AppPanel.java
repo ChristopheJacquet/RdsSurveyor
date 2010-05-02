@@ -46,10 +46,18 @@ public abstract class AppPanel extends JPanel implements ChangeListener {
 		super(layout);
 	}
 	
-	public void notifyChange() {
-		repaint();
+	private long previousTime = 0;
+	
+	public final void notifyChange() {
+		long currentTime = System.currentTimeMillis();
+		if(currentTime - previousTime > 500) {  // refresh every 1s only
+			previousTime = currentTime;
+			doNotifyChange();
+		}
 	}
 	
+	protected abstract void doNotifyChange();
+
 	public static AppPanel forApp(Application app) {
 		if(app instanceof Paging) return new PagingPanel(app);
 		if(app instanceof AlertC) return new AlertCPanel(app);

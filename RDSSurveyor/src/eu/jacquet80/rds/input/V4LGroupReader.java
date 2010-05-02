@@ -37,21 +37,11 @@ public class V4LGroupReader implements GroupReader {
 	
 	public V4LGroupReader(File f) throws IOException {
 		reader = new FileInputStream(f);
-		
-		/*
-		boolean gotD = false;
-		byte[] buf = new byte[3];
-		do {
-			if(reader.read(buf) != 3) throw new IOException("Could not read from Video4Linux radio device.");
-			if((buf[2] & 3) == 3) gotD = true;
-		} while(! gotD);
-		*/
 	}
 	
 	@Override
 	public int[] getGroup() throws IOException {
 		int[] res = new int[4];
-		boolean error;
 
 		// read 4 blocks of offsets 0, 1, 2, 3
 		for(int i=0; i<4; i++) {
@@ -68,21 +58,6 @@ public class V4LGroupReader implements GroupReader {
 			res[i] = (recvBuffer[0] & 0xFF) | ((recvBuffer[1] & 0xFF) << 8);
 			
 			if((recvBuffer[2] & 0xC0) != 0) res[i] = -1;
-			
-			/*
-			error =
-				(recvBuffer[2] & 0x80) != 0 || 
-				(recvBuffer[5] & 0x80) != 0 || 
-				(recvBuffer[8] & 0x80) != 0 || 
-				(recvBuffer[11] & 0x80) != 0;
-				*/
-			//error = false;
-			
-			/*
-			System.out.printf("ERR: %02X %02X %02X %02X\n", recvBuffer[2], recvBuffer[5], recvBuffer[8], recvBuffer[11]);
-			System.out.flush();
-			*/
-			
 		}
 		
 		return res;
