@@ -137,7 +137,7 @@ public class PagingPanel extends AppPanel {
 	}
 
 	@Override
-	public void notifyChange() {
+	public void doNotifyChange() {
 		tableModel.fireTableDataChanged();
 		Util.packColumns(table);
 		

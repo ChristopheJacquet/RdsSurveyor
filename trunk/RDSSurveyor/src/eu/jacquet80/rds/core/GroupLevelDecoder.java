@@ -521,7 +521,9 @@ public class GroupLevelDecoder implements RDSDecoder {
 		}
 		
 
-		if(newApp != null) log.addMessage(new ApplicationChanged(bitTime, null, newApp));
+		// post log message for app creation only if the group is not being ignored
+		if(newApp != null && station == workingStation) 
+			log.addMessage(new ApplicationChanged(bitTime, null, newApp));
 	}
 	
 	

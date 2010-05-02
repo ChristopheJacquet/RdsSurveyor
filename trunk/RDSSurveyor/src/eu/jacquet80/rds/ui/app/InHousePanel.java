@@ -66,12 +66,11 @@ public class InHousePanel extends AppPanel {
 	}
 
 	@Override
-	public void notifyChange() {
-		//super.notifyChange();
-		
+	public void doNotifyChange() {
 		for(ListDataListener l : listModel.getListDataListeners()) {
 			l.intervalAdded(new ListDataEvent(this, ListDataEvent.INTERVAL_ADDED, app.getMessageCount()-1, app.getMessageCount()-1));
 		}
+		
 	}
 	
 	private class IHListModel extends AbstractListModel {
