@@ -32,6 +32,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.util.Date;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -72,13 +73,13 @@ public class MainWindow extends JFrame {
 			txtCountry = new JTextArea(1, 20),
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 30),
-			txtRTa = new JTextArea(1, 64),
-			txtRTb = new JTextArea(1, 64),
+			txtRT = new JTextArea(1, 64),
+			txtRTmessages = new JTextArea(3, 64),
 			txtAF = new JTextArea(3, 64);
 	private final GroupPanel groupStats = new GroupPanel();
 			
 			//txtGroupStats = new JTextArea(1, 64);
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRTa, txtRTb};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -139,12 +140,11 @@ public class MainWindow extends JFrame {
 				lblCountry = new JLabel("Country"),
 				lblLang = new JLabel("Language"),
 				lblTime = new JLabel("Time"),
-				lblRTa = new JLabel("RTA"),
-				lblRTb = new JLabel("RTB"),
 				lblPS = new JLabel("PS"),
 				lblPSName = new JLabel("Station name"),
 				lblPI = new JLabel("PI"),
 				lblAF = new JLabel("Alternative Frequencies"),
+				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics");
 		
 		
@@ -169,8 +169,9 @@ public class MainWindow extends JFrame {
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblRTa, txtRTa},
-				{lblRTb, txtRTb},
+				{lblRT},
+				{txtRT},
+				{txtRTmessages},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -265,9 +266,21 @@ public class MainWindow extends JFrame {
 								txtPI.setText(String.format("%04X", station.getPI()));
 								txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
 								txtPTYN.setText(station.getPTYN());
-								txtRTa.setText(station.getRT(0));
-								txtRTb.setText(station.getRT(1));
-								txtTraffic.setText(station.trafficInfoString());
+								txtRT.setText(station.getRT() != null ?
+										"[" + ((char)('A' + station.whichRT())) + "] " + station.getRT()
+										: "");
+								
+								List<String> rtM = station.getRTMessages();
+								String res = "";
+								for(int i=0; i<3; i++) {
+									if(rtM.size() > i) {
+										if(res.length() > 0) res += "\n";
+										res += rtM.get(rtM.size() - i - 1);
+									}
+								}
+								txtRTmessages.setText(res);
+								
+								/*
 								if(station.whichRT() == 0) {
 									lblRTa.setForeground(Color.RED);
 									lblRTb.setForeground(Color.BLACK);
@@ -278,7 +291,10 @@ public class MainWindow extends JFrame {
 									lblRTa.setForeground(Color.BLACK);
 									lblRTb.setForeground(Color.BLACK);
 								}
-								
+								*/
+										
+								txtTraffic.setText(station.trafficInfoString());
+																
 								Date date = station.getDate();
 								txtTime.setText(date != null ? date.toString() : "");
 								txtAF.setText(station.afsToString());

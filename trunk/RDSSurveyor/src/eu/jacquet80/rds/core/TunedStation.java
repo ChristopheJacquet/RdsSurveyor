@@ -24,10 +24,12 @@
 */
 
 package eu.jacquet80.rds.core;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -35,9 +37,12 @@ import eu.jacquet80.rds.app.Application;
 
 
 public class TunedStation extends Station {
-	private char[][] rt = new char[2][64];
-	private boolean[] touchedRT;
-	private int latestRT;
+	// radiotext-related variables
+	private char[] currentRT = new char[64];
+	private int currentRTflags = 0;
+	private List<String> rtMessages = new ArrayList<String>();
+	private int latestRT = -1;
+	
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
@@ -61,9 +66,8 @@ public class TunedStation extends Station {
 	protected void reset(int pi) {
 		super.reset(pi);
 		
-		for(int i=0; i<2; i++) {
-			Arrays.fill(rt[i], '?');
-		}
+		// reset radiotext
+		resetRT();
 		
 		synchronized(this) {
 			otherNetworks = new TreeMap<Integer, Station>();
@@ -83,10 +87,6 @@ public class TunedStation extends Station {
 		
 		applications = new Application[32];
 		di = 0;
-		
-		touchedRT = new boolean[] {false, false};
-		
-		latestRT = -1;
 	}
 	
 	public String toString() {
@@ -94,20 +94,8 @@ public class TunedStation extends Station {
 		//System.out.println("pi=" + pi + ", ps=" + new String(ps) + ", time=" + timeOfLastPI);
 		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%.3f", pi, getStationName(), new String(ps), (float)(timeOfLastPI / (1187.5f))));
 		
-		for(int ab=0; ab<2; ab++) {
-			for(int i=0; i<64; i++) {
-				if(rt[ab][i] != '?') {
-					res.append(String.format("\nRT %c = \"", (char)('a'+ab)));
-					for(int j=0; j<64; j++) {
-						if(rt[ab][j] == 0x0D) break;
-						res.append(rt[ab][j] >= 32 ? rt[ab][j] : "\\x" + ((int)rt[ab][j]));
-					}
-					res.append('\"');
-					break;
-				}
-			}
-		}
-		
+		res.append(String.format("\nRT = \"%s\"", getRT()));
+
 		synchronized(this) {
 			for(Station on : otherNetworks.values()) res.append("\nON: ").append(on);
 		}
@@ -169,9 +157,30 @@ public class TunedStation extends Station {
 	}
 	
 	public void setRTChars(int ab, int position, char ... characters) {
-		setChars(rt[ab], position, characters);
+		for(int i = 0; i < characters.length; i++) {
+			if(currentRT[position * characters.length + i] != '\0' && characters[i] != currentRT[position * characters.length + i]) {
+				// this is a new RT message: save the previous message...
+				StringBuffer msg = new StringBuffer("[");
+				for(int f=0; f<2; f++)
+					if((currentRTflags & (1<<f)) != 0) msg.append((char)('A' + f));
+				msg.append("] ").append(getRT());
+				rtMessages.add(msg.toString());
+				
+				// ... and reset the message buffer
+				resetRT();
+				break;
+			}
+		}
+		
+		setChars(currentRT, position, characters);
+		currentRTflags |= (1 << ab);   // set a bit corresponding to the current flag
 		latestRT = ab;
-		touchedRT[ab] = true;
+		
+		//System.out.println("\n*** RT=" + getRT() + ",   msgs=" + rtMessages + " ***");
+	}
+	
+	private void resetRT() {
+		Arrays.fill(currentRT, '\0');
 	}
 	
 	public void setApplicationForGroup(int type, int version, Application app) {
@@ -217,18 +226,27 @@ public class TunedStation extends Station {
 		di |= val<<(3-pos);				// set it if needed
 	}
 	
-	public String getRT(int idx) {
-		if(!touchedRT[idx]) return "";
-		else return new String(rt[idx]).split("\r")[0];
-	}
-	
 	public String getRT() {
 		if(latestRT < 0) return null;
-		else return getRT(latestRT);
+		
+		StringBuffer res = new StringBuffer();
+		
+		for(int j=0; j<64; j++) {
+			if(currentRT[j] == 0x0D) break;
+			if(currentRT[j] == 0) res.append(" ");
+			else if(currentRT[j] >= 32) res.append(currentRT[j]);
+			else res.append('<').append(Integer.toString(currentRT[j], 16)).append('>');
+		}
+		
+		return res.toString().trim();
 	}
 	
 	public int whichRT() {
 		return latestRT;
+	}
+	
+	public List<String> getRTMessages() {
+		return rtMessages;
 	}
 
 	public int getTotalBlocks() {
