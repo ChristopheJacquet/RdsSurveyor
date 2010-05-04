@@ -24,12 +24,11 @@
 */
 
 package eu.jacquet80.rds.core;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 
 
 /**
@@ -38,14 +37,11 @@ import java.util.Map.Entry;
  */
 public abstract class Station {
 	protected int pi;
-	protected char[] ps = new char[8];
+	protected Text ps = new Text(8, false);
 	protected final Map<Integer, AFList> afs = new HashMap<Integer, AFList>();
 	protected AFList currentAFList = null;
-	private HashMap<String, Integer>[] psSegments;
-	private String[] psPage;
-	private String dynamicPSmessage;
 	protected int pty = 0;
-	protected char[] ptyn = null;
+	protected Text ptyn = new Text(8, false);
 	private boolean tp, ta;
 	protected int timeOfLastPI = 0;
 	
@@ -86,56 +82,15 @@ public abstract class Station {
 
 
 	
-	@SuppressWarnings("unchecked")
 	protected void reset(int pi) {
 		this.pi = pi;
-		
-		Arrays.fill(ps, '?');
+	
+		ps.reset();
 		
 		afs.clear();
 		currentAFList = null;
-
-		psSegments = new HashMap[4];
-		for(int i=0; i<4; i++) psSegments[i] = new HashMap<String, Integer>();
-		
-		psPage = new String[4];
-		dynamicPSmessage = "";
 	}
 	
-	protected void setChars(char[] text, int position, char ... characters) {
-		for(int i=0; i<characters.length; i++)
-			text[position * characters.length + i] = characters[i];
-	}
-	
-	public void setPSChars(int position, char ... characters) {
-		setChars(ps, position, characters);
-		
-		// update segment count
-		String s = new String(characters);
-		Integer i = psSegments[position].get(s);
-		if(i == null) psSegments[position].put(s, 1);
-		else psSegments[position].put(s, i+1);
-		
-		// de-page dynamic PS
-		if(psPage[position] == null) {
-			psPage[position] = s;
-		} else if(! s.equals(psPage[position])) {
-			// new page detected
-			String page = "";
-			for(int j=0; j<4; j++) {
-				page += (psPage[j] == null ? "??" : psPage[j]);
-				psPage[j] = null;  // reset segment for new page
-			}
-			dynamicPSmessage += page.trim() + " ";
-			psPage[position] = s;
-		}
-	}
-	
-	public void setPTYNChars(int position, char ... characters) {
-		if(ptyn == null) ptyn = new char[8];
-		
-		setChars(ptyn, position, characters);
-	}
 	
 	protected void setPI(int pi) {
 		this.pi = pi;
@@ -193,30 +148,23 @@ public abstract class Station {
 		return res.toString();
 	}
 	
-	public String getPS() {
-		return new String(ps);
+	public Text getPS() {
+		return ps;
 	}
 	
 	public String getStationName() {
-		String res = "";
-		
-		for(int i=0; i<4; i++) {
-			String seg = "";
-			int max = 0;
-			for(Entry<String, Integer> e : psSegments[i].entrySet()) {
-				if(e.getValue() > max) {
-					max = e.getValue();
-					seg = e.getKey();
-				}
-			}
-			if(max>0) res += seg; else res += "??";
-		}
-		
-		return res;
+		return ps.getMostFrequentText();
 	}
 	
+
 	public String getDynamicPSmessage() {
-		return dynamicPSmessage;
+		List<String> msg = ps.getPastMessages();
+		
+		StringBuffer res = new StringBuffer();
+		for(int i=9; i>=0; i--) {
+			if(msg.size() > i) res.append(msg.get(msg.size() - 1 - i).trim()).append(' ');
+		}
+		return res.toString();
 	}
 	
 
@@ -233,8 +181,8 @@ public abstract class Station {
 		return pty;
 	}
 	
-	public String getPTYN() {
-		return ptyn == null ? "" : new String(ptyn);
+	public Text getPTYN() {
+		return ptyn;
 	}
 	
 	public String getPTYlabel() {

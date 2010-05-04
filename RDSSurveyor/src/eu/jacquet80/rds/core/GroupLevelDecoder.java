@@ -165,7 +165,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				char ch1 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				char ch2 = RDS.toChar(blocks[3] & 0xFF);
 				console.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
-				workingStation.setPSChars(addr, ch1, ch2);
+				workingStation.getPS().setChars(addr, ch1, ch2);
 			}
 			
 			// Groups 0A: to extract AFs we need blocks 1 and 2
@@ -258,13 +258,15 @@ public class GroupLevelDecoder implements RDSDecoder {
 				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
 				ch2 = RDS.toChar(blocks[2] & 0xFF);
 				
-				workingStation.setRTChars(ab, version == 0 ? addr*2 : addr, ch1, ch2);
+				workingStation.getRT().setChars(version == 0 ? addr*2 : addr, ch1, ch2);
+				workingStation.getRT().setFlag(ab);
 			}
 			
 			if(blocksOk[3] && version == 0) {
 				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				ch4 = RDS.toChar(blocks[3] & 0xFF);
-				workingStation.setRTChars(ab, addr*2+1, ch3, ch4);
+				workingStation.getRT().setChars(addr*2+1, ch3, ch4);
+				workingStation.getRT().setFlag(ab);
 			}
 			
 			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + ch1 + ch2);
@@ -403,14 +405,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[2]) {
 				char c1 = RDS.toChar((blocks[2]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[2] & 0xFF);
-				workingStation.setPTYNChars(pos*2, c1, c2);
+				workingStation.getPTYN().setChars(pos*2, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
 			
 			if(blocksOk[3]) {
 				char c1 = RDS.toChar((blocks[3]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[3] & 0xFF);
-				workingStation.setPTYNChars(pos*2+1, c1, c2);
+				workingStation.getPTYN().setChars(pos*2+1, c1, c2);
 				console.print(c1 + "" + c2);
 			} else console.print("??");
 			
@@ -457,7 +459,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 						char ch2 = RDS.toChar( blocks[2] & 0xFF);
 						console.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
 						
-						if(on != null) on.setPSChars(variant, ch1, ch2);
+						if(on != null) on.getPS().setChars(variant, ch1, ch2);
 					}
 					
 					if(variant == 4) { // frequencies
