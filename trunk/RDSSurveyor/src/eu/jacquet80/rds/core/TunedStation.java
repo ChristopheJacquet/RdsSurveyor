@@ -24,12 +24,9 @@
 */
 
 package eu.jacquet80.rds.core;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -37,12 +34,6 @@ import eu.jacquet80.rds.app.Application;
 
 
 public class TunedStation extends Station {
-	// radiotext-related variables
-	private char[] currentRT = new char[64];
-	private int currentRTflags = 0;
-	private List<String> rtMessages = new ArrayList<String>();
-	private int latestRT = -1;
-	
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
@@ -51,6 +42,7 @@ public class TunedStation extends Station {
 	private int totalBlocks, totalBlocksOk;
 	private int ecc, language;
 	private int dateBitTime = -1;
+	private Text rt = new Text(64, true);
 	
 	
 	public TunedStation(int pi, int time) {
@@ -67,7 +59,7 @@ public class TunedStation extends Station {
 		super.reset(pi);
 		
 		// reset radiotext
-		resetRT();
+		rt.reset();
 		
 		synchronized(this) {
 			otherNetworks = new TreeMap<Integer, Station>();
@@ -88,13 +80,14 @@ public class TunedStation extends Station {
 		applications = new Application[32];
 		di = 0;
 	}
+
 	
 	public String toString() {
 		StringBuffer res = new StringBuffer();
 		//System.out.println("pi=" + pi + ", ps=" + new String(ps) + ", time=" + timeOfLastPI);
-		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%.3f", pi, getStationName(), new String(ps), (float)(timeOfLastPI / (1187.5f))));
+		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%.3f", pi, getStationName(), ps.toString(), (float)(timeOfLastPI / (1187.5f))));
 		
-		res.append(String.format("\nRT = \"%s\"", getRT()));
+		res.append(String.format("\nRT = \"%s\"", rt.toString()));
 
 		synchronized(this) {
 			for(Station on : otherNetworks.values()) res.append("\nON: ").append(on);
@@ -110,7 +103,7 @@ public class TunedStation extends Station {
 		if(date != null) res.append("\nLatest CT: " + date);
 		
 		res.append("\nPTY: " + pty + " -> " + ptyLabels[pty]);
-		if(ptyn != null) res.append(", PTYN=" + new String(ptyn));
+		if(ptyn != null) res.append(", PTYN=" + ptyn);
 		
 		res.append("\nDI: ")
 				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
@@ -156,33 +149,6 @@ public class TunedStation extends Station {
 		groupStats[16][0]++;
 	}
 	
-	public void setRTChars(int ab, int position, char ... characters) {
-		for(int i = 0; i < characters.length; i++) {
-			if(currentRT[position * characters.length + i] != '\0' && characters[i] != currentRT[position * characters.length + i]) {
-				// this is a new RT message: save the previous message...
-				StringBuffer msg = new StringBuffer("[");
-				for(int f=0; f<2; f++)
-					if((currentRTflags & (1<<f)) != 0) msg.append((char)('A' + f));
-				msg.append("] ").append(getRT());
-				rtMessages.add(msg.toString());
-				
-				// ... and reset the message buffer
-				resetRT();
-				break;
-			}
-		}
-		
-		setChars(currentRT, position, characters);
-		currentRTflags |= (1 << ab);   // set a bit corresponding to the current flag
-		latestRT = ab;
-		
-		//System.out.println("\n*** RT=" + getRT() + ",   msgs=" + rtMessages + " ***");
-	}
-	
-	private void resetRT() {
-		Arrays.fill(currentRT, '\0');
-	}
-	
 	public void setApplicationForGroup(int type, int version, Application app) {
 		applications[(type<<1) | version] = app;
 	}
@@ -221,34 +187,15 @@ public class TunedStation extends Station {
 		return null;
 	}
 	
+	public Text getRT() {
+		return rt;
+	}
+	
 	public void setDIbit(int pos, int val) {
 		di &= 0xF ^ (1<<(3-pos));		// clear bit
 		di |= val<<(3-pos);				// set it if needed
 	}
 	
-	public String getRT() {
-		if(latestRT < 0) return null;
-		
-		StringBuffer res = new StringBuffer();
-		
-		for(int j=0; j<64; j++) {
-			if(currentRT[j] == 0x0D) break;
-			if(currentRT[j] == 0) res.append(" ");
-			else if(currentRT[j] >= 32) res.append(currentRT[j]);
-			else res.append('<').append(Integer.toString(currentRT[j], 16)).append('>');
-		}
-		
-		return res.toString().trim();
-	}
-	
-	public int whichRT() {
-		return latestRT;
-	}
-	
-	public List<String> getRTMessages() {
-		return rtMessages;
-	}
-
 	public int getTotalBlocks() {
 		return totalBlocks;
 	}

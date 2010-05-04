@@ -75,11 +75,12 @@ public class MainWindow extends JFrame {
 			txtTime = new JTextArea(1, 30),
 			txtRT = new JTextArea(1, 64),
 			txtRTmessages = new JTextArea(3, 64),
-			txtAF = new JTextArea(3, 64);
+			txtAF = new JTextArea(3, 64),
+			txtDynPS = new JTextArea(1, 80);
 	private final GroupPanel groupStats = new GroupPanel();
 			
 			//txtGroupStats = new JTextArea(1, 64);
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -145,7 +146,8 @@ public class MainWindow extends JFrame {
 				lblPI = new JLabel("PI"),
 				lblAF = new JLabel("Alternative Frequencies"),
 				lblRT = new JLabel("RT"),
-				lblGroupStats = new JLabel("Group statistics");
+				lblGroupStats = new JLabel("Group statistics"),
+				lblDynPS = new JLabel("Dynamic PS");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -153,6 +155,11 @@ public class MainWindow extends JFrame {
 				{txtPS, txtPSName, txtPI},
 		}));
 
+		mainPanel.add(createArrangedPanel(new Component[][] {
+				{lblDynPS},
+				{txtDynPS},
+		}));
+		
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblPTY, lblPTYN, lblTraffic},
 				{txtPTY, txtPTYN, txtTraffic},
@@ -261,16 +268,25 @@ public class MainWindow extends JFrame {
 					if(station != null) {
 						SwingUtilities.invokeLater(new Runnable() {
 							public void run() {
-								txtPS.setText(station.getPS());
+								if(station.getPS().isComplete()) {
+									txtPS.setText(station.getPS().toString());
+								} else if(station.getPS().getPastMessages().size()>0) {
+									List<String> past = station.getPS().getPastMessages();
+									txtPS.setText(past.get(past.size()-1));
+								} else txtPS.setText("");
+
 								txtPSName.setText(station.getStationName());
+								txtDynPS.setText(station.getDynamicPSmessage());
+								
 								txtPI.setText(String.format("%04X", station.getPI()));
 								txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
-								txtPTYN.setText(station.getPTYN());
-								txtRT.setText(station.getRT() != null ?
-										"[" + ((char)('A' + station.whichRT())) + "] " + station.getRT()
+								txtPTYN.setText(station.getPTYN().toString());
+								// if Radiotext was received, then flags != 0
+								txtRT.setText(station.getRT().toString() != null ?
+										"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
 										: "");
 								
-								List<String> rtM = station.getRTMessages();
+								List<String> rtM = station.getRT().getPastMessages();
 								String res = "";
 								for(int i=0; i<3; i++) {
 									if(rtM.size() > i) {

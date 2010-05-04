@@ -141,7 +141,7 @@ public class RTPlus extends ODA {
 			
 			for(int i=0; i<2; i++) {
 				if(ctype[i] != 0) {
-					String rt = station == null ? null : station.getRT();
+					String rt = station == null ? null : station.getRT().toString();
 					String text = null;
 					if(rt != null) {
 						if(start[i] + len[i] <= rt.length()) {

@@ -108,7 +108,7 @@ public class TimeLine extends JPanel {
 			g.drawLine(x-2, 46, x, 49);
 			g.drawLine(x+2, 46, x, 49);
 			
-			if(eonSwitch.getON() != null) g.drawString(eonSwitch.getON().getPS(), x+1, 49);
+			if(eonSwitch.getON() != null) g.drawString(eonSwitch.getON().getPS().toString(), x+1, 49);
 		}
 
 		public void visit(StationLost stationLost) {
