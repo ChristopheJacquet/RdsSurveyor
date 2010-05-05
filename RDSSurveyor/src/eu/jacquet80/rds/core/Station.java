@@ -153,12 +153,12 @@ public abstract class Station {
 	}
 	
 	public String getStationName() {
-		return ps.getMostFrequentText();
+		return ps.getMostFrequentOrPartialText();
 	}
 	
 
 	public String getDynamicPSmessage() {
-		List<String> msg = ps.getPastMessages();
+		List<String> msg = ps.getPastMessages(true);
 		
 		StringBuffer res = new StringBuffer();
 		for(int i=9; i>=0; i--) {

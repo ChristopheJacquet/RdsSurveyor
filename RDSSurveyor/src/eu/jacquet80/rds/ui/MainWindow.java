@@ -268,13 +268,7 @@ public class MainWindow extends JFrame {
 					if(station != null) {
 						SwingUtilities.invokeLater(new Runnable() {
 							public void run() {
-								if(station.getPS().isComplete()) {
-									txtPS.setText(station.getPS().toString());
-								} else if(station.getPS().getPastMessages().size()>0) {
-									List<String> past = station.getPS().getPastMessages();
-									txtPS.setText(past.get(past.size()-1));
-								} else txtPS.setText("");
-
+								txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
 								txtPSName.setText(station.getStationName());
 								txtDynPS.setText(station.getDynamicPSmessage());
 								
@@ -286,7 +280,7 @@ public class MainWindow extends JFrame {
 										"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
 										: "");
 								
-								List<String> rtM = station.getRT().getPastMessages();
+								List<String> rtM = station.getRT().getPastMessages(false);
 								String res = "";
 								for(int i=0; i<3; i++) {
 									if(rtM.size() > i) {

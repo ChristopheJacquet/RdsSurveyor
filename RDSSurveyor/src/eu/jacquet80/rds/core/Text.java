@@ -87,8 +87,14 @@ public class Text {
 		return latest;
 	}
 	
-	public List<String> getPastMessages() {
-		return messages;
+	public List<String> getPastMessages(boolean includingCurrent) {
+		if(!includingCurrent || !isComplete())
+			return messages;
+		else {
+			List<String> l = new ArrayList<String>(messages);
+			l.add(toString());
+			return l;
+		}
 	}
 
 	private void setChars(char[] text, int position, char ... characters) {
@@ -117,5 +123,30 @@ public class Text {
 		}
 		
 		return mft;
+	}
+	
+	/**
+	 * If the "most frequent" text is defined, return it. Otherwise, return
+	 * the partial text being received.
+	 * 
+	 * @return the most frequent text if defined, the current text otherwise
+	 */
+	public String getMostFrequentOrPartialText() {
+		String text = getMostFrequentText();
+		if(text.length() == 0) text = toString();
+		if(text == null) text = "";
+		return text;
+	}
+	
+	public String getLatestCompleteOrPartialText() {
+		if(isComplete()) {
+			return toString();
+		} else if(messages.size()>0) {
+			return messages.get(messages.size()-1);
+		} else {
+			String t = toString();
+			if(t != null) return t; else return "";
+		}
+
 	}
 }
