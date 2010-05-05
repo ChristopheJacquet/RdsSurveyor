@@ -26,9 +26,14 @@
 package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 
+import javax.swing.Box;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 import eu.jacquet80.rds.app.Application;
@@ -38,14 +43,44 @@ public class AlertCPanel extends AppPanel {
 	private static final long serialVersionUID = 4835434126469108572L;
 	private AlertC app;
 
-	private final JLabel lblProviderName = new JLabel();
+	private final JLabel 
+		lblProviderName = new JLabel(),
+		lblLTN = new JLabel(),
+		lblMGS = new JLabel(),
+		lblAFI = new JLabel(),
+		lblMode = new JLabel(),
+		lblSID = new JLabel();
+	
+	private JLabel[] fields = {lblProviderName, lblLTN, lblMGS, lblAFI, lblMode, lblSID};
+	private Component[] infoComponents = {
+			new JLabel("Provider"), lblProviderName,
+			Box.createHorizontalStrut(20),
+			new JLabel("LTN"), lblLTN,
+			Box.createHorizontalStrut(20),
+			new JLabel("MGS"), lblMGS,
+			Box.createHorizontalStrut(20),
+			new JLabel("AFI"), lblAFI,
+			Box.createHorizontalStrut(20),
+			new JLabel("Mode"), lblMode,
+			Box.createHorizontalStrut(20),
+			new JLabel("SID"), lblSID
+	};
 	
 	public AlertCPanel() {
 		super(new BorderLayout());
 		
-		lblProviderName.setHorizontalAlignment(SwingConstants.CENTER);
-		lblProviderName.setFont(new Font("monospaced", Font.PLAIN, 20));
-		add(lblProviderName, BorderLayout.NORTH);
+		for(JLabel f : fields) {
+			f.setHorizontalAlignment(SwingConstants.CENTER);
+			f.setFont(new Font("monospaced", Font.PLAIN, 20));
+		}
+		
+		JPanel pnlInfo = new JPanel(new FlowLayout());
+		
+		for(Component c : infoComponents) {
+			pnlInfo.add(c);
+		}
+		
+		add(pnlInfo, BorderLayout.NORTH);
 	}
 	
 	public AlertCPanel(Application app) {
@@ -62,5 +97,10 @@ public class AlertCPanel extends AppPanel {
 	@Override
 	public void doNotifyChange() {
 		lblProviderName.setText(app.getProviderName());
+		lblLTN.setText(app.getLTN() >= 0 ? Integer.toString(app.getLTN()) : "");
+		lblMGS.setText(app.getMGS());
+		lblAFI.setText(app.getAFI() >= 0 ? Integer.toString(app.getAFI()) : "");
+		lblMode.setText(Integer.toString(app.getMode()));
+		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 	}
 }

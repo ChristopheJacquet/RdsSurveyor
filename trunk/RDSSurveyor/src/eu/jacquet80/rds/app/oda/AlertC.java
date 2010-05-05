@@ -30,18 +30,26 @@ import java.util.Map;
 
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
-import eu.jacquet80.rds.core.Station;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
 	public static final int AID_WITH_ALERT_PLUS = 0x4B02; // Alert-C with Alert-Plus
 	// I have no info on this, I only have France Inter samples from 2000 that made use of this AID
 	
+	// provider name
 	private String[] providerName = {"????", "????"};
+	
+	// basic parameters
+	private int ltn = -1;			// location table number
+	private int afi = -1;			// AF indicator
+	private int mgs = -1;			// message geographical scope
+	private int mode = 0;			// mode (basic or enhanced)
+	private int sid = -1;			// Service ID
+	
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
-	private int mode = 0;
+
 	private int currentContIndex = -1;
 	private int nextGroupExpected = -1;
 	private int totalGroupsExpected = -1;
@@ -59,10 +67,10 @@ public class AlertC extends ODA {
 			console.print("Sys.Info v=" + var+ ", ");
 			
 			if(var == 0) {
-				int ltn = (blocks[2]>>6) & 0x3F;
-				int afi = (blocks[2]>>5) & 1;
+				ltn = (blocks[2]>>6) & 0x3F;
+				afi = (blocks[2]>>5) & 1;
 				mode = (blocks[2]>>4) & 1;
-				int mgs = blocks[2] & 0xF;
+				mgs = blocks[2] & 0xF;
 				
 				/*
 				int scopeI = (blocks[2]>>3) & 1;
@@ -74,7 +82,7 @@ public class AlertC extends ODA {
 				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS=%s ", ltn, afi, mode, decodeMGS(mgs));
 			} else if(var == 1) {
 				int gap = (blocks[2]>>12) & 3;
-				int sid = (blocks[2]>>6) & 0x3F;
+				sid = (blocks[2]>>6) & 0x3F;
 				int ta = (blocks[2]>>4) & 3;
 				int tw = (blocks[2]>>2) & 3;
 				int td = blocks[2] & 3;
@@ -232,6 +240,7 @@ public class AlertC extends ODA {
 	}
 
 	private static String decodeMGS(int mgs) {
+		if(mgs < 0) return "";
 		return
 			((mgs&8) != 0 ? "I" : "") +
 			((mgs&4) != 0 ? "N" : "") +
@@ -251,6 +260,26 @@ public class AlertC extends ODA {
 	
 	public String getProviderName() {
 		return providerName[0] + providerName[1];
+	}
+	
+	public int getLTN() {
+		return ltn;
+	}
+	
+	public int getAFI() {
+		return afi;
+	}
+	
+	public String getMGS() {
+		return decodeMGS(mgs);
+	}
+	
+	public int getMode() {
+		return mode;
+	}
+	
+	public int getSID() {
+		return sid;
 	}
 	
 	private static class Bitstream {
