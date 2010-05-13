@@ -49,7 +49,7 @@ import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
-import eu.jacquet80.rds.input.V4LGroupReader;
+import eu.jacquet80.rds.input.SimpleV4LGroupReader;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
@@ -103,7 +103,7 @@ public class RDSSurveyor {
 				((USBFMRadioGroupReader)newReader).init();
 				((USBFMRadioGroupReader)newReader).setFrequency(105500);
 			} else if("-inv4l".equals(args[i])) {
-				newReader = new V4LGroupReader(new File(getParam("inv4l", args, ++i)));
+				newReader = new SimpleV4LGroupReader(new File(getParam("inv4l", args, ++i)));
 			} else if("-invert".equals(args[i])) {
 				inversion = BitInversion.INVERT;
 			} else if("-noinvert".equals(args[i])) {

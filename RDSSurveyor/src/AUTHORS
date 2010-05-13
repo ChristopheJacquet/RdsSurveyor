@@ -1,0 +1,10 @@
+Authors of RDS Surveyor.
+
+The main developer of RDS Surveyor is Christophe Jacquet.
+
+Contributors:
+ - Dominique Matz: JNI interface with V4L devices
+
+Code used from other projects:
+ - interface with V4L devices based on work by Danilo F. S. Santos on the
+   "RadioAPI" project, released under the LGPL.
