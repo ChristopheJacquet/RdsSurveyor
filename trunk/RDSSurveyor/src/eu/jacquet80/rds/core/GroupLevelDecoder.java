@@ -532,7 +532,11 @@ public class GroupLevelDecoder implements RDSDecoder {
 	public TunedStation getTunedStation() {
 		return station;
 	}
-
+	
+	public void notifyFrequencyChange(int time) {
+		station = new TunedStation(time);
+	}
+	
 	public void processStream(RDSReader rdsReader, Log log) throws IOException {
 		int bitTime = 0;
 		GroupReader reader = (GroupReader)rdsReader;

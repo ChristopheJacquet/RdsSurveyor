@@ -29,13 +29,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-public class V4LGroupReader implements GroupReader {
+public class SimpleV4LGroupReader implements GroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final FileInputStream reader;
 	private final byte[] recvBuffer = new byte[3];
 	
-	public V4LGroupReader(File f) throws IOException {
+	public SimpleV4LGroupReader(File f) throws IOException {
 		reader = new FileInputStream(f);
 	}
 	
