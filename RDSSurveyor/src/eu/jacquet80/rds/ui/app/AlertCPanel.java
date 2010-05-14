@@ -27,14 +27,16 @@ package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 
 import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.SwingConstants;
+import javax.swing.table.AbstractTableModel;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
@@ -49,21 +51,24 @@ public class AlertCPanel extends AppPanel {
 		lblMGS = new JLabel(),
 		lblAFI = new JLabel(),
 		lblMode = new JLabel(),
-		lblSID = new JLabel();
+		lblSID = new JLabel(),
+		lblMessageCount = new JLabel();
 	
-	private JLabel[] fields = {lblProviderName, lblLTN, lblMGS, lblAFI, lblMode, lblSID};
+	private JLabel[] fields = {lblProviderName, lblLTN, lblMGS, lblAFI, lblMode, lblSID, lblMessageCount};
 	private Component[] infoComponents = {
-			new JLabel("Provider"), lblProviderName,
+			new JLabel("Provider:"), lblProviderName,
 			Box.createHorizontalStrut(20),
-			new JLabel("LTN"), lblLTN,
+			new JLabel("LTN:"), lblLTN,
 			Box.createHorizontalStrut(20),
-			new JLabel("MGS"), lblMGS,
+			new JLabel("MGS:"), lblMGS,
 			Box.createHorizontalStrut(20),
-			new JLabel("AFI"), lblAFI,
+			new JLabel("AFI:"), lblAFI,
 			Box.createHorizontalStrut(20),
-			new JLabel("Mode"), lblMode,
+			new JLabel("Mode:"), lblMode,
 			Box.createHorizontalStrut(20),
-			new JLabel("SID"), lblSID
+			new JLabel("SID:"), lblSID,
+			Box.createHorizontalStrut(20),
+			new JLabel("Messages:"), lblMessageCount
 	};
 	
 	public AlertCPanel() {
@@ -81,6 +86,8 @@ public class AlertCPanel extends AppPanel {
 		}
 		
 		add(pnlInfo, BorderLayout.NORTH);
+		
+		add(new JScrollPane(new JTable(new MessageTableModel())), BorderLayout.CENTER);
 	}
 	
 	public AlertCPanel(Application app) {
@@ -102,5 +109,48 @@ public class AlertCPanel extends AppPanel {
 		lblAFI.setText(app.getAFI() >= 0 ? Integer.toString(app.getAFI()) : "");
 		lblMode.setText(Integer.toString(app.getMode()));
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
+		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
+	}
+	
+	private class MessageTableModel extends AbstractTableModel {
+		private static final long serialVersionUID = -6489769864816692235L;
+		
+		@Override
+		public int getColumnCount() {
+			return 3;
+		}
+		
+		@Override
+		public String getColumnName(int column) {
+			switch(column) {
+			case 0: return "Location";
+			case 1: return "Events";
+			case 2: return "#Upd";
+			default: return "ERR";
+			}
+		}
+		
+		@Override
+		public boolean isCellEditable(int row, int column) {
+			return false;
+		}
+		
+		@Override
+		public Object getValueAt(int row, int column) {
+			AlertC.Message msg = app.getMessages().get(row);
+			if(msg == null) return null;
+			
+			switch(column) {
+			case 0: return msg.getLocation();
+			case 1: return msg.getEvents();
+			case 2: return msg.getUpdateCount();
+			default: return null;
+			}
+		}
+		
+		@Override
+		public int getRowCount() {
+			return app.getMessages().size();
+		}
 	}
 }

@@ -25,7 +25,10 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import eu.jacquet80.rds.core.OtherNetwork;
@@ -33,8 +36,6 @@ import eu.jacquet80.rds.core.RDS;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
-	public static final int AID_WITH_ALERT_PLUS = 0x4B02; // Alert-C with Alert-Plus
-	// I have no info on this, I only have France Inter samples from 2000 that made use of this AID
 	
 	// provider name
 	private String[] providerName = {"????", "????"};
@@ -47,6 +48,7 @@ public class AlertC extends ODA {
 	private int sid = -1;			// Service ID
 	
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
+	private List<Message> messages = new ArrayList<Message>();
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
 
@@ -59,6 +61,8 @@ public class AlertC extends ODA {
 
 	@Override
 	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+		boolean messageJustCompleted = false;
+		
 		// in all cases, we need all blocks to proceed
 		if(!blocksOk[2] || !blocksOk[3]) return;
 		
@@ -108,6 +112,11 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+					currentMessage = new Message(dir, extent, event, location);
+					
+					// single-group message is complete
+					currentMessage.complete = true;
+					messageJustCompleted = true;
 					
 					// reset "expected" indicators
 					currentContIndex = -1;
@@ -131,7 +140,6 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							// TODO find a message to possibly update
 							currentMessage = new Message(dir, extent, event, location);
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
@@ -182,6 +190,13 @@ public class AlertC extends ODA {
 									}
 
 								}
+								
+								// message is complete if no remaining group
+								if(remaining == 0) {
+									currentMessage.complete = true;
+									messageJustCompleted = true;
+								}
+								
 							} else {  /* if nextGroupExpected = -1 */
 								//console.printf("(#%d), ", groupNumber);
 								if(currentContIndex == idx) {
@@ -236,6 +251,32 @@ public class AlertC extends ODA {
 			}
 		}
 		
+		// if a message has just been completed, update the list of messages
+		// accordingly
+		if(messageJustCompleted) {
+			// 1) first we need to remove any message overriden by the current one
+			List<Message> messagesToRemove = new LinkedList<Message>();
+			int oldUpdate = 0;
+			for(Message m : messages) {
+				if(currentMessage.overrides(m)) {
+					messagesToRemove.add(m);
+					oldUpdate = m.updateCount;
+				}
+			}
+			
+			for(Message msgToRemove : messagesToRemove) {
+				messages.remove(msgToRemove);
+			}
+			
+			// 2) second we just need to add the current message
+			messages.add(currentMessage);
+			
+			currentMessage.updateCount = oldUpdate + 1;
+			
+			//System.out.println("*** Current TMC messages: ");
+			//for(Message m : messages) System.out.println("\t" + m);
+		}
+		
 		fireChangeListeners();
 	}
 
@@ -246,6 +287,10 @@ public class AlertC extends ODA {
 			((mgs&4) != 0 ? "N" : "") +
 			((mgs&2) != 0 ? "R" : "") +
 			((mgs&1) != 0 ? "U" : "");
+	}
+	
+	public List<Message> getMessages() {
+		return messages;
 	}
 
 	@Override
@@ -316,10 +361,10 @@ public class AlertC extends ODA {
 		}
 	}
 	
-	private static class Message {
+	public static class Message {
 		private final int direction;
 		private final int extent;
-		private final int event;
+		private final List<Integer> events;
 		private final int location;
 		private int diversion = 0;
 		private int duration = 0;
@@ -332,13 +377,16 @@ public class AlertC extends ODA {
 		private int speed = 0;
 		private int quantifier = 0;
 		private int suppInfo = 0;
+		private boolean complete = false;
+		private int updateCount = 0;
 		
 		public final static int[] labelSizes = {3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0};
 		
 		public Message(int direction, int extent, int event, int location) {
 			this.direction = direction;
 			this.extent = extent;
-			this.event = event;
+			this.events = new ArrayList<Integer>(1);
+			events.add(event);
 			this.location = location;
 		}
 		
@@ -351,7 +399,8 @@ public class AlertC extends ODA {
 		public void addField(int label, int value) {
 			switch(label) {
 			// duration
-			case 0: duration = value; break;
+			case 0: duration = value;
+			break;
 			
 			// control code
 			case 1:
@@ -387,9 +436,204 @@ public class AlertC extends ODA {
 			case 6:
 				suppInfo = value;
 				break;
+			
+			case 9:		// additional event
+				events.add(value);
+				break;
 				
 			// TODO complete!
 			}
 		}
+		
+		public boolean overrides(Message m) {
+			return
+				(location == m.location || location == 65535) &&
+				(direction == m.direction) &&
+				hasAnEventFromTheSameUpdateClassAs(m) &&
+				(!isForecastMessage() || duration == m.duration);
+				// is forecast message => same duration
+		}
+		
+		/**
+		 * As per TMC/Alert-C standard, "contains an event that belongs to the
+		 * same update class as any event (a multi-group message may have more
+		 * than one event) in the existing message)"
+		 * 
+		 * @param m
+		 * @return
+		 */
+		private boolean hasAnEventFromTheSameUpdateClassAs(Message m) {
+			for(Integer u : events) {
+				for(Integer v : m.events) {
+					if(updateClasses[u] == updateClasses[v]) return true;
+				}
+			}
+			return false;
+		}
+		
+		/**
+		 * Contains an event from one of the forecast update classes.
+		 * 
+		 * @return
+		 */
+		private boolean isForecastMessage() {
+			for(Integer u : events) {
+				int c = updateClasses[u];
+				if(c >= 32 && c <= 39) return true;
+			}
+			return false;
+		}
+		
+		@Override
+		public String toString() {
+			return location + ": " + events + "(" + updateCount + ")";
+		}
+		
+		public int getLocation() {
+			return location;
+		}
+		
+		public List<Integer> getEvents() {
+			return events;
+		}
+		
+		public int getUpdateCount() {
+			return updateCount;
+		}
 	}
+	
+	/* This table is derived from the original work of Tobias Lorenz in the
+	 * "radiodatasystem" project released under the LGPL, see 
+	 * https://sourceforge.net/projects/radiodatasystem/
+	 */
+	private static byte[] updateClasses = {
+		 0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  4,  3,  0,  0,  0, 
+		 5,  0,  0,  0,  9,  0,  9,  9,  9,  9,  6,  6,  9,  0,  0,  0, 
+		 0,  0,  0,  0,  9,  9,  0,  0,  9,  5,  5,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  5, 11, 11,  0,  2,  2,  2,  0,  0,  0, 12, 12, 12, 
+		12,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 20,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  2,  1,  1,  1,  1, 
+		 1,  1,  2,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  1,  1, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0, 20,  3,  3,  3,  3,  3,  3,  3, 
+		 1,  3, 12,  4,  4,  3,  4,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1, 
+		 5,  5,  5,  5,  5,  5,  5, 20, 20, 20,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1, 
+		 2,  0,  1, 20, 20, 20,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1,  5, 
+		 5,  5,  5,  5,  5,  5, 20, 20, 20,  1,  1,  1,  1,  1,  2,  1, 
+		 2,  1,  1,  5,  5,  5,  5,  5,  5,  5, 20, 20, 20,  3,  3,  3, 
+		 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  4, 24,  1,  1,  1,  3, 
+		 1,  1,  1,  1,  1,  1,  1, 12,  1,  1,  1,  1,  1,  2,  1,  2, 
+		 1,  5,  5,  5,  5,  5,  5, 20, 20, 20,  3,  1,  1,  1,  1,  1, 
+		 0,  1,  0,  1, 20,  0, 20,  3,  3,  4,  4,  4,  4,  4,  0,  8, 
+		 0,  5,  5,  9,  9,  9,  8,  7,  7,  7,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1, 
+		 2,  1,  1, 20, 20, 20,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1, 20, 
+		20, 20,  7,  5,  9,  9,  9,  8,  8,  8,  7,  7,  7,  7,  7,  6, 
+		 6,  6,  6,  6,  6,  7,  6,  6,  6,  6,  6,  6,  9,  9,  9,  1, 
+		 1,  1,  1,  1,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, 
+		 5,  5,  5,  5,  5,  5,  5,  5,  5,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2, 
+		 1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1,  1,  1,  1,  1, 
+		 1,  2,  1,  2,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  2,  1,  2,  1,  1,  5,  5,  5,  1,  1,  1,  1, 
+		 1,  2,  1,  2,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1, 
+		 5,  5,  1,  9,  9,  9,  5,  5,  8,  7,  6,  9,  9,  5,  5,  5, 
+		 5,  5,  5,  5,  5,  5,  5, 10, 10, 10, 10,  1,  1,  1,  1,  1, 
+		 1,  5,  5, 10,  9,  9,  9,  6,  5,  5,  5,  0,  0,  0,  0, 10, 
+		 6,  7,  0,  0,  6,  0,  5,  5,  9,  2,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 11, 11, 11, 
+		11, 11, 13, 11, 11, 11,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  2,  1,  1,  5, 
+		 5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, 20, 20, 20,  1,  1, 
+		 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+		 1,  1,  2,  1,  2,  1,  1,  5,  5,  5,  5,  5, 20, 20, 20,  1, 
+		 1,  1,  1,  1,  2,  1,  2,  1,  1,  5,  5,  5,  5,  5,  5,  5, 
+		11, 11, 11, 11, 23, 11, 11, 11, 11, 11, 11, 11,  1,  1,  1, 11, 
+		11, 11,  1,  1,  1, 11, 11, 11, 13,  1,  1,  1,  1,  1,  2,  1, 
+		 2,  1,  1,  5,  5,  5,  5,  5, 20, 20, 20, 20, 20, 20, 20, 20, 
+		20, 20, 20, 20, 13, 11, 11, 11, 13, 13, 13, 13, 13, 13, 13,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 
+		12, 12, 12, 12, 14, 12, 12, 12, 12, 12, 13, 13,  4,  5,  5, 12, 
+		 1,  1,  1,  1,  1,  2,  1,  2,  1,  1,  9, 20, 20, 20, 12,  9, 
+		12,  9, 12,  5, 12,  9, 12,  5,  5,  5,  5, 12,  5,  5, 20, 20, 
+		20,  5, 20, 20, 20,  5, 20, 20, 20,  5, 12, 12, 12, 12, 12, 12, 
+		12, 12, 12, 12,  5, 12,  5, 12, 12, 12, 12,  5, 12, 12, 12, 12, 
+		12,  9, 12,  9, 12, 12, 12, 12, 12, 14, 14, 14, 14, 14, 14, 14, 
+		14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,  5,  5,  5, 
+		14, 14, 12, 20, 20, 20, 12, 12, 12, 12,  4, 14, 14, 14, 14, 14, 
+		14, 14, 14, 14, 14, 14,  0, 14, 14,  0, 14,  0,  0,  0, 14, 14, 
+		14, 14, 14, 14, 14, 14, 14, 14, 14, 14,  4, 13, 13, 14, 14,  0, 
+		 0, 14, 14, 14,  0,  0,  0, 15, 15, 15, 15, 15, 12,  0, 12,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 16, 16, 16, 
+		16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 15, 15,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0, 16, 15, 16,  0, 16,  0, 16,  0, 16, 16, 
+		16, 16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 14, 14,  0, 
+		 0,  0, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0, 17, 17,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0, 17, 17, 17, 17, 17,  0,  0,  0, 17, 17, 17,  9, 17, 17,  9, 
+		 0, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0, 16, 16, 16, 16, 16,  0, 16, 16, 16, 16,  0, 
+		16, 16, 16,  0,  0,  0, 16, 16, 16, 16, 16, 16, 16, 16, 16,  0, 
+		 0,  0,  0,  0,  9,  0,  0,  0,  0, 16,  9,  0, 16,  0,  0,  0, 
+		 0, 16, 16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18, 18, 18, 18, 18, 18, 
+		18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 13, 
+		13, 13, 13, 18, 19, 19, 19, 19, 19, 19, 13, 13, 13,  9, 20, 20, 
+		20, 20, 20, 20, 19, 18, 19,  1, 18,  0,  0,  0,  0, 18, 18, 18, 
+		18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19,  1,  1,  1, 
+		 1,  1,  2,  1,  2,  1,  1,  9, 20, 20, 20,  1,  1,  1,  1,  1, 
+		 2,  1,  2,  1,  1,  9, 20, 20, 20,  1,  1,  1,  1,  1,  2,  1, 
+		 2,  1,  1,  9, 20, 20, 20,  9, 20, 20, 20,  9, 20, 20, 20,  9, 
+		20, 20, 20,  1,  1,  1,  1,  1,  2,  1,  2,  1,  9, 20, 20, 20, 
+		 1, 18,  1, 19, 19, 31, 31, 18, 18, 18, 18, 18, 18, 18,  0,  0, 
+		 0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 
+		21, 21, 21, 21, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 
+		20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 20, 20, 21, 21, 22, 22, 
+		20, 21, 20, 21, 21, 20, 20, 21, 22, 21, 21, 21, 21, 21, 22, 20, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 22, 
+		22,  0,  0,  0, 12, 23, 23, 23, 23, 23, 23, 23, 23, 12, 23, 23, 
+		12,  0,  0,  0,  0,  0,  0,  0, 21, 21,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0, 24, 24, 24, 24, 24, 23, 24, 24, 24, 20, 20,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0, 24, 24, 24, 24, 24, 20, 20, 20, 20, 
+		20, 20, 24, 24, 24, 23, 24, 24, 23, 23, 24, 13,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0, 25, 25, 25, 25, 25, 25,  1, 
+		 1,  1,  1,  1,  2,  1,  2,  1,  1, 20, 20, 20,  1,  1,  1,  1, 
+		 1,  2,  1,  2,  1,  1, 20, 20, 20, 25, 25, 25, 25, 25, 25, 25, 
+		25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 26, 26,  0,  9, 28, 
+		28, 26, 20,  0,  0, 26, 26,  0, 25, 25, 25, 25, 20, 20, 20, 26, 
+		26, 26, 26, 25, 20, 20, 20, 25, 20, 26, 26, 27, 20, 20, 27, 27, 
+		28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 22, 22, 28, 
+		28, 28, 21, 31, 29, 29, 29, 29,  0, 29, 30, 31, 30,  0, 28,  0, 
+		28, 28, 28, 28, 28, 28, 28, 27, 27, 29, 30, 29, 30,  0, 28,  0, 
+		 0,  0, 28,  0, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 
+		30, 30, 30, 29, 30, 30,  0,  0,  0,  9, 10, 10, 30, 30, 30, 30, 
+		 0,  0,  0,  9,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0,  6, 25, 
+		 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+		 9,  0,  0,  0,  0,  0, 10, 10,  0,  0,  0,  0,  0,  9,  0,  0, 
+		 0,  0,  0,  0,  0, 21, 21,  0,  0,  0,  0,  0,  4, 10, 13,  0, 
+		 0, 19, 21, 22,  0,  0, 28, 30,  0,  0,  0,  0,  0,  0,  0, 31, 
+	};
 }

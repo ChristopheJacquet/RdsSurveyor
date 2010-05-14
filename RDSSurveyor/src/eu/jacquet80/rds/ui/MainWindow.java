@@ -183,7 +183,7 @@ public class MainWindow extends JFrame {
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblAF},
-				{txtAF},
+				{new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {

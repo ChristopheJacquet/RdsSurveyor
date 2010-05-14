@@ -117,12 +117,14 @@ public class StreamLevelDecoder implements RDSDecoder {
 								synced = true;
 								eraseSyncArray(nbSyncAtOffset);
 
-								group[i] = (block>>10) & 0xFFFF;
+								group[i] = (block >> 10) & 0xFFFF;
 								blockCount = (i+1) % 4;
 								bitCount = 0;
 								nbOk = 1;
 								for(int k=0; k<4; k++) blocksOk[k] = (k == i);
 								negativePolarity = (j==1);
+								
+								if(negativePolarity) group[i] = ~ group[i];
 								
 								console.println("\nGot synchronization on block " + (char)('A' + i) + "! (" + (j==0 ? "positive" : "negative") + " polarity)");
 								console.print("      ");
