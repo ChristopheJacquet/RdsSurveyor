@@ -11,15 +11,15 @@ import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 
 import eu.jacquet80.rds.img.Image;
-import eu.jacquet80.rds.input.USBFMRadioGroupReader;
+import eu.jacquet80.rds.input.TunerGroupReader;
 
-public class USBFMRadioToolBar extends InputToolBar {
+public class TunerToolBar extends InputToolBar {
 	private static final long serialVersionUID = -5257388808546986303L;
 
-	private final USBFMRadioGroupReader reader;
+	private final TunerGroupReader reader;
 	
 	private final JTextField txtFrequency = new JTextField();
-	private final JProgressBar barSignal = new JProgressBar(0, 63);
+	private final JProgressBar barSignal = new JProgressBar(0, 65535);
 	
 	private final static String 
 		UP_BUTTON = "UP",
@@ -50,11 +50,11 @@ public class USBFMRadioToolBar extends InputToolBar {
 	
 	private synchronized void update() {
 		txtFrequency.setText(Double.toString(reader.getFrequency() / 1000.));
-		barSignal.setValue(reader.getSignal());
+		barSignal.setValue(reader.getSignalStrength());
 	}
 	
-	public USBFMRadioToolBar(USBFMRadioGroupReader reader) {
-		super("Live", "USBFMRADIO");
+	public TunerToolBar(TunerGroupReader reader) {
+		super("Live", reader.getDeviceName());
 		
 		this.reader = reader;
 		

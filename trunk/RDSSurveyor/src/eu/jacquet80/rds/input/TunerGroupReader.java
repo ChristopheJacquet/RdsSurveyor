@@ -12,4 +12,10 @@ public interface TunerGroupReader extends GroupReader {
 	public int unmute();
 
 	public int getSignalStrength();
+	
+	public void tune(boolean up);
+	
+	public void seek(boolean up);
+	
+	public String getDeviceName();
 }

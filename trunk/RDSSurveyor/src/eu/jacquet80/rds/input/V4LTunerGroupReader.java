@@ -49,7 +49,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
     private native synchronized int open(String device);
     private native synchronized int close();
     private native synchronized boolean hasRDS();
-    private native synchronized byte[] getRDSData();
+    private native byte[] getRDSData();
 
 	
 	@Override
@@ -94,5 +94,35 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 	@Override
 	protected void finalize() throws Throwable {
 		close();
+	}
+	
+	@Override
+	public String getDeviceName() {
+		return "Video4Linux";
+	}
+
+	@Override
+	public void seek(boolean up) {
+		int steps = 0;
+		// 87500 to 108000 => 410 50kHz steps
+		do {
+			tune(up);
+			steps++;
+		} while(getSignalStrength() < 30000 && steps<410);
+	}
+
+	@Override
+	public void tune(boolean up) {
+		//System.out.println("tune " + up);
+		int freq = getFrequency();
+		//System.out.println("starting from: " + freq);
+		
+		freq += up ? 100 : -100;
+		
+		if(freq > 108000) freq = 87500;
+		if(freq < 87500) freq = 108000;
+		
+		setFrequency(freq);
+		//System.out.println("tuned");
 	}
 }
