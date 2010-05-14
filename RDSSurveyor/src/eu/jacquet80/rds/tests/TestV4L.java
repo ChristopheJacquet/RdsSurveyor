@@ -56,8 +56,8 @@ public class TestV4L {
 					//System.out.println("**");
 					synchronized(TestV4L.this) {
 						//System.out.println("%%");
-						System.out.println(radio.getFrequency() + ": " + String.format("%04X ", decoder.getTunedStation().getPI()) + decoder.getTunedStation().getStationName());
-						freq += 100;
+						System.out.println(radio.getFrequency() + " <" + radio.getSignalStrength() + ">: " + String.format("%04X ", decoder.getTunedStation().getPI()) + decoder.getTunedStation().getStationName());
+						freq += 50;
 						if(freq > 108000) freq = 87500;
 						radio.setFrequency(freq);
 						decoder.notifyFrequencyChange(0);

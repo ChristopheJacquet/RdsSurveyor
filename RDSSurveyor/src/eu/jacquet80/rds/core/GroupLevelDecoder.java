@@ -542,13 +542,19 @@ public class GroupLevelDecoder implements RDSDecoder {
 		GroupReader reader = (GroupReader)rdsReader;
 		final boolean[] allOk = {true, true, true, true};
 		final boolean[] noneOk = {false, false, false, false};
-		int[] nextBlocks = reader.getGroup();
+		int[] nextBlocks = new int[] {-1, -1, -1, -1};
 		int lastPI = 0;
 		int lastPTY = 0;
 		
 		for(;;) {
+			int[] oldBlocks = nextBlocks;
 			int[] blocks = nextBlocks;
 			nextBlocks = reader.getGroup();
+			
+			if(nextBlocks == null) {
+				nextBlocks = oldBlocks;
+				continue;
+			}
 			
 			console.printf("%04d: [", bitTime / 26);
 			//boolean[] blocksOk = allOk;
