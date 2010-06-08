@@ -39,12 +39,12 @@ public class HexFileGroupReader implements GroupReader {
 	}
 	
 	
-	public int[] getGroup() throws IOException {
+	public int[] getGroup() throws IOException, EndOfStream {
 		String line;
 		
 		do {
 			line = br.readLine();
-			if(line == null) throw new IOException("End of file");
+			if(line == null) throw new EndOfStream();
 		} while(line.startsWith("%"));    // ignore lines beginning with '%' (metadata and possibly comments)
 		
 		

@@ -50,6 +50,7 @@ import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
 
 import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
@@ -268,17 +269,29 @@ public class MainWindow extends JFrame {
 					if(station != null) {
 						SwingUtilities.invokeLater(new Runnable() {
 							public void run() {
+								int pi = station.getPI();
 								txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
 								txtPSName.setText(station.getStationName());
 								txtDynPS.setText(station.getDynamicPSmessage());
 								
-								txtPI.setText(String.format("%04X", station.getPI()));
+								txtPI.setText(String.format("%04X", pi));
 								txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
 								txtPTYN.setText(station.getPTYN().toString());
 								// if Radiotext was received, then flags != 0
 								txtRT.setText(station.getRT().toString() != null ?
 										"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
 										: "");
+								
+								// Country & language
+								{
+									int ecc = station.getECC();
+									if(pi != 0 && ecc != 0)
+										txtCountry.setText(RDS.getISOCountryCode((pi>>12) & 0xF, ecc));
+									
+									int lang = station.getLanguage();
+									if(lang > 0 && lang < RDS.languages.length)
+										txtLang.setText(RDS.languages[lang][0]);
+								}
 								
 								List<String> rtM = station.getRT().getPastMessages(false);
 								String res = "";

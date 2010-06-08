@@ -208,8 +208,16 @@ public class TunedStation extends Station {
 		this.ecc = ecc;
 	}
 	
+	public int getECC() {
+		return ecc;
+	}
+	
 	public void setLanguage(int lang) {
 		this.language = lang;
+	}
+	
+	public int getLanguage() {
+		return language;
 	}
 	
 	public Date getDateForBitTime(int bitTime) {
