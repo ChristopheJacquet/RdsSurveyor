@@ -25,7 +25,9 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.text.Format;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -185,10 +187,12 @@ public class AlertC extends ODA {
 											if(!(label == 0 && value == 0)) {
 												console.print(label + "->" + value + ", ");
 												currentMessage.addField(label, value);
+											} else {
+												console.print("EOM");
+												break;
 											}
 										}
 									}
-
 								}
 								
 								// message is complete if no remaining group
@@ -336,16 +340,18 @@ public class AlertC extends ODA {
 		}
 		
 		public int peek(int count) {
-			return (int) ( ( bits >> (this.count - count) ) & ( (1 << count) - 1 ) );
+			return (int) ( ( bits >> (this.count - count) ) & ( (1L << count) - 1 ) );
 		}
 		
 		public int take(int count) {
 			int res = peek(count);
 			this.count -= count;
+			bits &= (1L << this.count) - 1;   // remove the count leftmost bits
+			///System.out.println(" *" + ((1L << this.count)-1) + "* ");
 			return res;
 		}
 		
-		public void add(int bits, int count) {
+		public void add(long bits, int count) {
 			this.count += count;
 			this.bits <<= count;
 			this.bits |= bits;
@@ -357,7 +363,12 @@ public class AlertC extends ODA {
 		
 		@Override
 		public String toString() {
-			return count + "/" + Long.toBinaryString(bits);
+			StringBuffer res = new StringBuffer();
+			StringBuffer theBits = new StringBuffer(Long.toBinaryString(bits));
+			res.append(count).append('/');
+			for(int i=0; i<count-theBits.length(); i++)
+				res.append('0');
+			return res.append(theBits).toString();
 		}
 	}
 	
