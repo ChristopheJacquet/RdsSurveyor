@@ -157,7 +157,7 @@ public class AlertC extends ODA {
 							if(nextGroupExpected >= 0) {
 								console.print("(#" + groupNumber + "/" + totalGroupsExpected + 
 										") [rem=" + remaining + "]");
-
+								
 								if(idx != currentContIndex) {
 									console.printf(" ignoring, bad continuity index (was %d), probably missed groups", currentContIndex);
 									currentContIndex = -1;
@@ -202,7 +202,7 @@ public class AlertC extends ODA {
 								if(currentContIndex == idx) {
 									console.print("rem=" + remaining + ", ignoring repeated last group of multi-group message");
 								} else {
-									console.print("rem=" + remaining + ", ignoring (start of message missed)");
+									console.print("rem=" + remaining + ", ignoring (missed first group of multi-group message)");
 								}
 							}
 						}
@@ -502,9 +502,7 @@ public class AlertC extends ODA {
 		}
 	}
 	
-	/* This table is derived from the original work of Tobias Lorenz in the
-	 * "radiodatasystem" project released under the LGPL, see 
-	 * https://sourceforge.net/projects/radiodatasystem/
+	/* Table derived from work done by Tobias Lorenz
 	 */
 	private static byte[] updateClasses = {
 		 0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  4,  3,  0,  0,  0, 

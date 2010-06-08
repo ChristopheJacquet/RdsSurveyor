@@ -33,6 +33,7 @@ import java.io.PrintStream;
 import eu.jacquet80.rds.core.GroupLevelDecoder;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
+import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.log.Log;
 
 public class TestV4L {
@@ -68,7 +69,7 @@ public class TestV4L {
 
 	}
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, EndOfStream {
 	
 
 		TestV4L t = new TestV4L();
