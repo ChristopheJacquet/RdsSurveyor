@@ -32,7 +32,9 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -54,6 +56,7 @@ import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
+import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationTuned;
 import eu.jacquet80.rds.ui.app.AppPanel;
@@ -79,12 +82,33 @@ public class MainWindow extends JFrame {
 			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80);
 	private final GroupPanel groupStats = new GroupPanel();
+	
+	private final JTabbedPane tabbedPane = new JTabbedPane();
 			
 			//txtGroupStats = new JTextArea(1, 64);
 	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
+	private boolean streamFinished = false;
+	
+	private Map<Application, AppPanel> currentAppPanels = new HashMap<Application, AppPanel>();
+	
+	private void updateAppTabs() {
+		if(station == null) return;
+		for(Application app : station.getApplications()) {
+			///System.err.println("tab for " + app.getName() + ": " + currentAppPanels.get(app));
+			if(currentAppPanels.get(app) == null) {
+				// application does not have a tab!
+				AppPanel panel = AppPanel.forApp(app);
+				if(panel != null) {
+					currentAppPanels.put(app, panel);
+					tabbedPane.addTab(app.getName(), panel);
+					///System.err.println("add tab: " + app.getName());
+				}
+			}
+		}
+	}
 	
 	private static JPanel createArrangedPanel(Component[][] components) {
 		JPanel panel = new JPanel();
@@ -120,8 +144,6 @@ public class MainWindow extends JFrame {
 		
 		this.log = log;
 		
-		final JTabbedPane tabbedPane = new JTabbedPane();
-		
 		setLayout(new BorderLayout());
 		
 		JPanel globalPanel = new JPanel(new BorderLayout());
@@ -145,7 +167,6 @@ public class MainWindow extends JFrame {
 				lblPS = new JLabel("PS"),
 				lblPSName = new JLabel("Station name"),
 				lblPI = new JLabel("PI"),
-				lblAF = new JLabel("Alternative Frequencies"),
 				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics"),
 				lblDynPS = new JLabel("Dynamic PS");
@@ -183,11 +204,6 @@ public class MainWindow extends JFrame {
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblAF},
-				{new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED)},
-		}));
-
-		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblGroupStats},
 				{groupStats},
 		}));
@@ -195,6 +211,9 @@ public class MainWindow extends JFrame {
 		
 		final JPanel pnlEON = new JPanel(new BorderLayout());
 		pnlEON.add(new JScrollPane(tblEON = new JTable(eonTableModel)), BorderLayout.CENTER);
+		
+		final JPanel pnlAF = new JPanel(new BorderLayout());
+		pnlAF.add(new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 		
 		globalPanel.add(tabbedPane, BorderLayout.CENTER);
 		
@@ -226,10 +245,13 @@ public class MainWindow extends JFrame {
 					
 				// reset the tabs displayed
 				try {
-					SwingUtilities.invokeLater(new Runnable() {
+					SwingUtilities.invokeAndWait(new Runnable() {
 						public void run() {
 							tabbedPane.removeAll();
 							tabbedPane.addTab("EON", pnlEON);
+							tabbedPane.addTab("AF", pnlAF);
+							currentAppPanels.clear();
+							updateAppTabs();
 						}
 					});
 					repaint();
@@ -241,69 +263,75 @@ public class MainWindow extends JFrame {
 			
 			@Override
 			public void visit(ApplicationChanged appChanged) {
-				final Application newApp = appChanged.getNewApplication();
+				/*final Application newApp = appChanged.getNewApplication();
 				final AppPanel panel = AppPanel.forApp(newApp);
-				if(panel == null) return;
+				if(panel == null) return;*/
+				//currentAppPanels.put(newApp, panel);
 				try {
-					SwingUtilities.invokeLater(new Runnable() {
+					SwingUtilities.invokeAndWait(new Runnable() {
 						public void run() {
-							tabbedPane.addTab(newApp.getName(), panel);
-						};
+							updateAppTabs();
+						}
 					});
-					repaint();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
+			
+			@Override
+			public void visit(EndOfStream endOfStream) {
+				synchronized(MainWindow.this) {
+					streamFinished = true;
+				}
+			}
 		});
 		
-		log.addGroupListener(new Runnable() {
-			long previousTime = 0;
+		new Thread(new Runnable() {
 			public void run() {
-				long currentTime = System.currentTimeMillis();
-				if(currentTime - previousTime > 500) {  // refresh every 1s only
-					previousTime = currentTime;
-				} else return;
-				
-				synchronized(MainWindow.this) {
-					if(station != null) {
-						SwingUtilities.invokeLater(new Runnable() {
-							public void run() {
-								int pi = station.getPI();
-								txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
-								txtPSName.setText(station.getStationName());
-								txtDynPS.setText(station.getDynamicPSmessage());
-								
-								txtPI.setText(String.format("%04X", pi));
-								txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
-								txtPTYN.setText(station.getPTYN().toString());
-								// if Radiotext was received, then flags != 0
-								txtRT.setText(station.getRT().toString() != null ?
-										"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
-										: "");
-								
-								// Country & language
-								{
-									int ecc = station.getECC();
-									if(pi != 0 && ecc != 0)
-										txtCountry.setText(RDS.getISOCountryCode((pi>>12) & 0xF, ecc));
-									
-									int lang = station.getLanguage();
-									if(lang > 0 && lang < RDS.languages.length)
-										txtLang.setText(RDS.languages[lang][0]);
-								}
-								
-								List<String> rtM = station.getRT().getPastMessages(false);
-								String res = "";
-								for(int i=0; i<3; i++) {
-									if(rtM.size() > i) {
-										if(res.length() > 0) res += "\n";
-										res += rtM.get(rtM.size() - i - 1);
+				while(true) {
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {}
+
+					synchronized(MainWindow.this) {
+						if(station != null) {
+							SwingUtilities.invokeLater(new Runnable() {
+								public void run() {
+									int pi = station.getPI();
+									txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
+									txtPSName.setText(station.getStationName());
+									txtDynPS.setText(station.getDynamicPSmessage());
+
+									txtPI.setText(String.format("%04X", pi));
+									txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
+									txtPTYN.setText(station.getPTYN().toString());
+									// if Radiotext was received, then flags != 0
+									txtRT.setText(station.getRT().toString() != null ?
+											"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
+											: "");
+
+									// Country & language
+									{
+										int ecc = station.getECC();
+										if(pi != 0 && ecc != 0)
+											txtCountry.setText(RDS.getISOCountryCode((pi>>12) & 0xF, ecc));
+
+										int lang = station.getLanguage();
+										if(lang > 0 && lang < RDS.languages.length)
+											txtLang.setText(RDS.languages[lang][0]);
 									}
-								}
-								txtRTmessages.setText(res);
-								
-								/*
+
+									List<String> rtM = station.getRT().getPastMessages(false);
+									String res = "";
+									for(int i=0; i<3; i++) {
+										if(rtM.size() > i) {
+											if(res.length() > 0) res += "\n";
+											res += rtM.get(rtM.size() - i - 1);
+										}
+									}
+									txtRTmessages.setText(res);
+
+									/*
 								if(station.whichRT() == 0) {
 									lblRTa.setForeground(Color.RED);
 									lblRTb.setForeground(Color.BLACK);
@@ -314,29 +342,32 @@ public class MainWindow extends JFrame {
 									lblRTa.setForeground(Color.BLACK);
 									lblRTb.setForeground(Color.BLACK);
 								}
-								*/
-										
-								txtTraffic.setText(station.trafficInfoString());
-																
-								Date date = station.getDate();
-								txtTime.setText(date != null ? date.toString() : "");
-								txtAF.setText(station.afsToString());
-								//txtGroupStats.setText(station.groupStats());
-								groupStats.update(station.numericGroupStats());
-								
-								eonTableModel.fireTableDataChanged();
-								Util.packColumns(tblEON);
+									 */
 
-							};
-						});
+									txtTraffic.setText(station.trafficInfoString());
+
+									Date date = station.getDate();
+									txtTime.setText(date != null ? date.toString() : "");
+									txtAF.setText(station.afsToString());
+									//txtGroupStats.setText(station.groupStats());
+									groupStats.update(station.numericGroupStats());
+
+									eonTableModel.fireTableDataChanged();
+									Util.packColumns(tblEON);
+
+								};
+							});
+
+							// does not work here groupStats.update(station.numericGroupStats());
+							repaint();
+						}
 						
-						// does not work here groupStats.update(station.numericGroupStats());
-						repaint();
+						if(streamFinished) return;
 					}
 				}
 			}
-			
-		});
+
+		}).start();
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
