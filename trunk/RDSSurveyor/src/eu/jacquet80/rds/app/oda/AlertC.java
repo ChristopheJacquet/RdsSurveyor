@@ -25,9 +25,7 @@
 
 package eu.jacquet80.rds.app.oda;
 
-import java.text.Format;
 import java.util.ArrayList;
-import java.util.Formatter;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -347,7 +345,6 @@ public class AlertC extends ODA {
 			int res = peek(count);
 			this.count -= count;
 			bits &= (1L << this.count) - 1;   // remove the count leftmost bits
-			///System.out.println(" *" + ((1L << this.count)-1) + "* ");
 			return res;
 		}
 		

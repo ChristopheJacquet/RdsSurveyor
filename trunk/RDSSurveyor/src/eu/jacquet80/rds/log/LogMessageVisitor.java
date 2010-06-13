@@ -32,4 +32,5 @@ public interface LogMessageVisitor {
 	void visit(StationLost stationLost);
 	void visit(StationTuned stationTuned);
 	void visit(ApplicationChanged appChanged);
+	void visit(EndOfStream endOfStream);
 }

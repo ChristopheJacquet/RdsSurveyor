@@ -30,7 +30,7 @@ import java.util.LinkedList;
 
 public class Log {
 	private ArrayList<LogMessage> messages = new ArrayList<LogMessage>();
-	private LinkedList<Runnable> groupListeners = new LinkedList<Runnable>();
+	//private LinkedList<Runnable> groupListeners = new LinkedList<Runnable>();
 	private LinkedList<LogMessageVisitor> newMessageListeners = new LinkedList<LogMessageVisitor>();
 	
 	public synchronized void addMessage(LogMessage message) {
@@ -55,9 +55,9 @@ public class Log {
 		return messages.get(i);
 	}
 	
-	public void addGroupListener(Runnable r) {
+	/*public void addGroupListener(Runnable r) {
 		groupListeners.add(r);
-	}
+	}*/
 	
 	public void addNewMessageListener(LogMessageVisitor v) {
 		newMessageListeners.add(v);
@@ -80,6 +80,6 @@ public class Log {
 	}
 	
 	public void notifyGroup() {
-		for(Runnable r : groupListeners) r.run();
+		//for(Runnable r : groupListeners) r.run();
 	}
 }

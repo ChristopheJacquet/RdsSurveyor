@@ -125,11 +125,15 @@ public abstract class Station {
 				return "AF: #" + (a-224) + ", freq=" + frequencyToString(currentAFList.getTransmitterFrequency());
 			} else return "No AF information";
 		} else {
-			if(currentAFList == null) {
-				currentAFList = new AFList(-1);
-			}
 			if(a >= 0 && a <= 205 && b >= 0 && b <= 205) {
-				String res = currentAFList.addPair(a, b);
+				String res = currentAFList == null ? null : currentAFList.addPair(a, b);
+				if(res == null) {
+					// this means that the method addPair has determined that
+					// the new AF pair cannot belong to the existing list
+					// So create a new list
+					currentAFList = new AFList(-1);
+					currentAFList.addPair(a, b);
+				}
 				return "AF: " + res;
 			} else return "Unhandled AF pair: " + a + ", " + b;
 		}
@@ -247,7 +251,18 @@ class AFList {
 			if(fA > 0) afs.add(fA);
 			return "Method B: " + Station.frequencyToString(transmitterFrequency) + " -> " + Station.frequencyToString(fA) + " (" + typeIfB + ")";
 		} else if(fA > 0 || fB > 0){  // method A
-			if(transmitterFrequency != 0) method = 'A';
+			if(transmitterFrequency != 0) {
+				if(method == 'B') {
+					// if the two frequencies are transmitted
+					// if a transmitter frequency has previously been provided
+					// if none of them corresponds to the transmitter frequency
+					// and if method B had been identified...
+					// then the only possible explanation is that a new B-list has
+					// begun. So we return null, so that the caller creates a new AFList
+					return null;
+				} // else
+				method = 'A';
+			}
 			String res = (method == 'A' ? "Method A: " : "Unknown method: ");
 			if(fA > 0) {
 				afs.add(fA);

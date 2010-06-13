@@ -24,9 +24,11 @@
 */
 
 package eu.jacquet80.rds.core;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -38,6 +40,7 @@ public class TunedStation extends Station {
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
 	private Application[] applications = new Application[32];
+	private List<Application> applicationList = new ArrayList<Application>();
 	private int di = 0;
 	private int totalBlocks, totalBlocksOk;
 	private int ecc, language;
@@ -151,10 +154,15 @@ public class TunedStation extends Station {
 	
 	public void setApplicationForGroup(int type, int version, Application app) {
 		applications[(type<<1) | version] = app;
+		applicationList.add(app);
 	}
 	
 	public Application getApplicationForGroup(int type, int version) {
 		 return applications[(type<<1) | version];
+	}
+	
+	public List<Application> getApplications() {
+		return applicationList;
 	}
 	
 	public void setDate(Date date, int bitTime) {

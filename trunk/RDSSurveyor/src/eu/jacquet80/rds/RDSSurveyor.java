@@ -42,15 +42,14 @@ import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
-import eu.jacquet80.rds.input.InverterBitReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
-import eu.jacquet80.rds.input.SimpleV4LGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
+import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
@@ -230,5 +229,6 @@ public class RDSSurveyor {
 		streamLevelDecoder.processStream(reader, log);
 		
 		System.out.println("\nProcessing complete.");
+		log.addMessage(new EndOfStream(0));
 	}
 }

@@ -261,7 +261,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			int ab = (blocks[1]>>4) & 1;
 			char ch1 = '?', ch2 = '?', ch3 = '?', ch4 = '?';
 			
-			if(blocksOk[2]) {
+			if(blocksOk[2] && version == 0) {
 				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
 				ch2 = RDS.toChar(blocks[2] & 0xFF);
 				
@@ -269,15 +269,16 @@ public class GroupLevelDecoder implements RDSDecoder {
 				workingStation.getRT().setFlag(ab);
 			}
 			
-			if(blocksOk[3] && version == 0) {
+			if(blocksOk[3]) {
 				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				ch4 = RDS.toChar(blocks[3] & 0xFF);
-				workingStation.getRT().setChars(addr*2+1, ch3, ch4);
+				workingStation.getRT().setChars(version == 0 ? addr*2+1 : addr, ch3, ch4);
 				workingStation.getRT().setFlag(ab);
 			}
 			
-			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"" + toASCII(ch1) + toASCII(ch2));
-			if(version == 0) console.print(toASCII(ch3) + "" + toASCII(ch4));
+			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"");
+			if(version == 0) console.print(toASCII(ch1) + "" + toASCII(ch2));
+			console.print(toASCII(ch3) + "" + toASCII(ch4));
 			console.print('\"');
 		}
 		
@@ -531,7 +532,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 		
 
 		// post log message for app creation only if the group is not being ignored
-		if(newApp != null && station == workingStation) 
+		if(newApp != null && station == workingStation)
 			log.addMessage(new ApplicationChanged(bitTime, null, newApp));
 	}
 	

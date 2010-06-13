@@ -169,6 +169,8 @@ public class StreamLevelDecoder implements RDSDecoder {
 						*/
 					}
 					
+					//console.printf("-%07X>%04X+%03X ", block, group[blockCount], synd);
+					
 					bitCount = 0;
 					blockCount++;
 					
