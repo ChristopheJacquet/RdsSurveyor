@@ -8,4 +8,9 @@ public class AlertCwithAlertPlus extends AlertC {
 	public String getName() {
 		return "TMC/Alert-C with Alert-Plus";
 	}
+	
+	@Override
+	public int getAID() {
+		return AID;
+	}
 }
