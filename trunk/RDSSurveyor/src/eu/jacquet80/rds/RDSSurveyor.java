@@ -76,9 +76,10 @@ public class RDSSurveyor {
 	public static void main(String[] args) throws IOException {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009-2010.");
 		
-		RDSReader reader = null;
+		RDSReader reader = null, realReader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
+		boolean liveGroupInput = false;
 		Segmenter segmenter = null;
 		File outBinFile = null;
 		File outGroupFile = null;
@@ -104,6 +105,7 @@ public class RDSSurveyor {
 				((USBFMRadioGroupReader)newReader).setFrequency(105500);
 			} else if("-inv4l".equals(args[i])) {
 				newReader = new V4LTunerGroupReader(getParam("inv4l", args, ++i));
+				liveGroupInput = true;
 			} else if("-invert".equals(args[i])) {
 				inversion = BitInversion.INVERT;
 			} else if("-noinvert".equals(args[i])) {
@@ -162,6 +164,14 @@ public class RDSSurveyor {
 			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 		}
 		
+		if(liveGroupInput && outGroupFile == null) {
+			System.out.print("Using default group output file. ");
+			String tempDir = System.getProperty("java.io.tmpdir");
+			outGroupFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".l2");			
+		}
+		
+		realReader = reader;
+		
 		// use the output binary file if defined
 		if(outBinFile != null && reader instanceof BitReader) {
 			System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
@@ -207,7 +217,7 @@ public class RDSSurveyor {
 			fTL.setVisible(true);
 			*/
 			
-			InputToolBar toolbar = InputToolBar.forReader(reader);
+			InputToolBar toolbar = InputToolBar.forReader(realReader);
 			
 			MainWindow mainWindow = new MainWindow(log, toolbar);
 			mainWindow.setVisible(true);

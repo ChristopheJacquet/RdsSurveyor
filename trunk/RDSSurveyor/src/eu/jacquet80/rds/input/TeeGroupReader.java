@@ -42,7 +42,9 @@ public class TeeGroupReader implements GroupReader {
 	
 	@Override
 	public int[] getGroup() throws IOException, EndOfStream {
-		int[] group = reader.getGroup();
+		int[] group = null;
+		while(group == null)
+			group = reader.getGroup();
 		for(int i=0; i<4; i++) {
 			if(group[i]>=0) writer.printf("%04X ", group[i]);
 			else writer.print("---- ");

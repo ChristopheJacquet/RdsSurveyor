@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <jardesc>
-    <jar path="/private/tmp/rdssurveyor.jar"/>
+    <jar path="/tmp/rdssurveyor.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/RDSSurveyor/rdssurveyor.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>
@@ -13,7 +13,6 @@
     <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
         <file path="/RDSSurveyor/.project"/>
         <file path="/RDSSurveyor/.classpath"/>
-        <file path="/RDSSurveyor/.DS_Store"/>
         <javaElement handleIdentifier="=RDSSurveyor/src"/>
         <file path="/RDSSurveyor/rdssurveyor.jardesc"/>
     </selectedElements>
