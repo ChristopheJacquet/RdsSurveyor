@@ -18,4 +18,6 @@ public interface TunerGroupReader extends GroupReader {
 	public void seek(boolean up);
 	
 	public String getDeviceName();
+	
+	public boolean newGroups();
 }

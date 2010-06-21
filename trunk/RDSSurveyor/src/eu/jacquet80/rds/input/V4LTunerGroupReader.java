@@ -33,6 +33,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final static String LIB_NAME = "v4ltuner";
+	private boolean newGroups;
 	
 	public V4LTunerGroupReader(String device) {
 		int res = open(device);
@@ -77,6 +78,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 			if((data[2] & 0xC0) != 0) res[i] = -1;
 		}
 		
+		newGroups = true;
 		return res;
 	}
 
@@ -124,5 +126,12 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		
 		setFrequency(freq);
 		//System.out.println("tuned");
+	}
+
+	@Override
+	public boolean newGroups() {
+		boolean ng = newGroups;
+		newGroups = false;
+		return ng;
 	}
 }
