@@ -47,6 +47,7 @@ import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
+import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -80,6 +81,7 @@ public class RDSSurveyor {
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		boolean liveGroupInput = false;
+		boolean scan = false;
 		Segmenter segmenter = null;
 		File outBinFile = null;
 		File outGroupFile = null;
@@ -124,6 +126,8 @@ public class RDSSurveyor {
 				console = nullConsole;   // implies -noconsole
 				showGui = false;         // implies -nogui
 				segmenter = new Segmenter(System.out);
+			} else if("-scan".equals(args[i])) {
+				scan = true;
 			} else {
 				System.out.println("Unknown argument: " + args[i]);
 				
@@ -191,6 +195,35 @@ public class RDSSurveyor {
 		// force inversion if necessary
 		if(streamLevelDecoder instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
 			((StreamLevelDecoder)streamLevelDecoder).forceInversion(inversion);
+		}
+		
+		if(scan) {
+			if(realReader instanceof TunerGroupReader) {
+				final TunerGroupReader tgr = (TunerGroupReader) realReader;
+				new Thread() {
+					public void run() {
+						while(true) {
+							int cnt = 0;
+							boolean rdsReceived = false;
+							do {
+								try {
+									sleep(2000);
+									if(rdsReceived) sleep(4000);
+								} catch (InterruptedException e) {}
+								cnt++;
+								rdsReceived = tgr.newGroups();
+							} while(cnt < 4 && rdsReceived);
+							System.out.print("*** Tuning... ");
+							System.out.flush();
+							tgr.seek(true);
+							System.out.println("At " + tgr.getFrequency());
+						}
+					}
+				}.start();
+			} else {
+				System.out.println("Scanning may be used only with a tuner (" + realReader.getClass() + ")");
+				System.exit(1);
+			}
 		}
 
 			

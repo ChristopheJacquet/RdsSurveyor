@@ -571,29 +571,40 @@ public class GroupLevelDecoder implements RDSDecoder {
 			console.printf("%04d: [", bitTime / 26);
 			//boolean[] blocksOk = allOk;
 			boolean[] blocksOk = new boolean[4];
+			int nbOk = 0;
 			for(int i=0; i<4; i++) {
 				blocksOk[i] = (blocks[i] >= 0);
+				if(blocksOk[i]) nbOk++;
 				if(blocksOk[i]) console.printf("%04X ", blocks[i]);
 				else console.print("---- ");
 			}
 			console.print("] ");
 			
 			// detect isolated groups with wrong PI
-			if(lastPI == nextBlocks[0] && lastPI != blocks[0]) {
-				blocksOk = noneOk;
-			} else lastPI = blocks[0];
-			
-			// detect isolated groups with wrong PTY/TP
-			if(lastPTY == ((nextBlocks[1]>>5) & 0x3F) && lastPTY != ((blocks[1]>>5) & 0x3F)) {
-				blocksOk = noneOk;
-			} else lastPTY = ((blocks[1]>>5) & 0x3F);
-			
-			// detect spurious B-type groups
-			if(((blocks[1]>>11) & 1) == 1) {
-				if(blocks[0] != blocks[2]) blocksOk = noneOk;
+			// (only if block 0 was received correctly...)
+			if(blocks[0] != -1) {
+				if(nextBlocks[0] != -1 && lastPI == nextBlocks[0] && lastPI != blocks[0]) {
+					blocksOk = noneOk;
+				} else lastPI = blocks[0];
 			}
 			
-			processGroup(4, blocksOk, blocks, bitTime, log);
+			// detect isolated groups with wrong PTY/TP
+			// (only if block 1 was received correctly...)
+			if(blocks[1] != -1) {
+				if(nextBlocks[1] != -1 && lastPTY == ((nextBlocks[1]>>5) & 0x3F) && lastPTY != ((blocks[1]>>5) & 0x3F)) {
+					blocksOk = noneOk;
+				} else lastPTY = ((blocks[1]>>5) & 0x3F);
+			}
+			
+			// detect spurious B-type groups
+			// need to have blocks 0, 1 & 2 to do this
+			if(blocks[0] != -1 && blocks[1] != -1 && blocks[2] != -1) { 
+				if(((blocks[1]>>11) & 1) == 1) {
+					if(blocks[0] != blocks[2]) blocksOk = noneOk;
+				}
+			}
+			
+			processGroup(nbOk, blocksOk, blocks, bitTime, log);
 			console.println();
 			bitTime += 104;  // 104 bits per group
 			if(log != null) log.notifyGroup();
