@@ -126,7 +126,7 @@ public class Paging extends Application {
 				if((blocks[1] & 0xE) == 2) {
 					console.print("10-digit msg " + (1+(blocks[1] & 1)) + "/2: ");
 					if((blocks[1] & 1) == 0) {
-						String msg = Integer.toString(decodeBCD(blocks[3], 1)) + Integer.toString(decodeBCD(blocks[3], 0));
+						String msg = Character.toString(decodeBCD(blocks[3], 1)) + Character.toString(decodeBCD(blocks[3], 0));
 						console.print(addrStr +
 								", msg=" + msg + "...");
 
