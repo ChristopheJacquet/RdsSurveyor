@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 public class TeeGroupReader implements GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
+	private int oldFreq = -1, freq;
 	
 	public TeeGroupReader(GroupReader reader, File of) throws IOException {
 		this.reader = reader;
@@ -45,6 +46,16 @@ public class TeeGroupReader implements GroupReader {
 		int[] group = null;
 		while(group == null)
 			group = reader.getGroup();
+		
+		// detect frequency change
+		if(reader instanceof TunerGroupReader) {
+			freq = ((TunerGroupReader)reader).getFrequency();
+			if(freq != oldFreq) {
+				oldFreq = freq;
+				writer.println("% Freq " + freq);
+			}
+		}
+		
 		for(int i=0; i<4; i++) {
 			if(group[i]>=0) writer.printf("%04X ", group[i]);
 			else writer.print("---- ");
