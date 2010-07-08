@@ -83,10 +83,12 @@ public class GroupLevelDecoder implements RDSDecoder {
 		int ms = (block1>>3) & 1;
 		int addr = block1 & 3;
 		
-		station.setDIbit(addr, (block1>>2) & 1);
-		station.setTA(ta == 1);
+		console.print("TA=" + ta + ", " + (ms==1 ? "M/s" : "m/S") + ", ");
 		
-		console.print("TA=" + ta + ", M/S=" + ms + ", ");
+		boolean diInfo = ((block1>>2) & 1) == 1;		
+		station.setDIbit(addr, diInfo, console);
+		
+		station.setTA(ta == 1);
 		
 		// we return addr because it is also used to address PS segment in 0A/0B
 		return addr;
