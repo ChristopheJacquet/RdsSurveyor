@@ -24,6 +24,7 @@
 */
 
 package eu.jacquet80.rds.core;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,7 +42,7 @@ public class TunedStation extends Station {
 	private Date date = null;
 	private Application[] applications = new Application[32];
 	private List<Application> applicationList = new ArrayList<Application>();
-	private int di = 0;
+	private boolean diStereo, diArtif, diCompressed, diDPTY;
 	private int totalBlocks, totalBlocksOk;
 	private int ecc, language;
 	private int dateBitTime = -1;
@@ -81,7 +82,6 @@ public class TunedStation extends Station {
 		totalBlocksOk = 0;
 		
 		applications = new Application[32];
-		di = 0;
 	}
 
 	
@@ -109,10 +109,10 @@ public class TunedStation extends Station {
 		if(ptyn != null) res.append(", PTYN=" + ptyn);
 		
 		res.append("\nDI: ")
-				.append((di & 1) == 0 ? "Mono" : "Stereo").append(", ")
-				.append((di & 2) == 0 ? "Not artificial head" : "Artificial head").append(", ")
-				.append((di & 4) == 0 ? "Not compressed" : "Compressed").append(", ")
-				.append((di & 8) == 0 ? "Static PTY" : "Dynamic PTY")
+				.append(!diStereo ? "Mono" : "Stereo").append(", ")
+				.append(!diArtif ? "Not artificial head" : "Artificial head").append(", ")
+				.append(!diCompressed ? "Not compressed" : "Compressed").append(", ")
+				.append(!diDPTY ? "Static PTY" : "Dynamic PTY")
 				.append("\n");
 		
 		if(ecc != 0) {
@@ -199,9 +199,15 @@ public class TunedStation extends Station {
 		return rt;
 	}
 	
-	public void setDIbit(int pos, int val) {
-		di &= 0xF ^ (1<<(3-pos));		// clear bit
-		di |= val<<(3-pos);				// set it if needed
+	public void setDIbit(int addr, boolean diInfo, PrintStream console) {
+		console.print("DI:");
+		switch(addr) {
+		case 3: console.print(diInfo ? "Ster" : "Mono"); diStereo = diInfo; break;
+		case 2: console.print(diInfo ? "ArtH" : "NArH"); diArtif = diInfo; break;
+		case 1: console.print(diInfo ? "Comp" : "NCmp"); diCompressed = diInfo; break;
+		case 0: console.print(diInfo ? "DPTY" : "SPTY"); diDPTY = diInfo; break;
+		}
+		console.print(", ");
 	}
 	
 	public int getTotalBlocks() {
