@@ -43,6 +43,7 @@ struct v4l2_capability v_capability;
 struct v4l2_tuner v_tuner;
 struct v4l2_control v_control;
 struct v4l2_frequency v_frequency;
+struct v4l2_hw_freq_seek v_seek;
 
 #define BUF_LEN 3
 
@@ -86,6 +87,11 @@ int radio_open(char *device)
 	{
 		goto error;
 	}
+
+	printf("V4L device, driver='%s', card='%s', seek=%d\n",
+			v_capability.driver,
+			v_capability.card,
+			v_capability.capabilities & V4L2_CAP_HW_FREQ_SEEK);
 
 	return 1;
 
@@ -300,4 +306,19 @@ JNIEXPORT jbyteArray JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_get
 	jbyteArray jb = (*env)->NewByteArray(env, num_read);
 	(*env)->SetByteArrayRegion(env,jb,0,num_read,(jbyte*)data_buf);
 	return jb;
+}
+
+JNIEXPORT void JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_hwSeek
+  (JNIEnv *env, jobject obj, jboolean up) {
+
+	v_seek.tuner = 0;
+	v_seek.type = V4L2_TUNER_RADIO;
+	v_seek.seek_upward = up;
+	v_seek.wrap_around = 1;
+
+	printf("up=%d,  wrap=%d\n", v_seek.seek_upward, v_seek.wrap_around);
+	fflush(stdout);
+
+	ioctl(radio_fd, VIDIOC_S_HW_FREQ_SEEK, &v_seek);
+
 }

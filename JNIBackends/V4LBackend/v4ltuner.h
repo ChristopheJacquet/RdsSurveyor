@@ -87,6 +87,15 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_hasRD
 JNIEXPORT jbyteArray JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_getRDSData
   (JNIEnv *, jobject);
 
+/*
+ * Class:     eu_jacquet80_rds_input_V4LTunerGroupReader
+ * Method:    hwSeek
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_hwSeek
+  (JNIEnv *, jobject, jboolean);
+
+
 #ifdef __cplusplus
 }
 #endif
