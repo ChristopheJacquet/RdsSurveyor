@@ -73,6 +73,7 @@ public class MainWindow extends JFrame {
 			txtPI = new JTextArea(1, 4),
 			txtPTY = new JTextArea(1, 20),
 			txtPTYN = new JTextArea(1, 8),
+			txtDPTY = new JTextArea(1, 7),
 			txtTraffic = new JTextArea(1, 5),
 			txtCountry = new JTextArea(1, 20),
 			txtLang = new JTextArea(1, 20),
@@ -80,13 +81,16 @@ public class MainWindow extends JFrame {
 			txtRT = new JTextArea(1, 64),
 			txtRTmessages = new JTextArea(3, 64),
 			txtAF = new JTextArea(3, 64),
-			txtDynPS = new JTextArea(1, 80);
+			txtDynPS = new JTextArea(1, 80),
+			txtCompressed = new JTextArea(1, 5),
+			txtStereo = new JTextArea(1, 5),
+			txtHead = new JTextArea(1, 5);
 	private final GroupPanel groupStats = new GroupPanel();
 	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
 			
 			//txtGroupStats = new JTextArea(1, 64);
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -169,7 +173,11 @@ public class MainWindow extends JFrame {
 				lblPI = new JLabel("PI"),
 				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics"),
-				lblDynPS = new JLabel("Dynamic PS");
+				lblDynPS = new JLabel("Dynamic PS"),
+				lblDPTY = new JLabel("PTY kind"),
+				lblCompressed = new JLabel("Compressed"),
+				lblHead = new JLabel("Artificial head"),
+				lblStereo = new JLabel("Sound");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -183,13 +191,13 @@ public class MainWindow extends JFrame {
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblPTY, lblPTYN, lblTraffic},
-				{txtPTY, txtPTYN, txtTraffic},
+				{lblPTY, lblDPTY, lblPTYN, lblTraffic},
+				{txtPTY, txtDPTY, txtPTYN, txtTraffic},
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblCountry, lblLang},
-				{txtCountry, txtLang},
+				{lblCountry, lblLang, lblStereo, lblCompressed, lblHead},
+				{txtCountry, txtLang, txtStereo, txtCompressed, txtHead},
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -354,6 +362,12 @@ public class MainWindow extends JFrame {
 
 									eonTableModel.fireTableDataChanged();
 									Util.packColumns(tblEON);
+									
+									// DI info
+									txtStereo.setText(station.getStereo() ? "Stereo" : "Mono");
+									txtHead.setText(station.getArtificialHead() ? "Yes" : "No");
+									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
+									txtDPTY.setText(station.getDPTY() ? "Dynamic" : "Static");
 
 								};
 							});

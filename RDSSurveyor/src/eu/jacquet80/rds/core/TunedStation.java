@@ -241,4 +241,20 @@ public class TunedStation extends Station {
 		c.add(Calendar.SECOND, (int)((bitTime - dateBitTime) / 1187.5f));
 		return c.getTime();
 	}
+	
+	public boolean getStereo() {
+		return diStereo;
+	}
+	
+	public boolean getArtificialHead() {
+		return diArtif;
+	}
+	
+	public boolean getCompressed() {
+		return diCompressed;
+	}
+	
+	public boolean getDPTY() {
+		return diDPTY;
+	}
 }
