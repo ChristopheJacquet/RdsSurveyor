@@ -57,6 +57,14 @@ JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_getSignal
 
 /*
  * Class:     eu_jacquet80_rds_input_V4LTunerGroupReader
+ * Method:    hwSeek
+ * Signature: (Z)V
+ */
+JNIEXPORT void JNICALL Java_eu_jacquet80_rds_input_V4LTunerGroupReader_hwSeek
+  (JNIEnv *, jobject, jboolean);
+
+/*
+ * Class:     eu_jacquet80_rds_input_V4LTunerGroupReader
  * Method:    open
  * Signature: (Ljava/lang/String;)I
  */
