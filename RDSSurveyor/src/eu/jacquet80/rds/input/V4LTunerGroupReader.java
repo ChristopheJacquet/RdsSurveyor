@@ -47,6 +47,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 	public native synchronized int mute();
 	public native synchronized int unmute();
 	public native synchronized int getSignalStrength();
+	public native synchronized void hwSeek(boolean up);
     private native synchronized int open(String device);
     private native synchronized int close();
     private native synchronized boolean hasRDS();
@@ -69,7 +70,9 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 					return null;
 				}
 
-				blockOffset = data[2] & 0x3;
+				blockOffset = data[2] & 0x7;
+				// special handling of block C'
+				if(blockOffset == 4) blockOffset = 2;
 				if(blockOffset != i) System.out.println("<SLIP got " + blockOffset + ", expecting " + i + ">");
 			} while(blockOffset != i);
 			
@@ -103,6 +106,14 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		return "Video4Linux";
 	}
 
+	/*
+	@Override
+	public void seek(boolean up) {
+		hwSeek(up);
+	}
+	*/
+	
+	
 	@Override
 	public void seek(boolean up) {
 		int steps = 0;
@@ -112,6 +123,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 			steps++;
 		} while(getSignalStrength() < 30000 && steps<410);
 	}
+	
 
 	@Override
 	public void tune(boolean up) {

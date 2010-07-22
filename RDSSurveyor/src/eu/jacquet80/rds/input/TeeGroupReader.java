@@ -29,11 +29,14 @@ package eu.jacquet80.rds.input;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class TeeGroupReader implements GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
 	private int oldFreq = -1, freq;
+	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd HH:mm:ss Z");
 	
 	public TeeGroupReader(GroupReader reader, File of) throws IOException {
 		this.reader = reader;
@@ -52,7 +55,8 @@ public class TeeGroupReader implements GroupReader {
 			freq = ((TunerGroupReader)reader).getFrequency();
 			if(freq != oldFreq) {
 				oldFreq = freq;
-				writer.println("% Freq " + freq);
+				writer.println("% Freq " + freq + ", date=" + 
+						dateFormat.format(Calendar.getInstance().getTime()));
 			}
 		}
 		
