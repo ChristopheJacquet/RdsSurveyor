@@ -30,25 +30,41 @@ import java.io.PrintStream;
 import java.util.LinkedList;
 
 import eu.jacquet80.rds.input.BitReader;
-import eu.jacquet80.rds.input.RDSReader;
-import eu.jacquet80.rds.log.Log;
-import eu.jacquet80.rds.log.StationLost;
+import eu.jacquet80.rds.input.GroupReader;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
 
 
-public class StreamLevelDecoder implements RDSDecoder {
+public class StreamLevelDecoder implements GroupReader {
 	private final static int SYNC_THRESHOLD = 2;  // need 2 blocks after initial block to confirm synchronization
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
 
 	private final PrintStream console;
-	private final Log log;
-	private final GroupLevelDecoder groupLevelDecoder;
+	//private final Log log;
+	private final BitReader reader;
 	private BitInversion inversion = BitInversion.AUTO;
 	
-	public StreamLevelDecoder(PrintStream console, Log log) {
+	private int block = 0;        // block contents
+	private int blockCount = 0;   // block counter within group
+	private int bitCount = 0;     // bit count within block
+	private int[] group = {0, 0, 0, 0};   // group
+	private boolean synced = false;
+	private int nbOk = 0;
+	private boolean[] blocksOk = {false, false, false, false};
+	private int nbUnsync = 0;
+	private int groupCount = 0;
+	private int bitTime = 0;
+	private boolean negativePolarity = false;
+	private @SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][][] = new LinkedList[26][4][2];
+	
+	
+	public StreamLevelDecoder(PrintStream console, BitReader reader) {
 		this.console = console;
-		this.log = log;
-		groupLevelDecoder = new GroupLevelDecoder(console, log);
+		//this.log = log;
+		this.reader = reader;
+		
+		eraseSyncArray(nbSyncAtOffset);
 	}
 	
 	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][][]) {
@@ -57,35 +73,16 @@ public class StreamLevelDecoder implements RDSDecoder {
 				for(int k=0; k<nbSyncAtOffset[i][j].length; k++)
 					nbSyncAtOffset[i][j][k] = new LinkedList<Integer>();
 	}
-		
-	public void processStream(RDSReader rdsReader) throws IOException { 
-		int block = 0;        // block contents
-		int blockCount = 0;   // block counter within group
-		int bitCount = 0;     // bit count within block
-		int[] group = {0, 0, 0, 0};   // group
-		boolean synced = false;
-		int nbOk = 0;
-		boolean[] blocksOk = {false, false, false, false};
-		int nbUnsync = 0;
-		//TunedStation currentStation = new TunedStation();
-		int groupCount = 0;
-		int bitTime = 0;
-		boolean negativePolarity = false;
-		@SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][][] = new LinkedList[26][4][2];
-		
-		BitReader reader = (BitReader) rdsReader;
-		
-		eraseSyncArray(nbSyncAtOffset);
-		
+	
+	@Override
+	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
 		while(true) {
 			// read bit and add it to stream
 			boolean bit = false;
 			try {
 				bit = reader.getBit();
 			} catch(EOFException e) {
-				// when the end of stream is reached, must add log information about the last tuned station
-				log.addMessage(new StationLost(groupLevelDecoder.getTunedStation().getTimeOfLastPI(), groupLevelDecoder.getTunedStation()));
-				return;
+				throw new EndOfStream();
 			}
 			block = (block << 1) & 0x3FFFFFF;
 			if(bit) block |= 1;
@@ -152,6 +149,7 @@ public class StreamLevelDecoder implements RDSDecoder {
 						else console.print("g");   // type B offset word (for group C)
 					} else {
 						blocksOk[blockCount] = false;
+						group[blockCount] = -1;
 						console.print(".");
 						/*
 						This is a placeholder for error correction code
@@ -188,20 +186,25 @@ public class StreamLevelDecoder implements RDSDecoder {
 						// after a while without a correct block, decide we have lost synchronization
 						if(nbUnsync > SYNC_LOSS_DURATION) {
 							synced = false;
-							groupLevelDecoder.loseSync();
+							//groupLevelDecoder.loseSync();
+							//TODO: need a means to inform a group decoder of a sync loss?
 							console.println(" Lost synchronization.");
 						}
 						
 						
-						// process group data
-						groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime);
 						
-						if(log != null) log.notifyGroup();
+						//if(log != null) log.notifyGroup();
 
-						console.println();
-						console.printf("%04d: ", bitTime / 26);
+						//console.println();
+						//console.printf("%04d: ", bitTime / 26);
 
 						nbOk = 0;
+						
+						// return group data
+						int[] theGroup = new int[4];
+						System.arraycopy(group, 0, theGroup, 0, 4);
+						return new GroupEvent(bitTime, theGroup, false);
+						//groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime);
 					}
 				}
 			}
@@ -212,9 +215,6 @@ public class StreamLevelDecoder implements RDSDecoder {
 		this.inversion = inversion;
 	}
 	
-	public TunedStation getTunedStation() {
-		return groupLevelDecoder.getTunedStation();
-	}
 	
 	public static enum BitInversion {
 		AUTO, INVERT, NOINVERT;

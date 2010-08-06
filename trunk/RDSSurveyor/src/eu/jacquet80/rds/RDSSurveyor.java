@@ -78,7 +78,7 @@ public class RDSSurveyor {
 	public static void main(String[] args) throws IOException {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009-2010.");
 		
-		RDSReader reader = null, realReader = null;
+		GroupReader reader = null, realReader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		boolean liveGroupInput = false;
@@ -90,16 +90,16 @@ public class RDSSurveyor {
 		StreamLevelDecoder.BitInversion inversion = BitInversion.AUTO;
 		
 		for(int i=0; i<args.length; i++) {
-			RDSReader newReader = null;
+			GroupReader newReader = null;
 			if("-inaudio".equals(args[i])) {
-				newReader = new LiveAudioBitReader();
+				newReader = new StreamLevelDecoder(console, new LiveAudioBitReader());
 				liveInput = true;
 			} else if("-inbinfile".equals(args[i])) {
-				newReader = new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i)));
+				newReader = new StreamLevelDecoder(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
 			} else if("-insyncbinfile".equals(args[i])) {
-				newReader = new SyncBinaryFileBitReader(new File(getParam("insyncbinfile", args, ++i)));
+				newReader = new StreamLevelDecoder(console, new SyncBinaryFileBitReader(new File(getParam("insyncbinfile", args, ++i))));
 			} else if("-inbinstrfile".equals(args[i])) {
-				newReader = new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i)));
+				newReader = new StreamLevelDecoder(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 			} else if("-ingrouphexfile".equals(args[i])) {
 				newReader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
 			} else if("-inusbkey".equals(args[i])) {
@@ -114,7 +114,7 @@ public class RDSSurveyor {
 			} else if("-noinvert".equals(args[i])) {
 				inversion = BitInversion.NOINVERT;
 			} else if("-inaudiofile".equals(args[i])) {
-				newReader = new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i)));
+				newReader = new StreamLevelDecoder(console, new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i))));
 			} else if("-outbinfile".equals(args[i])) {
 				outBinFile = new File(getParam("outbinfile", args, ++i));
 			} else if("-outgrouphexfile".equals(args[i])) {
@@ -178,29 +178,32 @@ public class RDSSurveyor {
 		realReader = reader;
 		
 		// use the output binary file if defined
-		if(outBinFile != null && reader instanceof BitReader) {
+		// TODO FIXME: re-add a way to log binary streams?
+		/*if(outBinFile != null && reader instanceof BitReader) {
 			System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
 			reader = new TeeBitReader((BitReader)reader, outBinFile);
 		}
+		*/
 		
 		// use the output hex file if defined
 		if(outGroupFile != null && reader instanceof GroupReader) {
 			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
 			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
 		}
+
 		
 		// if group reader, add a station change detector
 		if(reader instanceof GroupReader) {
 			reader = new StationChangeDetector((GroupReader)reader);
 		}
 		
+		
 		Log log = new Log();
-		final RDSDecoder streamLevelDecoder = 
-			reader instanceof BitReader ? new StreamLevelDecoder(console, log) : new GroupLevelDecoder(console, log);
+		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(console, log);
 
 		// force inversion if necessary
-		if(streamLevelDecoder instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
-			((StreamLevelDecoder)streamLevelDecoder).forceInversion(inversion);
+		if(reader instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
+			((StreamLevelDecoder) reader).forceInversion(inversion);
 		}
 		
 		if(scan) {
@@ -263,7 +266,7 @@ public class RDSSurveyor {
 			segmenter.registerAtLog(log);
 		}
 
-		streamLevelDecoder.processStream(reader);
+		groupDecoder.processStream(reader);
 		
 		System.out.println("\nProcessing complete.");
 		log.addMessage(new EndOfStream(0));

@@ -94,7 +94,8 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		}
 		
 		newGroups = true;
-		return new GroupEvent(res, false);
+		return new GroupEvent(0, res, false);
+		// TODO FIXME: need to provide meaningful bit time
 	}
 
 	static {

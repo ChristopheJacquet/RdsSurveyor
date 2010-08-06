@@ -51,7 +51,8 @@ public class USBFMRadioGroupReader implements GroupReader {
 			short[] res = getRDSRegisters();
 			if(res == null) continue;
 			if((res[10] & 0x8000) == 0) continue;  // RSSI.RDS_Receive
-			return new GroupEvent(new int[] { 
+			// TODO FIXME: need to provide meaningful bit time
+			return new GroupEvent(0, new int[] { 
 					0xFFFF & ((int)res[12]), 
 					0xFFFF & ((int)res[13]),
 					0xFFFF & ((int)res[14]),
