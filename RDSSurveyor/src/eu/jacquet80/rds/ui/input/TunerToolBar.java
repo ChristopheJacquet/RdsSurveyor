@@ -3,10 +3,7 @@ package eu.jacquet80.rds.ui.input;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
-import javax.swing.Icon;
-import javax.swing.JButton;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 
@@ -29,24 +26,22 @@ public class TunerToolBar extends InputToolBar {
 		FFWD_BUTTON = "FFWD",
 		RWND_BUTTON = "RWND";
 	
-	private ActionListener buttonListener = new ActionListener() {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			if(e.getActionCommand() == FFWD_BUTTON) {
-				reader.seek(true);
-				update();
-			} else if(e.getActionCommand() == RWND_BUTTON) {
-				reader.seek(false);
-				update();
-			} else if(e.getActionCommand() == UP_BUTTON) {
-				reader.tune(true);
-				update();
-			} else if(e.getActionCommand() == DOWN_BUTTON) {
-				reader.tune(false);
-				update();
-			}
+	@Override
+	protected void handleButtonAction(ActionEvent e) {
+		if(e.getActionCommand() == FFWD_BUTTON) {
+			reader.seek(true);
+			update();
+		} else if(e.getActionCommand() == RWND_BUTTON) {
+			reader.seek(false);
+			update();
+		} else if(e.getActionCommand() == UP_BUTTON) {
+			reader.tune(true);
+			update();
+		} else if(e.getActionCommand() == DOWN_BUTTON) {
+			reader.tune(false);
+			update();
 		}
-	};
+	}
 	
 	private synchronized void update() {
 		txtFrequency.setText(Double.toString(reader.getFrequency() / 1000.));
@@ -86,11 +81,5 @@ public class TunerToolBar extends InputToolBar {
 			};
 		}.start();
 	}
-	
-	private void addButton(Icon icon, String command) {
-		JButton button = new JButton(icon);
-		button.setActionCommand(command);
-		button.addActionListener(buttonListener);
-		add(button);
-	}
+
 }

@@ -29,6 +29,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+
 public class SimpleV4LGroupReader implements GroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
@@ -40,7 +43,7 @@ public class SimpleV4LGroupReader implements GroupReader {
 	}
 	
 	@Override
-	public int[] getGroup() throws IOException {
+	public GroupReaderEvent getGroup() throws IOException {
 		int[] res = new int[4];
 
 		// read 4 blocks of offsets 0, 1, 2, 3
@@ -60,7 +63,7 @@ public class SimpleV4LGroupReader implements GroupReader {
 			if((recvBuffer[2] & 0xC0) != 0) res[i] = -1;
 		}
 		
-		return res;
+		return new GroupEvent(res, false);
 	}
 
 }

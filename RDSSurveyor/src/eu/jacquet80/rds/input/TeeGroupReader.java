@@ -32,10 +32,15 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
+import eu.jacquet80.rds.input.group.StationChangeEvent;
+
 public class TeeGroupReader implements GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
-	private int oldFreq = -1, freq;
 	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd HH:mm:ss Z");
 	
 	public TeeGroupReader(GroupReader reader, File of) throws IOException {
@@ -45,28 +50,35 @@ public class TeeGroupReader implements GroupReader {
 	}
 	
 	@Override
-	public int[] getGroup() throws IOException, EndOfStream {
-		int[] group = null;
-		while(group == null)
-			group = reader.getGroup();
+	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
+		GroupReaderEvent event = reader.getGroup();
+		if(event == null) return null;		// propagate null event
 		
-		// detect frequency change
-		if(reader instanceof TunerGroupReader) {
-			freq = ((TunerGroupReader)reader).getFrequency();
-			if(freq != oldFreq) {
-				oldFreq = freq;
-				writer.println("% Freq " + freq + ", date=" + 
+		event.accept(new GroupReaderEventVisitor() {
+			@Override
+			public void visit(FrequencyChangeEvent freqChangeEvent) {
+				writer.println("% Freq " + freqChangeEvent.frequency + ", date=" + 
 						dateFormat.format(Calendar.getInstance().getTime()));
 			}
-		}
-		
-		for(int i=0; i<4; i++) {
-			if(group[i]>=0) writer.printf("%04X ", group[i]);
-			else writer.print("---- ");
-		}
+			
+			@Override
+			public void visit(GroupEvent groupEvent) {
+				for(int i=0; i<4; i++) {
+					if(groupEvent.blocks[i]>=0) writer.printf("%04X ", groupEvent.blocks[i]);
+					else writer.print("---- ");
+				}
+			}
+
+			@Override
+			public void visit(StationChangeEvent stationChangeEvent) {
+				// do nothing
+			}
+		});
+
 		writer.println();
 		writer.flush();
-		return group;
+		
+		return event;
 	}
 
 }

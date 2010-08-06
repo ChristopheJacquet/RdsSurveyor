@@ -29,11 +29,16 @@ package eu.jacquet80.rds.input;
 
 import java.io.IOException;
 
+import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+
 public class V4LTunerGroupReader implements TunerGroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final static String LIB_NAME = "v4ltuner";
 	private boolean newGroups;
+	private int oldFreq = 0;	// if !=0, means that the frequency has just been adjusted
 	
 	public V4LTunerGroupReader(String device) {
 		int res = open(device);
@@ -55,7 +60,14 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 
 	
 	@Override
-	public int[] getGroup() throws IOException {
+	public GroupReaderEvent getGroup() throws IOException {
+		int newFreq = getFrequency();
+		if(newFreq != oldFreq) {
+			// if frequency has just been changed, must report an event
+			oldFreq = newFreq;
+			return new FrequencyChangeEvent(newFreq);
+		}
+		
 		int[] res = new int[4];
 		byte[] data;
 		
@@ -82,7 +94,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		}
 		
 		newGroups = true;
-		return res;
+		return new GroupEvent(res, false);
 	}
 
 	static {

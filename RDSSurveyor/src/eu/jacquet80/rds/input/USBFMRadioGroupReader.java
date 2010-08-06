@@ -2,6 +2,9 @@ package eu.jacquet80.rds.input;
 
 import java.io.IOException;
 
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+
 
 public class USBFMRadioGroupReader implements GroupReader {
 	public native byte init();
@@ -43,16 +46,16 @@ public class USBFMRadioGroupReader implements GroupReader {
 		}
 	}
 	@Override
-	public int[] getGroup() throws IOException {
+	public GroupReaderEvent getGroup() throws IOException {
 		while(true) {
 			short[] res = getRDSRegisters();
 			if(res == null) continue;
 			if((res[10] & 0x8000) == 0) continue;  // RSSI.RDS_Receive
-			return new int[] { 
+			return new GroupEvent(new int[] { 
 					0xFFFF & ((int)res[12]), 
 					0xFFFF & ((int)res[13]),
 					0xFFFF & ((int)res[14]),
-					0xFFFF & ((int)res[15]) };
+					0xFFFF & ((int)res[15]) }, false);
 		}
 	}
 }

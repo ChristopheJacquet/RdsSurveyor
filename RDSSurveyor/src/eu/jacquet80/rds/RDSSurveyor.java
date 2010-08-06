@@ -44,6 +44,7 @@ import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
+import eu.jacquet80.rds.input.StationChangeDetector;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
@@ -188,9 +189,14 @@ public class RDSSurveyor {
 			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
 		}
 		
+		// if group reader, add a station change detector
+		if(reader instanceof GroupReader) {
+			reader = new StationChangeDetector((GroupReader)reader);
+		}
+		
 		Log log = new Log();
 		final RDSDecoder streamLevelDecoder = 
-			reader instanceof BitReader ? new StreamLevelDecoder(console) : new GroupLevelDecoder(console);
+			reader instanceof BitReader ? new StreamLevelDecoder(console, log) : new GroupLevelDecoder(console, log);
 
 		// force inversion if necessary
 		if(streamLevelDecoder instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
@@ -229,18 +235,6 @@ public class RDSSurveyor {
 			
 		if(showGui) {
 			/*
-			JFrame frame = new JFrame("RDS Surveyor");
-			final JTextArea area = new JTextArea();
-			area.setFont(new Font("Monospaced", Font.PLAIN, 14));
-			frame.setLayout(new BorderLayout());
-			frame.add(new JScrollPane(area), BorderLayout.CENTER);
-			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			frame.setPreferredSize(new Dimension(800, 400));
-			frame.pack();
-			frame.setVisible(true);
-			*/
-		
-			/*
 			JFrame fTL = new JFrame("Timeline");
 			final TimeLine timeLine = new TimeLine(log);
 			fTL.setLayout(new BorderLayout());
@@ -250,7 +244,7 @@ public class RDSSurveyor {
 			fTL.setVisible(true);
 			*/
 			
-			InputToolBar toolbar = InputToolBar.forReader(realReader);
+			InputToolBar toolbar = InputToolBar.forReader(realReader, log);
 			
 			MainWindow mainWindow = new MainWindow(log, toolbar);
 			mainWindow.setVisible(true);
@@ -269,7 +263,7 @@ public class RDSSurveyor {
 			segmenter.registerAtLog(log);
 		}
 
-		streamLevelDecoder.processStream(reader, log);
+		streamLevelDecoder.processStream(reader);
 		
 		System.out.println("\nProcessing complete.");
 		log.addMessage(new EndOfStream(0));

@@ -42,6 +42,7 @@ import javax.swing.GroupLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
@@ -88,6 +89,8 @@ public class MainWindow extends JFrame {
 	private final GroupPanel groupStats = new GroupPanel();
 	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
+	
+	private final JProgressBar barBLER = new JProgressBar(0, 100);
 			
 			//txtGroupStats = new JTextArea(1, 64);
 	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
@@ -177,12 +180,13 @@ public class MainWindow extends JFrame {
 				lblDPTY = new JLabel("PTY kind"),
 				lblCompressed = new JLabel("Compressed"),
 				lblHead = new JLabel("Artificial head"),
-				lblStereo = new JLabel("Sound");
+				lblStereo = new JLabel("Sound"),
+				lblBLER = new JLabel("BLER");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblPS, lblPSName, lblPI},
-				{txtPS, txtPSName, txtPI},
+				{lblPS, lblPSName, lblPI, lblBLER},
+				{txtPS, txtPSName, txtPI, barBLER},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -305,6 +309,8 @@ public class MainWindow extends JFrame {
 						if(station != null) {
 							SwingUtilities.invokeLater(new Runnable() {
 								public void run() {
+									barBLER.setValue((int)(100. * station.getBLER()));
+									
 									int pi = station.getPI();
 									txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
 									txtPSName.setText(station.getStationName());
@@ -323,10 +329,12 @@ public class MainWindow extends JFrame {
 										int ecc = station.getECC();
 										if(pi != 0 && ecc != 0)
 											txtCountry.setText(RDS.getISOCountryCode((pi>>12) & 0xF, ecc));
+										else txtCountry.setText("");
 
 										int lang = station.getLanguage();
 										if(lang > 0 && lang < RDS.languages.length)
 											txtLang.setText(RDS.languages[lang][0]);
+										else txtLang.setText("");
 									}
 
 									List<String> rtM = station.getRT().getPastMessages(false);

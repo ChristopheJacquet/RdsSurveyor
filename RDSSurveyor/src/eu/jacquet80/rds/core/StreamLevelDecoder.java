@@ -41,12 +41,14 @@ public class StreamLevelDecoder implements RDSDecoder {
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
 
 	private final PrintStream console;
+	private final Log log;
 	private final GroupLevelDecoder groupLevelDecoder;
 	private BitInversion inversion = BitInversion.AUTO;
 	
-	public StreamLevelDecoder(PrintStream console) {
+	public StreamLevelDecoder(PrintStream console, Log log) {
 		this.console = console;
-		groupLevelDecoder = new GroupLevelDecoder(console);
+		this.log = log;
+		groupLevelDecoder = new GroupLevelDecoder(console, log);
 	}
 	
 	private final static void eraseSyncArray(LinkedList<Integer> nbSyncAtOffset[][][]) {
@@ -56,7 +58,7 @@ public class StreamLevelDecoder implements RDSDecoder {
 					nbSyncAtOffset[i][j][k] = new LinkedList<Integer>();
 	}
 		
-	public void processStream(RDSReader rdsReader, Log log) throws IOException { 
+	public void processStream(RDSReader rdsReader) throws IOException { 
 		int block = 0;        // block contents
 		int blockCount = 0;   // block counter within group
 		int bitCount = 0;     // bit count within block
@@ -192,7 +194,7 @@ public class StreamLevelDecoder implements RDSDecoder {
 						
 						
 						// process group data
-						groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime, log);
+						groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime);
 						
 						if(log != null) log.notifyGroup();
 
