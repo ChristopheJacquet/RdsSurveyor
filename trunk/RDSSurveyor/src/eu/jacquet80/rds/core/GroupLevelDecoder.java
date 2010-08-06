@@ -38,8 +38,13 @@ import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.ODA;
 import eu.jacquet80.rds.input.GroupReader;
-import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.GroupReader.EndOfStream;
+import eu.jacquet80.rds.input.RDSReader;
+import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
+import eu.jacquet80.rds.input.group.StationChangeEvent;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.ClockTime;
 import eu.jacquet80.rds.log.EONReturn;
@@ -52,9 +57,10 @@ public class GroupLevelDecoder implements RDSDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
 	private double time = 0.0;
-	private TunedStation station = new TunedStation(0);  // realStation is used in case station is a dummy one
+	private TunedStation station = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
-	private int badPIcount = 0;
+	private Log log;
+	//private int badPIcount = 0;
 	
 	private final String[] RP_TNGD_VALUES = {
 		"No RP",
@@ -69,8 +75,9 @@ public class GroupLevelDecoder implements RDSDecoder {
 
 	private final PrintStream console;
 	
-	public GroupLevelDecoder(PrintStream console) {
+	public GroupLevelDecoder(PrintStream console, Log log) {
 		this.console = console;
+		this.log = log;
 	}
 	
 	public void loseSync() {
@@ -94,7 +101,11 @@ public class GroupLevelDecoder implements RDSDecoder {
 		return addr;
 	}
 	
-	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime, Log log) {
+	/* TODO FIXME
+	 * This method should become private in the future. Everything should go through a
+	 * StreamReader, even if we decode a bitstream in the first place.
+	 */
+	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime) {
 		//console.print(" (" + (station == null ? null : station.getStationName() ) + ") ");
 		Application newApp = null;
 		
@@ -114,8 +125,11 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(station.getPI() == 0) {
 				// new station
 				station.setPI(pi);
-				log.addMessage(new StationTuned(bitTime, station));
-			}
+			}/*
+			TODO: should be improved
+			the 'StationTuned' message should be emitted when the 
+			StationChangeEvent is received in the first place. 
+			
 			if(station.getPI() == pi) {
 				// same PI as before => same station
 				station.pingPI(bitTime);
@@ -137,7 +151,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 					workingStation = new TunedStation(bitTime); // dummy station
 				}
 				
-			}
+			}*/
 		} else console.print("         ");
 		
 		if(!synced) return;   // after a sync loss, we wait for a PI before processing further data
@@ -157,7 +171,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			workingStation.setPTY(pty);
 			
 			console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
-		} else workingStation.addUnknownGroupToStats();
+		} else workingStation.addUnknownGroupToStats(nbOk);
 		
 		// Groups 0A & 0B
 		if(type == 0) {
@@ -547,41 +561,75 @@ public class GroupLevelDecoder implements RDSDecoder {
 		station = new TunedStation(time);
 	}
 	
-	public void processStream(RDSReader rdsReader, Log log) throws IOException {
-		int bitTime = 0;
+	public void processStream(RDSReader rdsReader) throws IOException {
 		GroupReader reader = (GroupReader)rdsReader;
-		final boolean[] allOk = {true, true, true, true};
-		final boolean[] noneOk = {false, false, false, false};
-		int[] nextBlocks = new int[] {-1, -1, -1, -1};
-		int lastPI = 0;
-		int lastPTY = 0;
+		//final boolean[] allOk = {true, true, true, true};
+		//final boolean[] noneOk = {false, false, false, false};
+		GroupReaderEvent evt;
 		
 		for(;;) {
-			int[] oldBlocks = nextBlocks;
-			int[] blocks = nextBlocks;
 			try {
-				nextBlocks = reader.getGroup();
+				///System.out.print(reader + "> ");
+				evt = reader.getGroup();
+				///System.out.println(evt);
 			} catch(EndOfStream eos) {
+				///System.out.println("EOS " + eos);
 				return;
 			}
 			
-			if(nextBlocks == null) {
-				nextBlocks = oldBlocks;
-				continue;
-			}
+			evt.accept(new GroupReaderEventVisitor() {
+				int bitTime = 0;
+				
+				@Override
+				public void visit(StationChangeEvent stationChangeEvent) {
+					if(station != null)
+						log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
+					station = new TunedStation(bitTime);
+					log.addMessage(new StationTuned(bitTime, station));
+					console.println("% New station tuned");
+				}
+				
+				@Override
+				public void visit(GroupEvent groupEvent) {
+					// defensive programming: station should not be null...
+					// but a (defective) input driver may forget to send the
+					// StationChangeEvent...
+					if(station == null) {
+						station = new TunedStation(bitTime);
+						log.addMessage(new StationTuned(bitTime, station));
+					}
+					// end defensive programming section
+					
+					int[] blocks = groupEvent.blocks;
+					
+					console.printf("%04d: [", bitTime / 26);
+					//boolean[] blocksOk = allOk;
+					boolean[] blocksOk = new boolean[4];
+					int nbOk = 0;
+					for(int i=0; i<4; i++) {
+						blocksOk[i] = (blocks[i] >= 0);
+						if(blocksOk[i]) nbOk++;
+						if(blocksOk[i]) console.printf("%04X ", blocks[i]);
+						else console.print("---- ");
+					}
+					console.print("] ");
+					
+					processGroup(nbOk, blocksOk, blocks, bitTime);
+					console.println();
+					bitTime += 104;  // 104 bits per group
+					if(log != null) log.notifyGroup();
+				}
+
+				@Override
+				public void visit(FrequencyChangeEvent frequencyChangeEvent) {
+					console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
+				}
+			});
 			
-			console.printf("%04d: [", bitTime / 26);
-			//boolean[] blocksOk = allOk;
-			boolean[] blocksOk = new boolean[4];
-			int nbOk = 0;
-			for(int i=0; i<4; i++) {
-				blocksOk[i] = (blocks[i] >= 0);
-				if(blocksOk[i]) nbOk++;
-				if(blocksOk[i]) console.printf("%04X ", blocks[i]);
-				else console.print("---- ");
-			}
-			console.print("] ");
+
 			
+			/*
+			 * TODO FIXME: do we really need this?
 			// detect isolated groups with wrong PI
 			// (only if block 0 was received correctly...)
 			if(blocks[0] != -1) {
@@ -605,11 +653,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 					if(blocks[0] != blocks[2]) blocksOk = noneOk;
 				}
 			}
-			
-			processGroup(nbOk, blocksOk, blocks, bitTime, log);
-			console.println();
-			bitTime += 104;  // 104 bits per group
-			if(log != null) log.notifyGroup();
+			*/
 		}
 	}
 	

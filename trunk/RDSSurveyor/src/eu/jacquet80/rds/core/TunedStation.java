@@ -44,6 +44,9 @@ public class TunedStation extends Station {
 	private List<Application> applicationList = new ArrayList<Application>();
 	private boolean diStereo, diArtif, diCompressed, diDPTY;
 	private int totalBlocks, totalBlocksOk;
+	private int[] latestBlocksOk = new int[25];
+	private int latestBlocksOkPtr = 0;
+	private int latestBlocksOkCount = 0;
 	private int ecc, language;
 	private int dateBitTime = -1;
 	private Text rt = new Text(64, true);
@@ -143,13 +146,35 @@ public class TunedStation extends Station {
 	}
 	
 	public void addGroupToStats(int type, int version, int nbOk) {
+		/*
+		if(type<0 || type>15) {
+			type = 16;
+			version = 0;
+		}
+		*/
 		groupStats[type][version]++;
 		totalBlocks += 4;
 		totalBlocksOk += nbOk;
+		
+		latestBlocksOk[latestBlocksOkPtr] = nbOk;
+		latestBlocksOkPtr = (latestBlocksOkPtr + 1) % latestBlocksOk.length;
+		if(latestBlocksOkCount < latestBlocksOk.length) latestBlocksOkCount++;
 	}
 	
-	public void addUnknownGroupToStats() {
-		groupStats[16][0]++;
+	public void addUnknownGroupToStats(int nbOk) {
+		addGroupToStats(16, 0, nbOk);
+	}
+	
+	/**
+	 * Returns the block error rate, averaged over the 25 latest groups
+	 * (slightly more than 2 seconds).
+	 * 
+	 * @return the BLER
+	 */
+	public double getBLER() {
+		int bOk = 0;
+		for(int i=0; i<latestBlocksOkCount; i++) bOk += latestBlocksOk[i];
+		return 1. - ((double)bOk) / (4*latestBlocksOkCount);
 	}
 	
 	public void setApplicationForGroup(int type, int version, Application app) {

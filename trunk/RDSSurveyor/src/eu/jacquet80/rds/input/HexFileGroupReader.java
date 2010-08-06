@@ -31,6 +31,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
+import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+
 public class HexFileGroupReader implements GroupReader {
 	private final BufferedReader br;
 	
@@ -39,14 +43,24 @@ public class HexFileGroupReader implements GroupReader {
 	}
 	
 	
-	public int[] getGroup() throws IOException, EndOfStream {
+	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
 		String line;
+		boolean ok;
 		
 		do {
+			ok = true;
 			line = br.readLine();
+			///System.out.println("[Read: " + line + "] ");
 			if(line == null) throw new EndOfStream();
-		} while(line.startsWith("%"));    // ignore lines beginning with '%' (metadata and possibly comments)
+			if(line.startsWith("%")) {
+				if(line.startsWith("% Freq")) {
+					return new FrequencyChangeEvent(0);
+					// TODO FIXME: parse frequency here
+				} else ok = false;
+			}
+		} while(! ok);    // ignore lines beginning with '%' (metadata and possibly comments)
 		
+		///System.out.println("OK");
 		
 		String[] components = line.trim().split("\\s+");
 		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
@@ -58,7 +72,6 @@ public class HexFileGroupReader implements GroupReader {
 			else res[i] = Integer.parseInt(s, 16);
 		}
 		
-		return res;
+		return new GroupEvent(res, false);
 	}
-
 }

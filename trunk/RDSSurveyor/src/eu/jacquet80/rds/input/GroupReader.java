@@ -27,8 +27,10 @@ package eu.jacquet80.rds.input;
 
 import java.io.IOException;
 
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+
 public interface GroupReader extends RDSReader {
-	public int[] getGroup() throws IOException, EndOfStream;
+	public GroupReaderEvent getGroup() throws IOException, EndOfStream;
 	
 	public static class EndOfStream extends Exception {
 		private static final long serialVersionUID = 6092870197242888300L;

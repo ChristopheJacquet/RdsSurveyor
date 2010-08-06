@@ -34,6 +34,11 @@ import eu.jacquet80.rds.core.GroupLevelDecoder;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
 import eu.jacquet80.rds.input.GroupReader.EndOfStream;
+import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
+import eu.jacquet80.rds.input.group.StationChangeEvent;
 import eu.jacquet80.rds.log.Log;
 
 public class TestV4L {
@@ -42,8 +47,9 @@ public class TestV4L {
 	private final TunerGroupReader radio;
 
 	public TestV4L() throws FileNotFoundException {
+		final Log log = new Log();
 		PrintStream out = new PrintStream("/tmp/rds.log");
-		decoder = new GroupLevelDecoder(out);
+		decoder = new GroupLevelDecoder(out, log);
 		radio = new V4LTunerGroupReader("/dev/radio0");
 
 		new Thread() {
@@ -72,7 +78,7 @@ public class TestV4L {
 	public static void main(String[] args) throws IOException, EndOfStream {
 	
 
-		TestV4L t = new TestV4L();
+		final TestV4L t = new TestV4L();
 		
 		/*
 		System.setProperty(
@@ -97,32 +103,44 @@ public class TestV4L {
 		System.out.println("getSignalStrength" + t.radio.getSignalStrength());
 	
 		
-		
-		int time = 0;
-		
-		Log log = new Log();
-
 		for(;;) {
 			
-			int[] group = t.radio.getGroup();
-			boolean[] ok = new boolean[4];
-			int nbok = 0;
-
-			if(group != null) {
-				for(int j=0 ;j<group.length;j++) {
-					//System.out.print(" " + String.format("%04X ", group[j]));
-					ok[j] = group[j] >= 0;
-					if(ok[j]) nbok++;
+			final GroupReaderEvent event = t.radio.getGroup();
+			
+			event.accept(new GroupReaderEventVisitor() {
+				int time = 0;
+				
+				@Override
+				public void visit(StationChangeEvent stationChangeEvent) {
+					System.out.println("New station tuned");
 				}
-			}
-				//System.out.println();
+				
+				@Override
+				public void visit(GroupEvent groupEvent) {
+					boolean[] ok = new boolean[4];
+					int nbok = 0;
 
-			//System.out.println("InSync");
-			synchronized(t) {
-				if(group != null)
-					t.decoder.processGroup(nbok, ok, group, time++, log);
-			}
-			//System.out.println("OutSync");
+					if(groupEvent.blocks != null) {
+						for(int j=0 ;j<groupEvent.blocks.length;j++) {
+							//System.out.print(" " + String.format("%04X ", group[j]));
+							ok[j] = groupEvent.blocks[j] >= 0;
+							if(ok[j]) nbok++;
+						}
+					}
+						//System.out.println();
+
+					//System.out.println("InSync");
+					synchronized(t) {
+						if(groupEvent.blocks != null)
+							t.decoder.processGroup(nbok, ok, groupEvent.blocks, time++);
+					}
+				}
+
+				@Override
+				public void visit(FrequencyChangeEvent frequencyChangeEvent) {
+					System.out.println("Tuned to frequency " + frequencyChangeEvent.frequency);
+				}
+			});
 		}
 		
 
