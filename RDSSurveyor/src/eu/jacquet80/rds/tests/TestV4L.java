@@ -131,8 +131,11 @@ public class TestV4L {
 
 					//System.out.println("InSync");
 					synchronized(t) {
-						if(groupEvent.blocks != null)
+						if(groupEvent.blocks != null) {}
+							/*
 							t.decoder.processGroup(nbok, ok, groupEvent.blocks, time++);
+							TODO FIXME
+							*/
 					}
 				}
 

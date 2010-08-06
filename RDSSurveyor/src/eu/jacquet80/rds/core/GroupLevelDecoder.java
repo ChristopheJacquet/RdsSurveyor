@@ -101,11 +101,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 		return addr;
 	}
 	
-	/* TODO FIXME
-	 * This method should become private in the future. Everything should go through a
-	 * StreamReader, even if we decode a bitstream in the first place.
-	 */
-	public void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime) {
+	private void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime) {
 		//console.print(" (" + (station == null ? null : station.getStationName() ) + ") ");
 		Application newApp = null;
 		
@@ -591,6 +587,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 				
 				@Override
 				public void visit(GroupEvent groupEvent) {
+					this.bitTime = groupEvent.bitTime;
+					
 					// defensive programming: station should not be null...
 					// but a (defective) input driver may forget to send the
 					// StationChangeEvent...

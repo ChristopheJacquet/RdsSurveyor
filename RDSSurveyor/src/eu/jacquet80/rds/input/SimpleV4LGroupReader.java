@@ -63,7 +63,8 @@ public class SimpleV4LGroupReader implements GroupReader {
 			if((recvBuffer[2] & 0xC0) != 0) res[i] = -1;
 		}
 		
-		return new GroupEvent(res, false);
+		// TODO FIXME: need to provide meaningful bit time
+		return new GroupEvent(0, res, false);
 	}
 
 }

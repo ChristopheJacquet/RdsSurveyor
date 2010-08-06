@@ -97,6 +97,7 @@ public class StationChangeDetector implements GroupReader {
 	
 	
 	public GroupReaderEvent getGroupOrNull() throws IOException, EndOfStream {
+		///System.out.println("queue: " + queuedGroups);
 		if(!expectingPI && !queuedGroups.isEmpty()) {
 			// There are queued groups awaiting to be sent out
 			return queuedGroups.removeFirst();

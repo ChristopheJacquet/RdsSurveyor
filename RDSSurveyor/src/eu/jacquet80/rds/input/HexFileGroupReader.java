@@ -37,6 +37,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 
 public class HexFileGroupReader implements GroupReader {
 	private final BufferedReader br;
+	private int bitTime = 0;
 	
 	public HexFileGroupReader(File file) throws FileNotFoundException {
 		br = new BufferedReader(new FileReader(file));
@@ -72,6 +73,8 @@ public class HexFileGroupReader implements GroupReader {
 			else res[i] = Integer.parseInt(s, 16);
 		}
 		
-		return new GroupEvent(res, false);
+		int thisBitTime = bitTime;
+		bitTime += 26;
+		return new GroupEvent(thisBitTime, res, false);
 	}
 }
