@@ -92,7 +92,17 @@ public class RDSSurveyor {
 		for(int i=0; i<args.length; i++) {
 			GroupReader newReader = null;
 			if("-inaudio".equals(args[i])) {
-				newReader = new StreamLevelDecoder(console, new LiveAudioBitReader());
+				BitReader binReader = new LiveAudioBitReader();
+				// TODO Ugly hack
+				{
+					String tempDir = System.getProperty("java.io.tmpdir");
+					outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
+					
+					System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
+					binReader = new TeeBitReader(binReader, outBinFile);
+				}
+				
+				newReader = new StreamLevelDecoder(console, binReader);
 				liveInput = true;
 			} else if("-inbinfile".equals(args[i])) {
 				newReader = new StreamLevelDecoder(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
