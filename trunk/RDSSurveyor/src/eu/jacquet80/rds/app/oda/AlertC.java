@@ -236,6 +236,11 @@ public class AlertC extends ODA {
 					console.print(", ON." + on.addAFPair(af1, af2));
 					break;
 					
+				case 7:
+					console.printf("Other Networks, ON.PI=%04X", blocks[3]);
+					console.printf(", ON.", on.addMappedFreq((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
+					break;
+					
 				case 8:
 					console.printf("Other Networks, ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
 					break;

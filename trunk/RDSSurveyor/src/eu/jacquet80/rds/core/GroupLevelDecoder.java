@@ -365,8 +365,10 @@ public class GroupLevelDecoder implements RDSDecoder {
 			cal.setTimeZone(new SimpleTimeZone(sign * offset * 30 * 60 * 1000, ""));
 			Date date = cal.getTime();
 			
-			console.printf("CT %02d:%02d%c%dmin %04d-%02d-%02d", hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
-			workingStation.setDate(date, bitTime);
+			String datetime = String.format("%02d:%02d%c%dmin %04d-%02d-%02d", 
+					hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
+			console.printf("CT " + datetime);
+			workingStation.setDate(date, datetime, bitTime);
 			log.addMessage(new ClockTime(bitTime, date));
 			
 			// is there paging ?
