@@ -31,7 +31,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +38,8 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.ParallelGroup;
+import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -49,8 +50,6 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import javax.swing.GroupLayout.ParallelGroup;
-import javax.swing.GroupLayout.SequentialGroup;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
@@ -66,7 +65,7 @@ import eu.jacquet80.rds.ui.input.InputToolBar;
 public class MainWindow extends JFrame {
 	private static final long serialVersionUID = -5219617213305143171L;
 
-	private final Log log;
+	//private final Log log;
 	private final EONTableModel eonTableModel = new EONTableModel();
 	private final JTextArea
 			txtPS = new JTextArea(1, 8),
@@ -149,7 +148,7 @@ public class MainWindow extends JFrame {
 	public MainWindow(Log log, InputToolBar toolbar) {
 		super("RDS Surveyor");
 		
-		this.log = log;
+		//this.log = log;
 		
 		setLayout(new BorderLayout());
 		
@@ -362,8 +361,8 @@ public class MainWindow extends JFrame {
 
 									txtTraffic.setText(station.trafficInfoString());
 
-									Date date = station.getDate();
-									txtTime.setText(date != null ? date.toString() : "");
+									String date = station.getDateTime();
+									txtTime.setText(date);
 									txtAF.setText(station.afsToString());
 									//txtGroupStats.setText(station.groupStats());
 									groupStats.update(station.numericGroupStats());

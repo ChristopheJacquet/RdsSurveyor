@@ -40,6 +40,7 @@ public class TunedStation extends Station {
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
+	private String datetime = "";
 	private Application[] applications = new Application[32];
 	private List<Application> applicationList = new ArrayList<Application>();
 	private boolean diStereo, diArtif, diCompressed, diDPTY;
@@ -190,13 +191,14 @@ public class TunedStation extends Station {
 		return applicationList;
 	}
 	
-	public void setDate(Date date, int bitTime) {
+	public void setDate(Date date, String datetime, int bitTime) {
 		this.date = date;
+		this.datetime = datetime;
 		this.dateBitTime = bitTime;
 	}
 	
-	public Date getDate() {
-		return date;
+	public String getDateTime() {
+		return datetime;
 	}
 	
 	public synchronized void addON(Station on) {

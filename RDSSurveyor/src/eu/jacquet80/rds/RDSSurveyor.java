@@ -33,7 +33,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import eu.jacquet80.rds.core.GroupLevelDecoder;
-import eu.jacquet80.rds.core.RDSDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder.BitInversion;
 import eu.jacquet80.rds.input.AudioFileBitReader;
@@ -43,7 +42,6 @@ import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
-import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.StationChangeDetector;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TeeBitReader;
@@ -76,7 +74,7 @@ public class RDSSurveyor {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		System.out.println("RDS Surveyor - (C) Christophe Jacquet, 2009-2010.");
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2010.");
 		
 		GroupReader reader = null, realReader = null;
 		boolean showGui = true;
