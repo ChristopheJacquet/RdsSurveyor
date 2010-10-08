@@ -132,7 +132,7 @@ public abstract class Station {
 					// the new AF pair cannot belong to the existing list
 					// So create a new list
 					currentAFList = new AFList(-1);
-					currentAFList.addPair(a, b);
+					res = currentAFList.addPair(a, b);
 				}
 				return "AF: " + res;
 			} else return "Unhandled AF pair: " + a + ", " + b;

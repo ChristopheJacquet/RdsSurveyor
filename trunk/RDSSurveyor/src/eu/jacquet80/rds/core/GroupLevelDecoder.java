@@ -394,8 +394,14 @@ public class GroupLevelDecoder implements RDSDecoder {
 			case 13: console.print("ERP "); break;
 			}
 			
-			if(blocksOk[2] && blocksOk[3])
+			if(blocksOk[2] && blocksOk[3]) {
 				console.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
+				if(type == 5 || type == 6) {
+					console.printf(" (%c%c%c%c)", 
+							toASCII((char)((blocks[2]>>8) & 0xFF)), toASCII((char)(blocks[2] & 0xFF)), 
+							toASCII((char)((blocks[3]>>8) & 0xFF)), toASCII((char)(blocks[3] & 0xFF)));
+				}
+			}
 			
 			Application app = workingStation.getApplicationForGroup(type, version);
 			
