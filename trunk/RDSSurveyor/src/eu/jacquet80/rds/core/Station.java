@@ -161,12 +161,55 @@ public abstract class Station {
 	}
 	
 
+	/**
+	 * This method tries to reconstruct a message transmitted using (non-
+	 * standard) "dynamic PS".
+	 * 
+	 * <p>I have observed two main ways of transmitting "dynamic PS":</p>
+	 * <ul>
+	 *   <li>transmit successively full words, for instance: "YOU ARE ",
+	 *   "TUNED TO", "RADIO 99",</li>
+	 *   <li>scroll a message one letter at a time, for instance: "YOU ARE ",
+	 *   "OU ARE T", "U ARE TU", " ARE TUN", "ARE TUNE", "RE TUNED", 
+	 *   "E TUNED ", " TUNED T", "TUNED TO", "UNED TO ", "NED TO R", etc.</li>
+	 * </ul>
+	 * 
+	 * <p>
+	 * This methods identifies the type of transmission used, and tries to 
+	 * reconstruct the original message.
+	 * </p>
+	 * 
+	 * <p>
+	 * Note that the method should work even if the two types are mixed in a
+	 * given transmission. Note also that the method will work correctly only
+	 * if reception is good. If there are many missing blocks, it will not
+	 * make sense of the message. This is not a limitation of the method
+	 * itself, rather, it is caused by of the abusive use of PS to transmit
+	 * complex text, what PS is not designed for. 
+	 * </p>
+	 *  
+	 * @return the reconstructed message, limited to 80 characters in length
+	 */
 	public String getDynamicPSmessage() {
 		List<String> msg = ps.getPastMessages(true);
 		
 		StringBuffer res = new StringBuffer();
-		for(int i=9; i>=0; i--) {
-			if(msg.size() > i) res.append(msg.get(msg.size() - 1 - i).trim()).append(' ');
+		String prev = null;
+		for(int i=msg.size()-1; i>=0 && res.length() < 80; i--) {
+			String current = msg.get(i);
+			if(prev != null && prev.substring(0, 6).equals(current.substring(1, 7))) {
+				// if the 7 rightmost characters of the current PS correspond
+				// to the 7 leftmost characters of the "previous" PS (going 
+				// backward in time), then the PS is scrolling one character
+				// at a time, so we just add *the* leftmost character at the
+				// start
+				res.insert(0, current.charAt(0));
+			} else {
+				// otherwise, the PS is not scrolling, it's just displaying a
+				// succession of 8-character words/sentences
+				res.insert(0, current.trim() + " ");
+			}
+			prev = current;
 		}
 		return res.toString();
 	}
