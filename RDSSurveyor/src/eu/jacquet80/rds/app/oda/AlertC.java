@@ -515,7 +515,9 @@ public class AlertC extends ODA {
 		}
 	}
 	
-	/* Table derived from work done by Tobias Lorenz
+	/* Table derived from work done by Tobias Lorenz,
+	 * see http://sourceforge.net/projects/radiodatasystem/
+	 * Used with permission.
 	 */
 	private static byte[] updateClasses = {
 		 0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  4,  3,  0,  0,  0, 
@@ -647,4 +649,5 @@ public class AlertC extends ODA {
 		 0,  0,  0,  0,  0, 21, 21,  0,  0,  0,  0,  0,  4, 10, 13,  0, 
 		 0, 19, 21, 22,  0,  0, 28, 30,  0,  0,  0,  0,  0,  0,  0, 31, 
 	};
+
 }
