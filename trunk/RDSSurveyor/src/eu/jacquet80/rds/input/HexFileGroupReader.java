@@ -30,12 +30,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 
 public class HexFileGroupReader implements GroupReader {
+	private final static Pattern FIRST_NUMBER = Pattern.compile("\\D(\\d+)\\D");
 	private final BufferedReader br;
 	private int bitTime = 0;
 	
@@ -43,25 +46,39 @@ public class HexFileGroupReader implements GroupReader {
 		br = new BufferedReader(new FileReader(file));
 	}
 	
+	public HexFileGroupReader(BufferedReader br) {
+		this.br = br;
+	}
+	
 	
 	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
-		String line;
-		boolean ok;
+		GroupReaderEvent event;
 		
 		do {
-			ok = true;
-			line = br.readLine();
-			///System.out.println("[Read: " + line + "] ");
+			String line = br.readLine();
 			if(line == null) throw new EndOfStream();
-			if(line.startsWith("%")) {
-				if(line.startsWith("% Freq")) {
-					return new FrequencyChangeEvent(0);
-					// TODO FIXME: parse frequency here
-				} else ok = false;
-			}
-		} while(! ok);    // ignore lines beginning with '%' (metadata and possibly comments)
+
+			int thisBitTime = bitTime;
+			bitTime += 26;
+
+			event = parseHexLine(line, thisBitTime);
+		} while(event == null);
 		
-		///System.out.println("OK");
+		return event;
+	}
+	
+	static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
+		if(line.startsWith("%")) {
+			if(line.startsWith("% Freq")) {
+				Matcher m = FIRST_NUMBER.matcher(line);
+				int f = 0;
+				if(m.groupCount() > 1) f = Integer.parseInt(m.group(1));
+				return new FrequencyChangeEvent(f);
+			}
+			
+		    // ignore lines beginning with '%' (metadata and possibly comments)
+			return null;
+		}
 		
 		String[] components = line.trim().split("\\s+");
 		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
@@ -73,8 +90,7 @@ public class HexFileGroupReader implements GroupReader {
 			else res[i] = Integer.parseInt(s, 16);
 		}
 		
-		int thisBitTime = bitTime;
-		bitTime += 26;
-		return new GroupEvent(thisBitTime, res, false);
+
+		return new GroupEvent(bitTime, res, false);
 	}
 }
