@@ -44,6 +44,7 @@ import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.StationChangeDetector;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
+import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
@@ -110,6 +111,8 @@ public class RDSSurveyor {
 				newReader = new StreamLevelDecoder(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 			} else if("-ingrouphexfile".equals(args[i])) {
 				newReader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
+			} else if("-intcp".equals(args[i])) {
+				newReader = new TCPTunerGroupReader(getParam("intcp", args, ++i), 8750);
 			} else if("-inusbkey".equals(args[i])) {
 				newReader = new USBFMRadioGroupReader();
 				((USBFMRadioGroupReader)newReader).init();
