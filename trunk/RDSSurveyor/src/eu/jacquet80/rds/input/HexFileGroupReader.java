@@ -38,7 +38,7 @@ import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 
 public class HexFileGroupReader implements GroupReader {
-	private final static Pattern FIRST_NUMBER = Pattern.compile("\\D(\\d+)\\D");
+	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
 	private final BufferedReader br;
 	private int bitTime = 0;
 	
@@ -71,8 +71,9 @@ public class HexFileGroupReader implements GroupReader {
 		if(line.startsWith("%")) {
 			if(line.startsWith("% Freq")) {
 				Matcher m = FIRST_NUMBER.matcher(line);
+				//System.out.println(m + " ** " + line + " ** " + m.groupCount() + " ** " + m.matches() );
 				int f = 0;
-				if(m.groupCount() > 1) f = Integer.parseInt(m.group(1));
+				if(m.matches()) f = Integer.parseInt(m.group(1));
 				return new FrequencyChangeEvent(f);
 			}
 			
