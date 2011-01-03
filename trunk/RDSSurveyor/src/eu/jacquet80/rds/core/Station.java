@@ -215,6 +215,11 @@ public abstract class Station {
 	}
 	
 
+	/**
+	 * Returns the PI code of the station.
+	 * 
+	 * @return the PI code
+	 */
 	public int getPI() {
 		return pi;
 	}

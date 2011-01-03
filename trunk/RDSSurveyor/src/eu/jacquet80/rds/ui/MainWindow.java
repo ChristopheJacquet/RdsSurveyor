@@ -40,8 +40,10 @@ import javax.swing.BoxLayout;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
+import javax.swing.plaf.ListUI;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -78,8 +80,6 @@ public class MainWindow extends JFrame {
 			txtCountry = new JTextArea(1, 20),
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 30),
-			txtRT = new JTextArea(1, 64),
-			txtRTmessages = new JTextArea(3, 64),
 			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80),
 			txtCompressed = new JTextArea(1, 5),
@@ -87,12 +87,14 @@ public class MainWindow extends JFrame {
 			txtHead = new JTextArea(1, 5);
 	private final GroupPanel groupStats = new GroupPanel();
 	
+	private final JList lstRT = new JList();
+	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
 	
 	private final JProgressBar barBLER = new JProgressBar(0, 100);
 			
 			//txtGroupStats = new JTextArea(1, 64);
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtRT, txtRTmessages, txtDynPS};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -210,8 +212,7 @@ public class MainWindow extends JFrame {
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblRT},
-				{txtRT},
-				{txtRTmessages},
+				{new JScrollPane(lstRT)},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -319,9 +320,11 @@ public class MainWindow extends JFrame {
 									txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
 									txtPTYN.setText(station.getPTYN().toString());
 									// if Radiotext was received, then flags != 0
+									/*
 									txtRT.setText(station.getRT().toString() != null ?
 											"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
 											: "");
+									*/		
 
 									// Country & language
 									{
@@ -336,6 +339,9 @@ public class MainWindow extends JFrame {
 										else txtLang.setText("");
 									}
 
+									lstRT.setListData(station.getRT().getPastMessages(true).toArray());
+									lstRT.repaint();
+									/*
 									List<String> rtM = station.getRT().getPastMessages(false);
 									String res = "";
 									for(int i=0; i<3; i++) {
@@ -345,6 +351,7 @@ public class MainWindow extends JFrame {
 										}
 									}
 									txtRTmessages.setText(res);
+									*/
 
 									/*
 								if(station.whichRT() == 0) {
