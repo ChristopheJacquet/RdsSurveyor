@@ -7,7 +7,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.LinkedList;
 
-import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
@@ -27,7 +26,7 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 	}
 	
 	@Override
-	public synchronized GroupReaderEvent getGroup() throws IOException, EndOfStream {
+	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
 		while(groups.size() == 0) {
 			readUntil(null);
 		}
@@ -41,28 +40,14 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 	}
 
 	@Override
-	public int setFrequency(int frequency) {
+	public synchronized int setFrequency(int frequency) {
 		writer.println("SET_FREQ " + frequency);
-		return 0;
-		//return getReportedFrequency();
+		return freq;
 	}
 
 	@Override
-	public int getFrequency() {
-		//writer.println("GET_FREQ");
-		//return getReportedFrequency();
-		return 0;
-	}
-	
-	private synchronized int getReportedFrequency() {
-		try {
-			readUntil("% Freq");
-			return freq;
-		} catch (IOException e) {
-			return 0;
-		} catch (EndOfStream e) {
-			return 0;
-		}
+	public synchronized int getFrequency() {
+		return freq;
 	}
 
 	@Override
@@ -105,7 +90,7 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 		return ng;
 	}
 	
-	private synchronized String readUntil(String start) throws IOException, EndOfStream {
+	private String readUntil(String start) throws IOException, EndOfStream {
 		String line;
 		
 		do {
@@ -117,7 +102,9 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 			if(event instanceof GroupEvent) newGroups = true;
 			else if(event instanceof FrequencyChangeEvent) {
 				FrequencyChangeEvent fEvent = (FrequencyChangeEvent) event;
-				freq = fEvent.frequency;
+				synchronized(this) {
+					freq = fEvent.frequency;
+				}
 			}
 			
 			if(event != null) groups.addLast(event);
