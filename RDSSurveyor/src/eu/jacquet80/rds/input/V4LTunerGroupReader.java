@@ -129,12 +129,15 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 	
 	@Override
 	public void seek(boolean up) {
+		hwSeek(up);
+		/*
 		int steps = 0;
 		// 87500 to 108000 => 410 50kHz steps
 		do {
 			tune(up);
 			steps++;
 		} while(getSignalStrength() < 30000 && steps<410);
+		*/
 	}
 	
 
