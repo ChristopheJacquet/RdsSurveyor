@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 
+import javax.swing.BorderFactory;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 
@@ -15,7 +16,7 @@ public class TunerToolBar extends InputToolBar {
 
 	private final TunerGroupReader reader;
 	
-	private final JTextField txtFrequency = new JTextField();
+	private final JTextField txtFrequency = new JTextField(6);
 	private final JProgressBar barSignal = new JProgressBar(0, 65535);
 	
 	private final static String 
@@ -57,9 +58,13 @@ public class TunerToolBar extends InputToolBar {
 		addButton(Image.DOWN, DOWN_BUTTON);
 		
 		txtFrequency.setEditable(false);
+		txtFrequency.setOpaque(false);
+		txtFrequency.setBackground(getBackground());
+		txtFrequency.setBorder(BorderFactory.createEmptyBorder());
+		txtFrequency.setHorizontalAlignment(JTextField.CENTER);
 		txtFrequency.setFont(txtFrequency.getFont().deriveFont(Font.PLAIN, 30f));
 		txtFrequency.setPreferredSize(new Dimension(100, 30));
-		txtFrequency.setMaximumSize(new Dimension(100, Integer.MAX_VALUE));
+		txtFrequency.setMaximumSize(new Dimension(120, Integer.MAX_VALUE));
 		add(txtFrequency);
 		
 		barSignal.setMaximumSize(new Dimension(200, 20));		

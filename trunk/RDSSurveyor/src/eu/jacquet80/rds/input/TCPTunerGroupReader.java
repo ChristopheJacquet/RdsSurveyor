@@ -23,6 +23,9 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 		Socket socket = new Socket(hostname, port);
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		writer = new PrintWriter(socket.getOutputStream(), true);  // true for autoflush
+		
+		// first, try to get the initial frequency
+		writer.println("GET_FREQ");
 	}
 	
 	@Override

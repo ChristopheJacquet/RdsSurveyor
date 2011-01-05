@@ -193,6 +193,9 @@ public abstract class Station {
 	public String getDynamicPSmessage() {
 		List<String> msg = ps.getPastMessages(true);
 		
+		// trivial case when there is no message
+		if(msg.size() == 0) return "";
+		
 		StringBuffer res = new StringBuffer();
 		String prev = null;
 		for(int i=msg.size()-1; i>=0 && res.length() < 80; i--) {
