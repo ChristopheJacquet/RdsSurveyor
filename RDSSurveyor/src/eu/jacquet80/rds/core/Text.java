@@ -88,7 +88,7 @@ public class Text {
 	}
 	
 	public List<String> getPastMessages(boolean includingCurrent) {
-		if(!includingCurrent) // || !isComplete())
+		if(!includingCurrent || empty)
 			return messages;
 		else {
 			List<String> l = new ArrayList<String>(messages);
