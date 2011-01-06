@@ -31,6 +31,7 @@ public abstract class InputToolBar extends JToolBar {
 	}
 	
 	protected InputToolBar(String name1, String name2) {
+		setFloatable(false);
 		JLabel label = new JLabel("<html>" + name1 + "<br>" + name2 + "</html>");
 		label.setPreferredSize(label.getMinimumSize());
 		label.setMaximumSize(label.getMinimumSize());
