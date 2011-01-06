@@ -1,12 +1,13 @@
 package eu.jacquet80.rds.ui.input;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.event.ActionEvent;
+import java.awt.geom.Rectangle2D;
 
-import javax.swing.BorderFactory;
-import javax.swing.JProgressBar;
-import javax.swing.JTextField;
+import javax.swing.JPanel;
 
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.TunerGroupReader;
@@ -16,8 +17,11 @@ public class TunerToolBar extends InputToolBar {
 
 	private final TunerGroupReader reader;
 	
-	private final JTextField txtFrequency = new JTextField(6);
-	private final JProgressBar barSignal = new JProgressBar(0, 65535);
+	private final FrequencyDisplay freqDisplay = new FrequencyDisplay();
+	
+	private int frequency;
+	private int signal;
+	private final static int MAX_SIGNAL = 65535;
 	
 	private final static String 
 		UP_BUTTON = "UP",
@@ -45,8 +49,10 @@ public class TunerToolBar extends InputToolBar {
 	}
 	
 	private synchronized void update() {
-		txtFrequency.setText(Double.toString(reader.getFrequency() / 1000.));
-		barSignal.setValue(reader.getSignalStrength());
+		frequency = reader.getFrequency();
+		signal = reader.getSignalStrength();
+		
+		freqDisplay.repaint();
 	}
 	
 	public TunerToolBar(TunerGroupReader reader) {
@@ -57,18 +63,11 @@ public class TunerToolBar extends InputToolBar {
 		addButton(Image.RWND, RWND_BUTTON);
 		addButton(Image.DOWN, DOWN_BUTTON);
 		
-		txtFrequency.setEditable(false);
-		txtFrequency.setOpaque(false);
-		txtFrequency.setBackground(getBackground());
-		txtFrequency.setBorder(BorderFactory.createEmptyBorder());
-		txtFrequency.setHorizontalAlignment(JTextField.CENTER);
-		txtFrequency.setFont(txtFrequency.getFont().deriveFont(Font.PLAIN, 30f));
-		txtFrequency.setPreferredSize(new Dimension(100, 30));
-		txtFrequency.setMaximumSize(new Dimension(120, Integer.MAX_VALUE));
-		add(txtFrequency);
+		addSeparator();
+
+		add(freqDisplay);
 		
-		barSignal.setMaximumSize(new Dimension(200, 20));		
-		add(barSignal);
+		addSeparator();
 		
 		addButton(Image.UP, UP_BUTTON);
 		addButton(Image.FFWD, FFWD_BUTTON);
@@ -87,4 +86,43 @@ public class TunerToolBar extends InputToolBar {
 		}.start();
 	}
 
+
+	private static final Color DISPLAY_BACKGROUND = Color.BLACK;
+	private static final Color DISPLAY_FOREGROUND = Color.CYAN;
+	private static final Color DISPLAY_FOREGROUND_DARK = DISPLAY_FOREGROUND.darker().darker();
+	private static final Font DISPLAY_FREQUENCY_FONT = new Font("Sans", Font.BOLD, 14);
+	
+	private class FrequencyDisplay extends JPanel {
+		private static final long serialVersionUID = 3109732979840091804L;
+		
+		
+		public FrequencyDisplay() {
+			setBackground(DISPLAY_BACKGROUND);
+			setMinimumSize(new Dimension(300, 30));
+			setPreferredSize(new Dimension(300, 30));
+			setMaximumSize(new Dimension(300, 30));
+		}
+		
+		@Override
+		protected void paintComponent(Graphics g) {
+			super.paintComponent(g);
+			
+			g.setColor(DISPLAY_FOREGROUND);
+			
+			g.setFont(DISPLAY_FREQUENCY_FONT);
+			String freq = Integer.toString(frequency / 1000) + "." + Integer.toString((frequency / 10) % 100);
+			Rectangle2D bounds = g.getFontMetrics().getStringBounds(freq, g);
+			g.drawString(freq, (getWidth() - (int)bounds.getWidth())/2, (int)bounds.getHeight()+2);
+			
+			int w = getWidth() - 20;
+			
+			int barWidth = w * signal / MAX_SIGNAL;
+
+			g.fillRect(10, getHeight() - 8, barWidth, 6);
+			
+			g.setColor(DISPLAY_FOREGROUND_DARK);
+			g.fillRect(10 + barWidth, getHeight() - 8, w - barWidth, 6);
+		}
+		
+	}
 }
