@@ -39,6 +39,7 @@ import javax.swing.BoxLayout;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -54,6 +55,7 @@ import javax.swing.SwingUtilities;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -147,8 +149,6 @@ public class MainWindow extends JFrame {
 	
 	public MainWindow(Log log, InputToolBar toolbar) {
 		super("RDS Surveyor");
-		
-		//this.log = log;
 		
 		setLayout(new BorderLayout());
 		

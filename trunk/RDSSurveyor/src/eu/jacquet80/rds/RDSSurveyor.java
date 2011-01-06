@@ -75,7 +75,7 @@ public class RDSSurveyor {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2010.");
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2011.");
 		
 		GroupReader reader = null, realReader = null;
 		boolean showGui = true;
@@ -87,6 +87,9 @@ public class RDSSurveyor {
 		File outGroupFile = null;
 		PrintStream console = System.out;
 		StreamLevelDecoder.BitInversion inversion = BitInversion.AUTO;
+		
+		// Application name for MacOS X
+		System.setProperty("com.apple.mrj.application.apple.menu.about.name", "RDS Surveyor" );
 		
 		for(int i=0; i<args.length; i++) {
 			GroupReader newReader = null;
