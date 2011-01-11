@@ -69,24 +69,28 @@ public class HexFileGroupReader implements GroupReader {
 	
 	static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
 		if(line.startsWith("%")) {
+			// Lines beginning with % are to be ignored, but may contain metadata
 			if(line.startsWith("% Freq")) {
+				// Frequency indicator metadata
 				Matcher m = FIRST_NUMBER.matcher(line);
-				//System.out.println(m + " ** " + line + " ** " + m.groupCount() + " ** " + m.matches() );
 				int f = 0;
 				if(m.matches()) f = Integer.parseInt(m.group(1));
 				return new FrequencyChangeEvent(f);
 			}
 			
-		    // ignore lines beginning with '%' (metadata and possibly comments)
+		    // ignore other lines beginning with '%'
 			return null;
 		}
+		
+		// lines beginning with < are specific to RDS Spy. Ignore them altogether
+		if(line.startsWith("<")) return null;
 		
 		String[] components = line.trim().split("\\s+");
 		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
 		int[] res = new int[4];
 		
 		for(int i=0; i<4; i++) {
-			String s = components[components.length-4+i];
+			String s = components[i];
 			if("----".equals(s)) res[i] = -1;
 			else res[i] = Integer.parseInt(s, 16);
 		}
