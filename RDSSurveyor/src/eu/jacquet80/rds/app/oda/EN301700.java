@@ -1,3 +1,29 @@
+/*
+ RDS Surveyor -- RDS decoder, analyzer and monitor tool and library.
+ For more information see
+   http://www.jacquet80.eu/
+   http://rds-surveyor.sourceforge.net/
+ 
+ Copyright (c) 2009, 2011 Christophe Jacquet
+
+ This file is part of RDS Surveyor.
+
+ RDS Surveyor is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ RDS Surveyor is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser Public License for more details.
+
+ You should have received a copy of the GNU Lesser Public License
+ along with RDS Surveyor.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
+
 package eu.jacquet80.rds.app.oda;
 
 /**
@@ -11,12 +37,21 @@ package eu.jacquet80.rds.app.oda;
  */
 public class EN301700 extends ODA {
 	public static final int AID = 0x0093;
-
+	
 	@Override
 	public int getAID() {
 		return AID;
 	}
 
+	/** Frequency of DAB ensemble, in kHz (if not known, -1) */
+	private int freqKHz = -1;
+	
+	/** DAB Ensemble ID (if not known, -1) */
+	private int eid = -1;
+	
+	/** DAB mode (if not known, null) */
+	private String mode = null;
+	
 	@Override
 	public void receiveGroup(int type, int version, int[] blocks,
 			boolean[] blocksOk, int bitTime) {
@@ -40,24 +75,29 @@ public class EN301700 extends ODA {
 				// http://www.band2dx.info/
 				
 				// Mode
-				int mode = (blocks[1] >> 2) & 3;
+				int numMode = (blocks[1] >> 2) & 3;
 				
-				switch(mode) {
-				case 0: console.print("Unspecified mode, "); break;
-				case 1: console.print("Mode I, "); break;
-				case 2: console.print("Mode II or III, "); break;
-				case 3: console.print("Mode IV, "); break;
+				switch(numMode) {
+				case 0: mode = "Unspecified mode"; break;
+				case 1: mode = "Mode I"; break;
+				case 2: mode = "Mode II or III"; break;
+				case 3: mode = "Mode IV"; break;
 				}
+				
+				console.print(mode + ", ");
 				
 				// Frequency, coded as per DAB standard (EN 300401)
 				int freq = blocks[2] | ((blocks[1] & 3)<<16);
 				
 				// Frequency in kHz is expressed in units of 16 kHz
-				int freqKHz = 16 * freq;
+				freqKHz = 16 * freq;
+				
+				// Ensemble ID
+				eid = blocks[3];
 				
 				console.print(freqKHz + " kHz, ");
 				
-				console.printf("Ensemble ID=%04X", blocks[3]);
+				console.printf("Ensemble ID=%04X", eid);
 			} else {
 				// Service table
 				int variant = blocks[1] & 0xF;    // variant code
@@ -75,11 +115,40 @@ public class EN301700 extends ODA {
 				console.printf("Service ID=%04X", blocks[3]);
 			}
 		}
+		
+		fireChangeListeners();
 	}
 
 	@Override
 	public String getName() {
-		return "Cross-reference to DAB";
+		return "DAB X-Ref";
 	}
 
+	/**
+	 * Returns the frequency of the DAB ensemble, in kHz, or -1 if the
+	 * frequency is not known.
+	 * 
+	 * @return the frequency
+	 */
+	public int getFrequencyInKHz() {
+		return freqKHz;
+	}
+	
+	/**
+	 * Returns the DAB mode, or null if it is not known.
+	 * 
+	 * @return a string describing the mode
+	 */
+	public String getMode() {
+		return mode;
+	}
+	
+	/**
+	 * Returns the DAB ensemble Id, or -1 if it is not known.
+	 * 
+	 * @return the Ensemble Id (EId)
+	 */
+	public int getEnsembleId() {
+		return eid;
+	}
 }
