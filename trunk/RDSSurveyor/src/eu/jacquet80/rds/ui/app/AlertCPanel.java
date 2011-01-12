@@ -44,6 +44,7 @@ import eu.jacquet80.rds.app.oda.AlertC;
 public class AlertCPanel extends AppPanel {
 	private static final long serialVersionUID = 4835434126469108572L;
 	private AlertC app;
+	private final MessageTableModel model = new MessageTableModel();
 
 	private final JLabel 
 		lblProviderName = new JLabel(),
@@ -87,7 +88,7 @@ public class AlertCPanel extends AppPanel {
 		
 		add(pnlInfo, BorderLayout.NORTH);
 		
-		add(new JScrollPane(new JTable(new MessageTableModel())), BorderLayout.CENTER);
+		add(new JScrollPane(new JTable(model)), BorderLayout.CENTER);
 	}
 	
 	public AlertCPanel(Application app) {
@@ -110,6 +111,7 @@ public class AlertCPanel extends AppPanel {
 		lblMode.setText(Integer.toString(app.getMode()));
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
+		model.fireTableDataChanged();
 	}
 	
 	private class MessageTableModel extends AbstractTableModel {
