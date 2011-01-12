@@ -26,6 +26,9 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RTPlus extends ODA {
 	public static int AID = 0x4BD7;
 	
@@ -96,6 +99,7 @@ public class RTPlus extends ODA {
 		"GET_DATA"
 	};
 
+	private List<RTPlusItem> history = new ArrayList<RTPlusItem>();
 	
 	@Override
 	public String getName() {
@@ -150,17 +154,60 @@ public class RTPlus extends ODA {
 						}
 					}
 					console.print(ctype[i] + "/" + classNames[ctype[i]] + "@" + start[i] + ":" + len[i]);
-					if(text != null)
+					if(text != null) {
 						console.print(" = \"" + text + "\"");
+					}
+
 					console.print("    ");
+
+					if(len[i] > 0) {
+						addToHistory(station.getRT().getCurrentIndex(), ctype[i], start[i], len[i]);
+					}
 				}
 			}
 		}
+	}
+	
+	private void addToHistory(int textIndex, int type, int start, int len) {
+		// do not add anything if this type exists already for this index
+		for(RTPlusItem i : history) {
+			if(i.textIndex == textIndex && i.type == type) return;
+		}
+		
+		// else add a new history entry
+		history.add(new RTPlusItem(textIndex, type, start, len));
+	}
+	
+	public String getHistoryForIndex(int textIndex, String text) {
+		StringBuilder res = new StringBuilder();
+		for(RTPlusItem i : history) {
+			if(i.textIndex == textIndex) {
+				res.append(classNames[i.type])
+					.append("=\"").append(text.substring(i.start, i.start + i.len + 1))
+					.append("\"&nbsp;&nbsp;&nbsp;&nbsp;");
+			}
+		}
+		
+		return res.toString();
 	}
 
 	@Override
 	public int getAID() {
 		return AID;
+	}
+	
+	private static class RTPlusItem {
+		public final int textIndex;
+		public final int type;
+		public final int start;
+		public final int len;
+		
+		public RTPlusItem(int textIndex, int type, int start, int len) {
+			this.textIndex = textIndex;
+			this.type = type;
+			this.start = start;
+			this.len = len;
+		}
 	}
 
 }

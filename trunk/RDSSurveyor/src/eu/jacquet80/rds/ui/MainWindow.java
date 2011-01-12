@@ -41,7 +41,6 @@ import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -80,19 +79,19 @@ public class MainWindow extends JFrame {
 			txtTime = new JTextArea(1, 30),
 			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80),
+			txtRT = new JTextArea(1, 64),
 			txtCompressed = new JTextArea(1, 5),
 			txtStereo = new JTextArea(1, 5),
 			txtHead = new JTextArea(1, 5);
 	private final GroupPanel groupStats = new GroupPanel();
 	
-	private final JList lstRT = new JList();
-	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
 	
 	private final JProgressBar barBLER = new JProgressBar(0, 100);
+	
+	private RTPanel pnlRT = new RTPanel();
 			
-			//txtGroupStats = new JTextArea(1, 64);
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtRT};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -208,7 +207,7 @@ public class MainWindow extends JFrame {
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblRT},
-				{new JScrollPane(lstRT)},
+				{txtRT},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -234,10 +233,7 @@ public class MainWindow extends JFrame {
 			txt.setFont(new Font("monospaced", Font.PLAIN, 20));
 			txt.setEditable(false);
 		}
-		
-		//txtGroupStats.setLineWrap(true);
-		//txtGroupStats.setWrapStyleWord(true);
-		
+				
 		txtAF.setLineWrap(true);
 		txtAF.setWrapStyleWord(true);
 		
@@ -249,6 +245,7 @@ public class MainWindow extends JFrame {
 				synchronized(MainWindow.this) {
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
+					pnlRT.setStation(station);
 				}
 					
 				// reset the tabs displayed
@@ -257,6 +254,7 @@ public class MainWindow extends JFrame {
 						public void run() {
 							tabbedPane.removeAll();
 							tabbedPane.addTab("EON", pnlEON);
+							tabbedPane.addTab("RT", pnlRT);
 							tabbedPane.addTab("AF", pnlAF);
 							currentAppPanels.clear();
 							updateAppTabs();
@@ -315,12 +313,11 @@ public class MainWindow extends JFrame {
 									txtPI.setText(String.format("%04X", pi));
 									txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
 									txtPTYN.setText(station.getPTYN().toString());
-									// if Radiotext was received, then flags != 0
-									/*
+
 									txtRT.setText(station.getRT().toString() != null ?
 											"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
 											: "");
-									*/		
+									pnlRT.update();
 
 									// Country & language
 									{
@@ -335,39 +332,11 @@ public class MainWindow extends JFrame {
 										else txtLang.setText("");
 									}
 
-									lstRT.setListData(station.getRT().getPastMessages(true).toArray());
-									lstRT.repaint();
-									/*
-									List<String> rtM = station.getRT().getPastMessages(false);
-									String res = "";
-									for(int i=0; i<3; i++) {
-										if(rtM.size() > i) {
-											if(res.length() > 0) res += "\n";
-											res += rtM.get(rtM.size() - i - 1);
-										}
-									}
-									txtRTmessages.setText(res);
-									*/
-
-									/*
-								if(station.whichRT() == 0) {
-									lblRTa.setForeground(Color.RED);
-									lblRTb.setForeground(Color.BLACK);
-								} else if(station.whichRT() == 1) {
-									lblRTa.setForeground(Color.BLACK);
-									lblRTb.setForeground(Color.RED);							
-								} else {
-									lblRTa.setForeground(Color.BLACK);
-									lblRTb.setForeground(Color.BLACK);
-								}
-									 */
-
 									txtTraffic.setText(station.trafficInfoString());
 
 									String date = station.getDateTime();
 									txtTime.setText(date);
 									txtAF.setText(station.afsToString());
-									//txtGroupStats.setText(station.groupStats());
 									groupStats.update(station.numericGroupStats());
 
 									eonTableModel.fireTableDataChanged();

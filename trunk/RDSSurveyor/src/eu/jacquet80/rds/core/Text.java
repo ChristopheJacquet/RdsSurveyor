@@ -16,6 +16,7 @@ public class Text {
 	private boolean empty;
 	private int currentTicks;
 	private Map<String, Integer> tickHistory = new HashMap<String, Integer>();
+	private int currentIndex = 0;
 
 	public Text(int size, boolean usesFlags) {
 		this.usesFlags = usesFlags;
@@ -30,15 +31,19 @@ public class Text {
 				if(!empty) {
 					String message;
 					
+					/*
 					if(usesFlags) {
 						StringBuffer msg = new StringBuffer("[");
 						for(int f=0; f<2; f++)
 							if((currentFlags & (1<<f)) != 0) msg.append((char)('A' + f));
 						msg.append("] ");
 						message = msg.append(toString()).toString();
-					} else message = toString();
+					} else */
+					message = toString();
+					
 
 					messages.add(message);
+					currentIndex++;
 										
 					Integer prev = tickHistory.get(message);
 					tickHistory.put(message, currentTicks + (prev == null ? 0 : prev));
@@ -148,5 +153,9 @@ public class Text {
 			if(t != null) return t; else return "";
 		}
 
+	}
+	
+	public int getCurrentIndex() {
+		return currentIndex;
 	}
 }
