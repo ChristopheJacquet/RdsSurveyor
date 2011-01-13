@@ -46,6 +46,13 @@ public abstract class InputToolBar extends JToolBar {
 		button.addActionListener(buttonListener);
 		add(button);
 	}
+
+	protected void addButton(String caption, Icon icon, String command) {
+		JButton button = new JButton(caption, icon);
+		button.setActionCommand(command);
+		button.addActionListener(buttonListener);
+		add(button);
+	}
 	
 	protected abstract void handleButtonAction(ActionEvent e);
 }

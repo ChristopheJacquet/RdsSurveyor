@@ -29,7 +29,7 @@ public class PlaybackToolBar extends InputToolBar {
 		
 		this.log = log;
 		
-		addButton(Image.FFWD, NEXT_BUTTON);
+		addButton("Next station", Image.FFWD, NEXT_BUTTON);
 		
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
