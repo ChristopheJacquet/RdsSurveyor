@@ -43,7 +43,7 @@ public class RTPanel extends JPanel {
 			}
 			
 			for(int i=0; i<msg.length; i++) {
-				StringBuilder r = new StringBuilder("<html>").append(msg[i]);
+				StringBuilder r = new StringBuilder("<html>").append(msg[i].replaceAll("\\s", "&nbsp;"));
 				
 				if(rtplus != null) {
 					r.append("<br><font color=green>" + rtplus.getHistoryForIndex(i, msg[i])).append("</font><br>");
