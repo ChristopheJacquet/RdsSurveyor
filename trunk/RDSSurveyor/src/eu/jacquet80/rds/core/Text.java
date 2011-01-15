@@ -27,6 +27,9 @@ public class Text {
 	
 	public void setChars(int position, char ... characters) {
 		for(int i = 0; i < characters.length; i++) {
+			// ignore characters set with value 0
+			if(characters[i] == 0) continue;
+			
 			if(currentText[position * characters.length + i] != '\0' && characters[i] != currentText[position * characters.length + i]) {
 				// this is a new RT message: save the previous message...
 				if(!empty) {
@@ -127,8 +130,10 @@ public class Text {
 	}
 
 	private void setChars(char[] text, int position, char ... characters) {
-		for(int i=0; i<characters.length; i++)
-			text[position * characters.length + i] = characters[i];
+		for(int i=0; i<characters.length; i++) {
+			if(characters[i] != 0)
+				text[position * characters.length + i] = characters[i];
+		}
 		currentTicks++;
 		empty = false;
 		latestPos = position;

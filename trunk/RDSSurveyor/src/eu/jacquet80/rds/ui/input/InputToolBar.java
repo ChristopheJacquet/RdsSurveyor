@@ -24,6 +24,7 @@ public abstract class InputToolBar extends JToolBar {
 	};
 
 	public static InputToolBar forReader(RDSReader reader, Log log) {
+		//System.out.println("For reader: " + reader);
 		if(reader instanceof TunerGroupReader) 
 			return new TunerToolBar((TunerGroupReader)reader);
 		else if(reader instanceof GroupReader) return new PlaybackToolBar(log);

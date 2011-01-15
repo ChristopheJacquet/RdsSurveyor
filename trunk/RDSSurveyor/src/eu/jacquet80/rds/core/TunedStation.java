@@ -29,9 +29,12 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.Collection;
 
 import eu.jacquet80.rds.app.Application;
 
@@ -51,6 +54,9 @@ public class TunedStation extends Station {
 	private int ecc, language;
 	private int dateBitTime = -1;
 	private Text rt = new Text(64, true);
+	
+	private Map<Integer, Integer> odas = new HashMap<Integer, Integer>();
+	private Map<Integer, Application> odaApps = new HashMap<Integer, Application>();
 	
 	
 	public TunedStation(int pi, int time) {
@@ -283,5 +289,22 @@ public class TunedStation extends Station {
 	
 	public boolean getDPTY() {
 		return diDPTY;
+	}
+	
+	public void setODA(int aid, int group, Application app) {
+		odas.put(aid, group);
+		odaApps.put(aid, app);
+	}
+	
+	public Collection<Integer> getODAs() {
+		return odas.keySet();
+	}
+	
+	public int getODAgroup(int aid) {
+		return odas.get(aid);
+	}
+	
+	public Application getODAapplication(int aid) {
+		return odaApps.get(aid);
 	}
 }

@@ -330,6 +330,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 			} else {
 				app = ODA.forAID(aid);
 				
+				workingStation.setODA(aid, blocks[1] & 0x1F, app);
+				
 				if(app != null) {
 					newApp = app;
 					workingStation.setApplicationForGroup(odaG, odaV, app);
