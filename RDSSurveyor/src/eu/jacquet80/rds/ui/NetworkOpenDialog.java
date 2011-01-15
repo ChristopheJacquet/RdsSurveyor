@@ -7,6 +7,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -113,11 +116,29 @@ public class NetworkOpenDialog extends JFrame {
 		contents.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 		add(contents, BorderLayout.CENTER);
 		
+		final FocusListener fl = new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				if(e.getSource() == txtHost || e.getSource() == txtPort) {
+					radTCP.setSelected(true);
+				}
+				
+				if(e.getSource() == txtURL) {
+					radHTTP.setSelected(true);
+				}
+			}
+		};
+		
+		txtHost.addFocusListener(fl);
+		txtPort.addFocusListener(fl);
+		txtURL.addFocusListener(fl);
+		
 		final JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
 		final JButton btnCancel = new JButton("Cancel");
 		final JButton btnOK = new JButton("OK");
 		buttonPanel.add(btnCancel);
 		buttonPanel.add(btnOK);
+		getRootPane().setDefaultButton(btnOK);
 		add(buttonPanel, BorderLayout.SOUTH);
 		
 		final ActionListener l = new ActionListener() {
@@ -172,6 +193,7 @@ public class NetworkOpenDialog extends JFrame {
 		NetworkOpenDialog dialog = new NetworkOpenDialog();
 		dialog.setVisible(true);
 		dialog.choiceDone.acquireUninterruptibly();
+		dialog.setVisible(false);
 		
 		return dialog.source;
 	}

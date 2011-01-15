@@ -196,13 +196,21 @@ public class RDSSurveyor {
 		}
 
 		
+		Log log = new Log();
+		
+		// Create the input toolbar before wrapping the reader into a station change detector
+		if(showGui) {
+			InputToolBar toolbar = InputToolBar.forReader(reader, log);
+			
+			MainWindow mainWindow = new MainWindow(log, toolbar);
+			mainWindow.setVisible(true);
+		}
+		
 		// add a station change detector
 		reader = new StationChangeDetector(reader);
 		
-		
-		Log log = new Log();
 		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(console, log);
-
+		
 		// force inversion if necessary
 		if(reader instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
 			((StreamLevelDecoder) reader).forceInversion(inversion);
@@ -238,13 +246,6 @@ public class RDSSurveyor {
 		}
 
 			
-		if(showGui) {
-			InputToolBar toolbar = InputToolBar.forReader(reader, log);
-			
-			MainWindow mainWindow = new MainWindow(log, toolbar);
-			mainWindow.setVisible(true);
-		}
-		
 		if(segmenter != null) {
 			segmenter.registerAtLog(log);
 		}

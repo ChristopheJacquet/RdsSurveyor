@@ -95,6 +95,7 @@ public class MainWindow extends JFrame {
 	private final JProgressBar barBLER = new JProgressBar(0, 100);
 	
 	private RTPanel pnlRT = new RTPanel();
+	private ODAPanel pnlODA = new ODAPanel();
 			
 	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtCompressed, txtStereo, txtHead};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
@@ -265,6 +266,7 @@ public class MainWindow extends JFrame {
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
 					pnlRT.setStation(station);
+					pnlODA.setStation(station);
 				}
 					
 				// reset the tabs displayed
@@ -275,6 +277,7 @@ public class MainWindow extends JFrame {
 							tabbedPane.addTab("EON", pnlEON);
 							tabbedPane.addTab("RT", pnlRT);
 							tabbedPane.addTab("AF", pnlAF);
+							tabbedPane.addTab("ODA", pnlODA);
 							currentAppPanels.clear();
 							updateAppTabs();
 						}
@@ -342,7 +345,8 @@ public class MainWindow extends JFrame {
 										lblRT.setText("Current radiotext [" + ((char)('A' + station.getRT().getFlags())) + "]");
 										txtRT.setText(rt);
 									}
-									pnlRT.update();									
+									pnlRT.update();
+									pnlODA.update();
 
 									// Country & language
 									{
