@@ -17,6 +17,7 @@ public class Text {
 	private int currentTicks;
 	private Map<String, Integer> tickHistory = new HashMap<String, Integer>();
 	private int currentIndex = 0;
+	private int latestPos = -1, latestLen = -1;
 
 	public Text(int size, boolean usesFlags) {
 		this.usesFlags = usesFlags;
@@ -88,6 +89,29 @@ public class Text {
 		return res.toString();
 	}
 	
+	/**
+	 * Returns a string representing the current string, in which the latest
+	 * portion has been highlighted.
+	 * 
+	 * Java HTML control codes are used for this. This is intended to be used
+	 * in Swing components.
+	 * 
+	 * @return an HTML-tagged string representing the current text
+	 */
+	public String toStringWithHighlight() {
+		if(empty) return null;
+		
+		String s = toString();
+		StringBuilder res = new StringBuilder("<html>");
+		res.append(s.substring(0, latestPos * latestLen));
+		res.append("<font color=blue>");
+		res.append(s.substring(latestPos * latestLen, (latestPos+1)*latestLen));
+		res.append("</font>").append(s.substring((latestPos+1)*latestLen));
+		res.append("</html>");
+		
+		return res.toString().replaceAll("\\s", "&nbsp;");
+	}
+	
 	public int getFlags() {
 		return latest;
 	}
@@ -107,6 +131,8 @@ public class Text {
 			text[position * characters.length + i] = characters[i];
 		currentTicks++;
 		empty = false;
+		latestPos = position;
+		latestLen = characters.length;
 	}
 
 	public boolean isComplete() {

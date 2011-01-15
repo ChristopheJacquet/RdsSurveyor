@@ -270,22 +270,38 @@ public class GroupLevelDecoder implements RDSDecoder {
 		if(type == 2 && (blocksOk[2] || blocksOk[3])) {
 			int addr = blocks[1] & 0xF;
 			int ab = (blocks[1]>>4) & 1;
-			char ch1 = '?', ch2 = '?', ch3 = '?', ch4 = '?';
 			
-			if(blocksOk[2] && version == 0) {
-				ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
-				ch2 = RDS.toChar(blocks[2] & 0xFF);
-				
-				workingStation.getRT().setChars(version == 0 ? addr*2 : addr, ch1, ch2);
-				workingStation.getRT().setFlag(ab);
+			// First extract the 4 potential characters
+			char ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
+			char ch2 = RDS.toChar(blocks[2] & 0xFF);
+			char ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
+			char ch4 = RDS.toChar(blocks[3] & 0xFF);
+			
+			if(!blocksOk[2]) {
+				ch1 = ch2 = '?';
+			}
+			if(!blocksOk[3]) {
+				ch3 = ch4 = '?';
 			}
 			
-			if(blocksOk[3]) {
-				ch3 = RDS.toChar( (blocks[3]>>8) & 0xFF);
-				ch4 = RDS.toChar(blocks[3] & 0xFF);
-				workingStation.getRT().setChars(version == 0 ? addr*2+1 : addr, ch3, ch4);
-				workingStation.getRT().setFlag(ab);
+			Text rt = workingStation.getRT();
+			
+			// Need to handle the case group 2A and both data blocks ok
+			// separately, in order to correctly highlight the 4 characters
+			// of the latest RT segment received
+			if(version == 0 && blocksOk[2] && blocksOk[3]) {
+				rt.setChars(addr, ch1, ch2, ch3, ch4);
+			} else {
+				// Else only one block is provided (type 2B) or valid (type 2A)
+				if(blocksOk[2] && version == 0) {
+					rt.setChars(addr*2, ch1, ch2);
+				}
+				if(blocksOk[3]) {
+					rt.setChars(version == 0 ? addr*2+1 : addr, ch3, ch4);
+				}
 			}
+			
+			rt.setFlag(ab);
 			
 			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"");
 			if(version == 0) console.print(toASCII(ch1) + "" + toASCII(ch2));

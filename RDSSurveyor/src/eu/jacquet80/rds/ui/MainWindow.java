@@ -79,11 +79,12 @@ public class MainWindow extends JFrame {
 			txtTime = new JTextArea(1, 40),
 			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80),
-			txtRT = new JTextArea(1, 64),
+			//txtRT = new JTextArea(1, 64),
 			txtCompressed = new JTextArea(1, 5),
 			txtStereo = new JTextArea(1, 5),
 			txtHead = new JTextArea(1, 5),
 			txtPIN = new JTextArea(1, 12);
+	private final JLabel txtRT = new JLabel("<html> </html>");
 	private final GroupPanel groupStats = new GroupPanel();
 	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
@@ -92,7 +93,7 @@ public class MainWindow extends JFrame {
 	
 	private RTPanel pnlRT = new RTPanel();
 			
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtRT, txtPIN};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -239,6 +240,13 @@ public class MainWindow extends JFrame {
 		txtAF.setLineWrap(true);
 		txtAF.setWrapStyleWord(true);
 		
+		txtRT.setFont(new Font("monospaced", Font.PLAIN, txtRT.getFont().getSize()));
+		txtRT.setBackground(Color.WHITE);
+		txtRT.setOpaque(true);
+		txtRT.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(Color.BLACK, 1),
+				BorderFactory.createLineBorder(Color.WHITE, 2)));
+		
 		setPreferredSize(new Dimension(1000, 800));
 		
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
@@ -316,10 +324,16 @@ public class MainWindow extends JFrame {
 									txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
 									txtPTYN.setText(station.getPTYN().toString());
 
-									txtRT.setText(station.getRT().toString() != null ?
-											"[" + ((char)('A' + station.getRT().getFlags())) + "] " + station.getRT()
-											: "");
-									pnlRT.update();
+									// Radiotext
+									String rt = station.getRT().toStringWithHighlight();
+									if(rt == null) {
+										lblRT.setText("Current radiotext");
+										txtRT.setText("<html> </html>");  // one space to set component height
+									} else {
+										lblRT.setText("Current radiotext [" + ((char)('A' + station.getRT().getFlags())) + "]");
+										txtRT.setText(rt);
+									}
+									pnlRT.update();									
 
 									// Country & language
 									{
