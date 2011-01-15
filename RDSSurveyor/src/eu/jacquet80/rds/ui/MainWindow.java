@@ -76,13 +76,14 @@ public class MainWindow extends JFrame {
 			txtTraffic = new JTextArea(1, 5),
 			txtCountry = new JTextArea(1, 20),
 			txtLang = new JTextArea(1, 20),
-			txtTime = new JTextArea(1, 30),
+			txtTime = new JTextArea(1, 40),
 			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80),
 			txtRT = new JTextArea(1, 64),
 			txtCompressed = new JTextArea(1, 5),
 			txtStereo = new JTextArea(1, 5),
-			txtHead = new JTextArea(1, 5);
+			txtHead = new JTextArea(1, 5),
+			txtPIN = new JTextArea(1, 12);
 	private final GroupPanel groupStats = new GroupPanel();
 	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
@@ -91,7 +92,7 @@ public class MainWindow extends JFrame {
 	
 	private RTPanel pnlRT = new RTPanel();
 			
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtRT};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtRT, txtPIN};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -177,7 +178,8 @@ public class MainWindow extends JFrame {
 				lblCompressed = new JLabel("Compressed"),
 				lblHead = new JLabel("Artificial head"),
 				lblStereo = new JLabel("Sound"),
-				lblBLER = new JLabel("BLER");
+				lblBLER = new JLabel("BLER"),
+				lblPIN = new JLabel("PIN");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -201,8 +203,8 @@ public class MainWindow extends JFrame {
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblTime},
-				{txtTime},
+				{lblTime, lblPIN},
+				{txtTime, txtPIN},
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -334,8 +336,8 @@ public class MainWindow extends JFrame {
 
 									txtTraffic.setText(station.trafficInfoString());
 
-									String date = station.getDateTime();
-									txtTime.setText(date);
+									txtTime.setText(station.getDateTime());
+									txtPIN.setText(station.getPINText());
 									txtAF.setText(station.afsToString());
 									groupStats.update(station.numericGroupStats());
 

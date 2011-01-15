@@ -26,11 +26,12 @@
 package eu.jacquet80.rds.log;
 
 public interface LogMessageVisitor {
-	void visit(ClockTime clockTime);
+	void visit(GroupReceived groupReceived);
 	void visit(EONReturn eonReturn);
 	void visit(EONSwitch eonSwitch);
 	void visit(StationLost stationLost);
 	void visit(StationTuned stationTuned);
 	void visit(ApplicationChanged appChanged);
 	void visit(EndOfStream endOfStream);
+	void visit(ClockTime clockTime);
 }

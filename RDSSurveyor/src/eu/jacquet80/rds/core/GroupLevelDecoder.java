@@ -49,6 +49,7 @@ import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.ClockTime;
 import eu.jacquet80.rds.log.EONReturn;
 import eu.jacquet80.rds.log.EONSwitch;
+import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
@@ -211,10 +212,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 		// Groups 1A & 1B: to extract PIN we need blocks 1 and 3
 		if(type == 1 && blocksOk[3]) {
 			int pin = blocks[3];
-			int day = (pin>>11) & 0x1F;
-			int hour = (pin>>6) & 0x1F;
-			int min = pin & 0x3F;
-			console.printf("PIN=%04X [D=%d, H=%02d:%02d] ", pin, day, hour, min);
+			workingStation.setPIN(pin);
+			console.printf("PIN=%04X [%s] ", pin, station.getPINText());
 		}
 		
 		// Group 1A: to extract slow labeling codes, we need blocks 1 and 3
@@ -518,7 +517,10 @@ public class GroupLevelDecoder implements RDSDecoder {
 					
 					if(variant == 14) {
 						int onpin = blocks[2];
-						console.printf("ON.PIN=%04X ", onpin);
+						if(on != null) {
+							on.setPIN(onpin);
+						}
+						console.printf("ON.PIN=%04X [%s]", onpin, on.getPINText());
 					}
 				}
 			} else { // 14B groups
@@ -550,6 +552,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(blocksOk[3]) processBasicTuningBits(blocks[3]);
 		}
 		
+		// add a log message for each group
+		log.addMessage(new GroupReceived(bitTime, blocksOk, blocks));
 
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
