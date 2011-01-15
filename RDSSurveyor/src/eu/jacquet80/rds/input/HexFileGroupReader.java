@@ -30,6 +30,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,14 +44,17 @@ public class HexFileGroupReader implements GroupReader {
 	private final BufferedReader br;
 	private int bitTime = 0;
 	
-	public HexFileGroupReader(File file) throws FileNotFoundException {
-		br = new BufferedReader(new FileReader(file));
-	}
-	
 	public HexFileGroupReader(BufferedReader br) {
 		this.br = br;
 	}
 	
+	public HexFileGroupReader(URL url) throws IOException {
+		this(new BufferedReader(new InputStreamReader(url.openStream())));
+	}
+	
+	public HexFileGroupReader(File file) throws FileNotFoundException {
+		this(new BufferedReader(new FileReader(file)));
+	}
 	
 	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
 		GroupReaderEvent event;

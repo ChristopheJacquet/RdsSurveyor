@@ -15,6 +15,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.img.Image;
@@ -31,12 +32,12 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		btnAudio = new JButton("<html><b>External decoder</b><br>(through the sound card)</html>", Image.MICROPHONE),
 		btnTuner = new JButton("<html><b>Internal tuner or USB key</b></html>", Image.USBKEY),
 		btnFile = new JButton("<html><b>File</b><br>(playback)</html>", Image.OPEN),
-		btnTCP = new JButton("<html><b>Network connection</b><br>(TCP)</html>", Image.NETWORK);
+		btnTCP = new JButton("<html><b>Network</b><br>(Web site or TCP)</html>", Image.NETWORK);
 	
 	private final JButton[] buttons = {btnAudio, btnTuner, btnFile, btnTCP};
 	
 	private GroupReader choice;
-	private Semaphore choiceDone = new Semaphore(0);
+	private final Semaphore choiceDone = new Semaphore(0);
 	
 	public InputSelectionDialog() {
 		super("Choose an input method:");
@@ -88,9 +89,13 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 					choiceDone.release();
 				}
 			} else if(source == btnTCP) {
-				String server = JOptionPane.showInputDialog("Server name:");
-				choice = new TCPTunerGroupReader(server, 8750);
-				choiceDone.release();
+				Thread t = new Thread() {
+					public void run() {
+						choice = NetworkOpenDialog.dialog();
+						choiceDone.release();
+					}
+				};
+				t.start();
 			}
 		} catch(Throwable exc) {
 			JOptionPane.showMessageDialog(this, exc.toString(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -99,7 +104,9 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 	
 	public GroupReader makeChoice() {
 		setVisible(true);
-		choiceDone.acquireUninterruptibly();
+		do {
+			choiceDone.acquireUninterruptibly();
+		} while(choice == null);
 		setVisible(false);
 		return choice;
 	}
