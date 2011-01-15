@@ -66,6 +66,9 @@ public class MainWindow extends JFrame {
 
 	//private final Log log;
 	private final EONTableModel eonTableModel = new EONTableModel();
+	
+	private final static Color BORDER_COLOR = new Color(180, 180, 180);
+	
 	private final JTextArea
 			txtPS = new JTextArea(1, 8),
 			txtPSName = new JTextArea(1, 8),
@@ -93,7 +96,7 @@ public class MainWindow extends JFrame {
 	
 	private RTPanel pnlRT = new RTPanel();
 			
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtCompressed, txtStereo, txtHead};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -230,11 +233,17 @@ public class MainWindow extends JFrame {
 		for(JTextArea txt : smallTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, txt.getFont().getSize()));
 			txt.setEditable(false);
+			txt.setBorder(BorderFactory.createCompoundBorder(
+					BorderFactory.createLineBorder(BORDER_COLOR, 1),
+					BorderFactory.createLineBorder(Color.WHITE, 2)));
 		}
 		
 		for(JTextArea txt : bigTxt) {
 			txt.setFont(new Font("monospaced", Font.PLAIN, 20));
 			txt.setEditable(false);
+			txt.setBorder(BorderFactory.createCompoundBorder(
+					BorderFactory.createLineBorder(BORDER_COLOR, 1),
+					BorderFactory.createLineBorder(Color.WHITE, 2)));
 		}
 				
 		txtAF.setLineWrap(true);
@@ -244,7 +253,7 @@ public class MainWindow extends JFrame {
 		txtRT.setBackground(Color.WHITE);
 		txtRT.setOpaque(true);
 		txtRT.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(Color.BLACK, 1),
+				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.WHITE, 2)));
 		
 		setPreferredSize(new Dimension(1000, 800));
