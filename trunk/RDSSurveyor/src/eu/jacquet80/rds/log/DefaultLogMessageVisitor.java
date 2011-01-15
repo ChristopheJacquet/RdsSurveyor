@@ -47,4 +47,7 @@ public class DefaultLogMessageVisitor implements LogMessageVisitor {
 	public void visit(EndOfStream endOfStream) {
 	}
 
+	public void visit(GroupReceived groupReceived) {
+	}
+
 }

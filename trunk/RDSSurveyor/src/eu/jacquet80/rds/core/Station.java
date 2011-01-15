@@ -43,6 +43,7 @@ public abstract class Station {
 	protected int pty = 0;
 	protected Text ptyn = new Text(8, false);
 	private boolean tp, ta;
+	protected String pinText = "";
 	protected int timeOfLastPI = 0;
 	
 	protected static String[] ptyLabels = {
@@ -273,6 +274,17 @@ public abstract class Station {
 			if(ta) return "ON with TP";
 			else return "";
 		}
+	}
+	
+	public void setPIN(int pin) {
+		int day = (pin>>11) & 0x1F;
+		int hour = (pin>>6) & 0x1F;
+		int min = pin & 0x3F;
+		pinText = String.format("D=%d, H=%02d:%02d", day, hour, min);
+	}
+	
+	public String getPINText() {
+		return pinText;
 	}
 }
 
