@@ -10,7 +10,6 @@ import javax.swing.JCheckBox;
 
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
@@ -19,6 +18,7 @@ public class PlaybackToolBar extends InputToolBar {
 	private static final long serialVersionUID = 8528017046827475742L;
 
 	private final static String NEXT_BUTTON = "NEXT";
+	private final JButton btnNext = addButton("Next station", Image.FFWD, NEXT_BUTTON);
 	
 	private final Log log;
 	
@@ -30,6 +30,7 @@ public class PlaybackToolBar extends InputToolBar {
 	@Override
 	protected void handleButtonAction(ActionEvent e) {
 		if(e.getActionCommand() == NEXT_BUTTON) {
+			btnNext.setEnabled(false);
 			waitClick.release();
 		}
 	}
@@ -39,7 +40,7 @@ public class PlaybackToolBar extends InputToolBar {
 		
 		this.log = log;
 		
-		final JButton btnNext = addButton("Next station", Image.FFWD, NEXT_BUTTON);
+		btnNext.setEnabled(false);
 		
 		final JCheckBox chkRealtime = new JCheckBox("Simulate real time", true);
 		chkRealtime.addActionListener(new ActionListener() {
@@ -54,13 +55,18 @@ public class PlaybackToolBar extends InputToolBar {
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationLost stationLost) {
+				btnNext.setEnabled(true);
 				waitClick.acquireUninterruptibly();
+				initialTime = System.currentTimeMillis();
+				nbGroups = 0;
 			}
 
+			/*
 			@Override
 			public void visit(EndOfStream endOfStream) {
 				btnNext.setEnabled(false);
 			}
+			*/
 			
 			@Override
 			public void visit(GroupReceived groupReceived) {

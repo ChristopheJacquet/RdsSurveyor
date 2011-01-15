@@ -533,10 +533,11 @@ public class GroupLevelDecoder implements RDSDecoder {
 					
 					if(variant == 14) {
 						int onpin = blocks[2];
+						console.printf("ON.PIN=%04X ", onpin);
 						if(on != null) {
 							on.setPIN(onpin);
+							console.print("[" + on.getPINText() + "]");
 						}
-						console.printf("ON.PIN=%04X [%s]", onpin, on.getPINText());
 					}
 				}
 			} else { // 14B groups
