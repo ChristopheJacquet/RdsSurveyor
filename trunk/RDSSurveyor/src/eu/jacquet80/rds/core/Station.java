@@ -37,11 +37,11 @@ import java.util.Set;
  */
 public abstract class Station {
 	protected int pi;
-	protected Text ps = new Text(8, false);
+	protected Text ps = new Text(8);
 	protected final Map<Integer, AFList> afs = new HashMap<Integer, AFList>();
 	protected AFList currentAFList = null;
 	protected int pty = 0;
-	protected Text ptyn = new Text(8, false);
+	protected Text ptyn = new Text(8);
 	private boolean tp, ta;
 	protected String pinText = "";
 	protected int timeOfLastPI = 0;

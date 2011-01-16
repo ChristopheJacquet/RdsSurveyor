@@ -11,7 +11,6 @@ public class Text {
 	private final char[] currentText;
 	private int currentFlags = 0;
 	private final List<String> messages = new ArrayList<String>();
-	private final boolean usesFlags;
 	private int latest = -1;
 	private boolean empty;
 	private int currentTicks;
@@ -19,8 +18,7 @@ public class Text {
 	private int currentIndex = 0;
 	private int latestPos = -1, latestLen = -1;
 
-	public Text(int size, boolean usesFlags) {
-		this.usesFlags = usesFlags;
+	public Text(int size) {
 		currentText = new char[size];
 		reset();
 	}

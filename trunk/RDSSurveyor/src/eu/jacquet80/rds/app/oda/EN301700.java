@@ -26,6 +26,8 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.io.PrintWriter;
+
 /**
  * ETSI standard EN 301700 describes a way to cross-reference DAB (aka Eureka
  * 147) services from their FM/RDS counterparts. This is achieved through the
@@ -53,7 +55,7 @@ public class EN301700 extends ODA {
 	private String mode = null;
 	
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks,
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks,
 			boolean[] blocksOk, int bitTime) {
 		// need to have the three blocks, otherwise abort here
 		if(!(blocksOk[1] && blocksOk[2] && blocksOk[3])) return;

@@ -25,7 +25,7 @@
 
 package eu.jacquet80.rds.app;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -50,9 +50,8 @@ public class Paging extends Application {
 	
 	private final DateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
-	public Paging(TunedStation station, PrintStream console, String tngd) {
+	public Paging(TunedStation station, String tngd) {
 		setStation(station);
-		setConsole(console);
 		this.tngd = tngd;
 	}
 
@@ -62,7 +61,7 @@ public class Paging extends Application {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
 		Message newMessage = null;
 		String time = "-";
 		if(station != null) {

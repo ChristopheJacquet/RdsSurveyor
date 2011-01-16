@@ -26,6 +26,7 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -107,7 +108,7 @@ public class RTPlus extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
 		// Main RT+ group handling
 		if(type == 3 && version == 0 && blocksOk[2]) {
 			int ert = (blocks[2]>>13) & 1;

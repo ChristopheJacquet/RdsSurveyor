@@ -25,7 +25,7 @@
 
 package eu.jacquet80.rds.app;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,10 +33,8 @@ import eu.jacquet80.rds.core.RDS;
 
 public class InHouse extends Application {
 	private final List<Message> messages = new ArrayList<Message>();
-	private final PrintStream console;
 	
-	public InHouse(PrintStream console) {
-		this.console = console;
+	public InHouse() {
 	}
 	
 	@Override
@@ -45,7 +43,7 @@ public class InHouse extends Application {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks,
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks,
 			boolean[] blocksOk, int bitTime) {
 		if(blocksOk[1] && blocksOk[2] && blocksOk[3]) {
 			Message m = new Message(blocks[1] & 0x1F, blocks[2], blocks[3]);
