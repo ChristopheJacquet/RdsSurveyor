@@ -174,6 +174,17 @@ public class RDSSurveyor {
 			System.exit(0);
 		}
 		
+		Log log = new Log();
+		
+		// Create the input toolbar before wrapping the reader into a station change detector
+		// and possibly a group logger (tee)
+		if(showGui) {
+			InputToolBar toolbar = InputToolBar.forReader(reader, log);
+			
+			MainWindow mainWindow = new MainWindow(log, toolbar);
+			mainWindow.setVisible(true);
+		}
+		
 		// when input is "live", always create an output file
 		// if there is no output file, create one in the temp directory
 		if(liveInput && outBinFile == null) {
@@ -193,17 +204,6 @@ public class RDSSurveyor {
 		if(outGroupFile != null) {
 			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
 			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
-		}
-
-		
-		Log log = new Log();
-		
-		// Create the input toolbar before wrapping the reader into a station change detector
-		if(showGui) {
-			InputToolBar toolbar = InputToolBar.forReader(reader, log);
-			
-			MainWindow mainWindow = new MainWindow(log, toolbar);
-			mainWindow.setVisible(true);
 		}
 		
 		// add a station change detector

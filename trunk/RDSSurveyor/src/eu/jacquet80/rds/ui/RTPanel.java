@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.RTPlus;
@@ -25,7 +26,7 @@ public class RTPanel extends JPanel {
 		messageList.setSelectionBackground(new Color(255, 255, 200));
 		messageList.setSelectionForeground(Color.BLACK);
 		
-		add(messageList, BorderLayout.CENTER);
+		add(new JScrollPane(messageList), BorderLayout.CENTER);
 	}
 	
 	public void update() {
