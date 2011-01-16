@@ -73,6 +73,9 @@ public class HexFileGroupReader implements GroupReader {
 	}
 	
 	static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
+		// ignore empty lines
+		if(line.length() == 0) return null;
+		
 		if(line.startsWith("%")) {
 			// Lines beginning with % are to be ignored, but may contain metadata
 			if(line.startsWith("% Freq")) {
