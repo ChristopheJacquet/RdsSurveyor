@@ -26,6 +26,7 @@
 package eu.jacquet80.rds.app;
 
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.LinkedList;
 
 import eu.jacquet80.rds.core.TunedStation;
@@ -39,11 +40,7 @@ public abstract class Application {
 		this.station = station;
 	}
 	
-	public void setConsole(PrintStream console) {
-		this.console = console;
-	}
-	
-	public abstract void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime);
+	public abstract void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime);
 	public abstract String getName();
 
 	public void addChangeListener(ChangeListener l) {

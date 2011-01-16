@@ -24,9 +24,10 @@
 */
 
 package eu.jacquet80.rds.core;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -34,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.Collection;
 
 import eu.jacquet80.rds.app.Application;
 
@@ -53,7 +53,7 @@ public class TunedStation extends Station {
 	private int latestBlocksOkCount = 0;
 	private int ecc, language;
 	private int dateBitTime = -1;
-	private Text rt = new Text(64, true);
+	private Text rt = new Text(64);
 	
 	private Map<Integer, Integer> odas = new HashMap<Integer, Integer>();
 	private Map<Integer, Application> odaApps = new HashMap<Integer, Application>();
@@ -232,7 +232,7 @@ public class TunedStation extends Station {
 		return rt;
 	}
 	
-	public void setDIbit(int addr, boolean diInfo, PrintStream console) {
+	public void setDIbit(int addr, boolean diInfo, PrintWriter console) {
 		console.print("DI:");
 		switch(addr) {
 		case 3: console.print(diInfo ? "Ster" : "Mono"); diStereo = diInfo; break;

@@ -26,7 +26,8 @@
 package eu.jacquet80.rds.core;
 
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -73,11 +74,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 		"RP groups 00-19",
 		"RP groups 20-39",
 	};
-
-	private final PrintStream console;
 	
-	public GroupLevelDecoder(PrintStream console, Log log) {
-		this.console = console;
+	public GroupLevelDecoder(Log log) {
 		this.log = log;
 	}
 	
@@ -85,7 +83,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 		synced = false;
 	}
 	
-	private int processBasicTuningBits(int block1) {
+	private int processBasicTuningBits(PrintWriter console, int block1) {
 		// Groups 0A, 0B, 15B : for TA, M/S and DI we need only block 1 (or block 3 for 15B)
 		int ta = (block1>>4) & 1;
 		int ms = (block1>>3) & 1;
@@ -103,6 +101,9 @@ public class GroupLevelDecoder implements RDSDecoder {
 	}
 	
 	private void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime) {
+		StringWriter consoleWriter = new StringWriter();
+		PrintWriter console = new PrintWriter(consoleWriter);
+		
 		//console.print(" (" + (station == null ? null : station.getStationName() ) + ") ");
 		Application newApp = null;
 		
@@ -172,7 +173,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 		
 		// Groups 0A & 0B
 		if(type == 0) {
-			int addr = processBasicTuningBits(blocks[1]);
+			int addr = processBasicTuningBits(console, blocks[1]);
 			
 			// Groups 0A & 0B: to extract PS segment we need blocks 1 and 3
 			if(blocksOk[3]) {
@@ -197,7 +198,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(tngd > 0) {   // print the rest only if there IS RP
 				Application app = workingStation.getApplicationForGroup(7, 0);
 				if(app == null) {
-					newApp = app = new Paging(workingStation, console, RP_TNGD_VALUES[tngd]);
+					newApp = app = new Paging(workingStation, RP_TNGD_VALUES[tngd]);
 					
 					workingStation.setApplicationForGroup(7, 0, app);
 				} else if(!(app instanceof Paging)) {
@@ -240,7 +241,6 @@ public class GroupLevelDecoder implements RDSDecoder {
 					Application appTMC = new AlertC();
 					workingStation.setApplicationForGroup(8, 0, appTMC);
 					appTMC.setStation(workingStation);
-					appTMC.setConsole(console);
 				} else if(!(app instanceof AlertC)) {
 					console.print("Error: this group indicates the presence of TMC, while group 8A is used for '" + app.getName() + "'!");
 				}
@@ -336,7 +336,6 @@ public class GroupLevelDecoder implements RDSDecoder {
 					newApp = app;
 					workingStation.setApplicationForGroup(odaG, odaV, app);
 					app.setStation(workingStation);
-					app.setConsole(console);
 				} else {
 					console.print("Unknown AID!");
 				}
@@ -357,7 +356,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				
 				console.println();
 				console.print("\t" + app.getName()  + " --> ");
-				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
+				app.receiveGroup(console, type, version, blocks, blocksOk, bitTime);
 			}
 		}
 		
@@ -426,7 +425,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			
 			if(app == null) {
 				if(type == 6) {
-					newApp = new InHouse(console);
+					newApp = new InHouse();
 					workingStation.setApplicationForGroup(6, 0, newApp);
 				}
 			}
@@ -434,7 +433,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 			if(app != null) {
 				console.println();
 				console.print("\t" + app.getName() +  " --> ");
-				app.receiveGroup(type, version, blocks, blocksOk, bitTime);
+				app.receiveGroup(console, type, version, blocks, blocksOk, bitTime);
 			}
 		}
 		
@@ -567,12 +566,12 @@ public class GroupLevelDecoder implements RDSDecoder {
 		
 		// For 15B we need only group 1, and possibly group 3
 		if(type == 15 && version == 1) {
-			processBasicTuningBits(blocks[1]);
-			if(blocksOk[3]) processBasicTuningBits(blocks[3]);
+			processBasicTuningBits(console, blocks[1]);
+			if(blocksOk[3]) processBasicTuningBits(console, blocks[3]);
 		}
 		
 		// add a log message for each group
-		log.addMessage(new GroupReceived(bitTime, blocksOk, blocks));
+		log.addMessage(new GroupReceived(bitTime, blocks, consoleWriter.toString()));
 
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
@@ -600,7 +599,7 @@ public class GroupLevelDecoder implements RDSDecoder {
 				evt = reader.getGroup();
 				///System.out.println(evt);
 			} catch(EndOfStream eos) {
-				///System.out.println("EOS " + eos);
+				log.addMessage(new eu.jacquet80.rds.log.EndOfStream(station.getTimeOfLastPI()));
 				return;
 			}
 			
@@ -613,7 +612,6 @@ public class GroupLevelDecoder implements RDSDecoder {
 						log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
 					station = new TunedStation(bitTime);
 					log.addMessage(new StationTuned(bitTime, station));
-					console.println("% New station tuned");
 				}
 				
 				@Override
@@ -631,27 +629,21 @@ public class GroupLevelDecoder implements RDSDecoder {
 					
 					int[] blocks = groupEvent.blocks;
 					
-					console.printf("%04d: [", bitTime / 26);
-					//boolean[] blocksOk = allOk;
 					boolean[] blocksOk = new boolean[4];
 					int nbOk = 0;
 					for(int i=0; i<4; i++) {
 						blocksOk[i] = (blocks[i] >= 0);
 						if(blocksOk[i]) nbOk++;
-						if(blocksOk[i]) console.printf("%04X ", blocks[i]);
-						else console.print("---- ");
 					}
-					console.print("] ");
 					
 					processGroup(nbOk, blocksOk, blocks, bitTime);
-					console.println();
 					bitTime += 104;  // 104 bits per group
 					if(log != null) log.notifyGroup();
 				}
 
 				@Override
 				public void visit(FrequencyChangeEvent frequencyChangeEvent) {
-					console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
+					//console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
 				}
 			});
 			

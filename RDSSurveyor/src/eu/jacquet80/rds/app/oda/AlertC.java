@@ -25,6 +25,7 @@
 
 package eu.jacquet80.rds.app.oda;
 
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -60,7 +61,7 @@ public class AlertC extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
 		boolean messageJustCompleted = false;
 		
 		// in all cases, we need all blocks to proceed

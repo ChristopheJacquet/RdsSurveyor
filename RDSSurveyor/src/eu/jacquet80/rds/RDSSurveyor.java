@@ -50,7 +50,9 @@ import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
+import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
+import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
@@ -209,12 +211,14 @@ public class RDSSurveyor {
 		// add a station change detector
 		reader = new StationChangeDetector(reader);
 		
-		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(console, log);
+		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(log);
 		
 		// force inversion if necessary
 		if(reader instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
 			((StreamLevelDecoder) reader).forceInversion(inversion);
 		}
+		
+		final PrintStream fConsole = console;
 		
 		if(scan) {
 			if(reader instanceof TunerGroupReader) {
@@ -232,15 +236,15 @@ public class RDSSurveyor {
 								cnt++;
 								rdsReceived = tgr.newGroups();
 							} while(cnt < 4 && rdsReceived);
-							System.out.print("*** Tuning... ");
-							System.out.flush();
+							fConsole.print("*** Tuning... ");
+							fConsole.flush();
 							tgr.seek(true);
-							System.out.println("At " + tgr.getFrequency());
+							fConsole.println("At " + tgr.getFrequency());
 						}
 					}
 				}.start();
 			} else {
-				System.out.println("Scanning may be used only with a tuner (" + reader.getClass() + ")");
+				console.println("Scanning may be used only with a tuner (" + reader.getClass() + ")");
 				System.exit(1);
 			}
 		}
@@ -250,9 +254,25 @@ public class RDSSurveyor {
 			segmenter.registerAtLog(log);
 		}
 
-		groupDecoder.processStream(reader);
+		log.addNewMessageListener(new DefaultLogMessageVisitor() {
+			@Override
+			public void visit(EndOfStream endOfStream) {
+				fConsole.println("\nProcessing complete.");
+			}
+			
+			@Override
+			public void visit(GroupReceived groupReceived) {
+				fConsole.printf("%04d: [", groupReceived.getBitTime() / 26);
+				int[] blocks = groupReceived.getBlocks();
+				for(int i=0; i<4; i++) {
+					if(blocks[i] >= 0) fConsole.printf("%04X ", blocks[i]);
+					else fConsole.print("---- ");
+				}
+				fConsole.print("] ");
+				fConsole.println(groupReceived.getDecoding());
+			}
+		});
 		
-		System.out.println("\nProcessing complete.");
-		log.addMessage(new EndOfStream(0));
+		groupDecoder.processStream(reader);
 	}
 }

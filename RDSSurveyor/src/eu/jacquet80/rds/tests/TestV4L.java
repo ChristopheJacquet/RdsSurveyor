@@ -31,9 +31,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import eu.jacquet80.rds.core.GroupLevelDecoder;
+import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
-import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
@@ -49,7 +49,7 @@ public class TestV4L {
 	public TestV4L() throws FileNotFoundException {
 		final Log log = new Log();
 		PrintStream out = new PrintStream("/tmp/rds.log");
-		decoder = new GroupLevelDecoder(out, log);
+		decoder = new GroupLevelDecoder(log);
 		radio = new V4LTunerGroupReader("/dev/radio0");
 
 		new Thread() {

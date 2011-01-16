@@ -15,14 +15,12 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
-import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 
 public class InputSelectionDialog extends JFrame implements ActionListener {
