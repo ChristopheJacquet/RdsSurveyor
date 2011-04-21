@@ -8,10 +8,7 @@ import java.util.List;
 import javax.swing.AbstractListModel;
 import javax.swing.JFrame;
 import javax.swing.JList;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ListDataListener;
 
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -24,6 +21,7 @@ public class DumpDisplay extends JFrame {
 	private final Log log;
 	private final List<GroupReceived> groups = new ArrayList<GroupReceived>();
 	private final DumpListModel model;
+	private final JList list;
 	
 	public DumpDisplay(Log log) {
 		super("Group analyzer");
@@ -32,23 +30,15 @@ public class DumpDisplay extends JFrame {
 			
 		model = new DumpListModel(groups);
 		
-		final JList lst = new JList(model);
-		lst.setFont(new Font("monospaced", Font.PLAIN, lst.getFont().getSize()));
-		add(new JScrollPane(lst), BorderLayout.CENTER);
+		list = new JList(model);
+		list.setFont(new Font("monospaced", Font.PLAIN, list.getFont().getSize()));
+		add(new JScrollPane(list), BorderLayout.CENTER);
 		pack();
 		
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(GroupReceived groupReceived) {
 				groups.add(groupReceived);
-				
-				SwingUtilities.invokeLater(new Runnable() {
-					@Override
-					public void run() {
-						model.update();
-						lst.ensureIndexIsVisible(groups.size());
-					}
-				});
 			}
 			
 			@Override
@@ -61,6 +51,11 @@ public class DumpDisplay extends JFrame {
 			}
 		});
 
+	}
+	
+	public void update() {
+		model.update();
+		list.ensureIndexIsVisible(groups.size()-1);
 	}
 	
 	private static class DumpListModel extends AbstractListModel {

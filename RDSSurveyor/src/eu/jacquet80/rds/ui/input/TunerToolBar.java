@@ -110,7 +110,7 @@ public class TunerToolBar extends InputToolBar {
 			g.setColor(DISPLAY_FOREGROUND);
 			
 			g.setFont(DISPLAY_FREQUENCY_FONT);
-			String freq = Integer.toString(frequency / 1000) + "." + Integer.toString((frequency / 10) % 100);
+			String freq = String.format("%.2f", frequency/1000f);
 			Rectangle2D bounds = g.getFontMetrics().getStringBounds(freq, g);
 			g.drawString(freq, (getWidth() - (int)bounds.getWidth())/2, (int)bounds.getHeight()+2);
 			

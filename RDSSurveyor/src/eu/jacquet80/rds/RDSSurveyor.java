@@ -178,12 +178,7 @@ public class RDSSurveyor {
 		}
 		
 		Log log = new Log();
-		
-		/*
-		DumpDisplay d = new DumpDisplay(log);
-		d.setVisible(true);
-		*/
-		
+				
 		// Create the input toolbar before wrapping the reader into a station change detector
 		// and possibly a group logger (tee)
 		if(showGui) {
