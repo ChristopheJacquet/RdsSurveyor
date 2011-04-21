@@ -2,13 +2,13 @@ package eu.jacquet80.rds.log;
 
 public class GroupReceived extends LogMessage {
 	private final int[] blocks;
-	private String decoding;
+	private String analysis;
 	
-	public GroupReceived(int bitTime, int[] blocks, String decoding) {
+	public GroupReceived(int bitTime, int[] blocks, String analysis) {
 		super(bitTime);
 		
 		this.blocks = blocks;
-		this.decoding = decoding;
+		this.analysis = analysis;
 	}
 	
 	@Override
@@ -20,8 +20,8 @@ public class GroupReceived extends LogMessage {
 		return blocks;
 	}
 	
-	public String getDecoding() {
-		return decoding;
+	public String getAnalysis() {
+		return analysis;
 	}
 
 }

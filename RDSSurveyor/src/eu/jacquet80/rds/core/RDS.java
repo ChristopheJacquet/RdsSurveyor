@@ -25,6 +25,8 @@
 
 package eu.jacquet80.rds.core;
 
+import java.util.Locale;
+
 
 public class RDS {
 	private final static int matH[] = {
@@ -213,6 +215,17 @@ public class RDS {
 		case 0xF3: return ecc_F3[piCC];
 		case 0xF4: return ecc_F4[piCC];
 		default: return "Invalid";
+		}
+	}
+	
+	public final static String getCountryName(int piCC, int ecc) {
+		String isoCC = getISOCountryCode(piCC, ecc);
+		
+		try {
+			Locale locale = new Locale("en", isoCC);
+			return locale.getDisplayCountry(Locale.ENGLISH);
+		} catch(Exception e) {
+			return isoCC;
 		}
 	}
 	

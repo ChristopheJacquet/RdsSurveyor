@@ -54,6 +54,7 @@ import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.ui.DumpDisplay;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
@@ -178,6 +179,11 @@ public class RDSSurveyor {
 		
 		Log log = new Log();
 		
+		/*
+		DumpDisplay d = new DumpDisplay(log);
+		d.setVisible(true);
+		*/
+		
 		// Create the input toolbar before wrapping the reader into a station change detector
 		// and possibly a group logger (tee)
 		if(showGui) {
@@ -269,7 +275,7 @@ public class RDSSurveyor {
 					else fConsole.print("---- ");
 				}
 				fConsole.print("] ");
-				fConsole.println(groupReceived.getDecoding());
+				fConsole.println(groupReceived.getAnalysis());
 			}
 		});
 		

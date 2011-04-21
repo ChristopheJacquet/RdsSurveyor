@@ -352,7 +352,7 @@ public class MainWindow extends JFrame {
 									{
 										int ecc = station.getECC();
 										if(pi != 0 && ecc != 0)
-											txtCountry.setText(RDS.getISOCountryCode((pi>>12) & 0xF, ecc));
+											txtCountry.setText(RDS.getCountryName((pi>>12) & 0xF, ecc));
 										else txtCountry.setText("");
 
 										int lang = station.getLanguage();
