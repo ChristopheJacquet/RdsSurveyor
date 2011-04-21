@@ -41,7 +41,7 @@ import eu.jacquet80.rds.input.group.StationChangeEvent;
 public class TeeGroupReader implements GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
-	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-mm-dd HH:mm:ss Z");
+	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 	
 	public TeeGroupReader(GroupReader reader, File of) throws IOException {
 		this.reader = reader;
