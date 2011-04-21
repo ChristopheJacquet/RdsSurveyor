@@ -259,6 +259,12 @@ public class MainWindow extends JFrame {
 		
 		setPreferredSize(new Dimension(1000, 800));
 		
+		// dump display auxiliary window
+		/*
+		final DumpDisplay dumpDisplay = new DumpDisplay(log);
+		dumpDisplay.setVisible(true);
+		*/
+		
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationTuned stationTuned) {
@@ -377,6 +383,9 @@ public class MainWindow extends JFrame {
 									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
 									txtDPTY.setText(station.getDPTY() ? "Dynamic" : "Static");
 
+									// update dump display window
+									/// TODO: uncomment this
+									///dumpDisplay.update();
 								};
 							});
 
