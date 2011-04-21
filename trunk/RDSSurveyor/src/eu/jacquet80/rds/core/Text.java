@@ -102,7 +102,10 @@ public class Text {
 	public String toStringWithHighlight() {
 		if(empty) return null;
 		
-		String s = toString();
+		StringBuffer sb = new StringBuffer(toString());
+		while(sb.length() < 64) sb.append(' ');
+		String s = sb.toString();
+		
 		StringBuilder res = new StringBuilder("<html>");
 		res.append(s.substring(0, latestPos * latestLen));
 		res.append("<font color=blue>");
