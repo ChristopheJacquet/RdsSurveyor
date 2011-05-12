@@ -41,6 +41,7 @@ import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -152,6 +153,10 @@ public class MainWindow extends JFrame {
 	
 	public MainWindow(Log log, InputToolBar toolbar) {
 		super("RDS Surveyor");
+		
+		// menu bar
+		JMenuBar menuBar = Menu.buildMenuBar();
+		setJMenuBar(menuBar);
 		
 		setLayout(new BorderLayout());
 		
