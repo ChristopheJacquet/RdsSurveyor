@@ -93,7 +93,10 @@ public class RDSSurveyor {
 		StreamLevelDecoder.BitInversion inversion = BitInversion.AUTO;
 		
 		// Application name for MacOS X
-		System.setProperty("com.apple.mrj.application.apple.menu.about.name", "RDS Surveyor" );
+		try {
+			System.setProperty("com.apple.mrj.application.apple.menu.about.name", "RDS Surveyor" );
+			System.setProperty("apple.laf.useScreenMenuBar", "true");
+		} catch(Exception e) {}
 		
 		if(args.length != 0) {
 			// if arguments are provided, RDS Surveyor was launched from the
@@ -263,14 +266,8 @@ public class RDSSurveyor {
 			
 			@Override
 			public void visit(GroupReceived groupReceived) {
-				fConsole.printf("%04d: [", groupReceived.getBitTime() / 26);
-				int[] blocks = groupReceived.getBlocks();
-				for(int i=0; i<4; i++) {
-					if(blocks[i] >= 0) fConsole.printf("%04X ", blocks[i]);
-					else fConsole.print("---- ");
-				}
-				fConsole.print("] ");
-				fConsole.println(groupReceived.getAnalysis());
+				fConsole.printf("%04d: ", groupReceived.getBitTime() / 26);
+				fConsole.println(groupReceived);
 			}
 		});
 		

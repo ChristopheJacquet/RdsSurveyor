@@ -265,10 +265,8 @@ public class MainWindow extends JFrame {
 		setPreferredSize(new Dimension(1000, 800));
 		
 		// dump display auxiliary window
-		/*
-		final DumpDisplay dumpDisplay = new DumpDisplay(log);
+		final DumpDisplay dumpDisplay = new DumpDisplay(log, 10000);
 		dumpDisplay.setVisible(true);
-		*/
 		
 		log.addNewMessageListener(new DefaultLogMessageVisitor() {
 			@Override
