@@ -168,7 +168,8 @@ public class GroupLevelDecoder implements RDSDecoder {
 			int pty = (blocks[1]>>5) & 0x1F;
 			workingStation.setPTY(pty);
 			
-			console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
+			console.print("Type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
+			//console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
 		} else workingStation.addUnknownGroupToStats(nbOk);
 		
 		// Groups 0A & 0B
