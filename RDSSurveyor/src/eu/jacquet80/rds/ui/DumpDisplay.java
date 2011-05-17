@@ -7,6 +7,8 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 
 import javax.swing.BoundedRangeModel;
 import javax.swing.JFrame;
@@ -121,6 +123,8 @@ public class DumpDisplay extends JFrame {
 			super();
 			
 			setBackground(Color.WHITE);
+			
+			addMouseWheelListener(new ScrollListener());
 		}
 		
 		@Override
@@ -154,5 +158,17 @@ public class DumpDisplay extends JFrame {
 				y += lineHeight;
 			}
 		}
+	}
+	
+	private class ScrollListener implements MouseWheelListener {
+
+		@Override
+		public void mouseWheelMoved(MouseWheelEvent e) {
+			int lines = e.getWheelRotation() * 3;
+			synchronized(DumpDisplay.this) {
+				scrollModel.setValue(scrollModel.getValue() + lines);
+			}
+		}
+		
 	}
 }
