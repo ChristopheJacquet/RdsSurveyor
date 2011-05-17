@@ -149,11 +149,15 @@ public class DumpDisplay extends JFrame {
 			lineIndex = scrollModel.getValue();
 			
 			while(lineIndex < groups.length && countRemaining > 0) {
-				int type = groups[lineIndex].getGroupType();
+				// lineIndex is the "intuitive" index between 0 and the max value
+				// However the actual index of groups[] must take into account
+				// the fact that groups[] is a circular buffer
+				GroupReceived currentGroup = groups[(firstIndex + lineIndex) % groups.length];
+				int type = currentGroup.getGroupType();
 				g.setColor(type == -1 ? Color.GRAY : groupColors[type]);
-				g.drawString(groups[lineIndex].toString(), 0, y);
+				g.drawString(currentGroup.toString(), 0, y);
 				
-				lineIndex = (lineIndex + 1) % groups.length;
+				lineIndex++;
 				countRemaining--;
 				y += lineHeight;
 			}
