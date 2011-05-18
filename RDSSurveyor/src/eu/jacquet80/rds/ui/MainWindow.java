@@ -295,7 +295,6 @@ public class MainWindow extends JFrame {
 			@Override
 			public void visit(StationTuned stationTuned) {
 				synchronized(MainWindow.this) {
-					System.out.println("*** STATION TUNED ***");
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
 					pnlRT.setStation(station);

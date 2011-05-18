@@ -93,10 +93,13 @@ public class DumpDisplay extends JFrame {
 			firstIndex = (firstIndex + 1) % groups.length;
 		} else {
 			size++;
-			scrollModel.setMaximum(size);
-			scrollModel.setValue(size-numLines);
-			scrollModel.setExtent(numLines);
 		}
+
+		boolean down = scrollModel.getValue() == scrollModel.getMaximum() - scrollModel.getExtent();
+		scrollModel.setMaximum(size);
+		scrollModel.setExtent(numLines);
+		// move to the new line only if the scroll bar was all the way down:
+		if(down) scrollModel.setValue(size-numLines);
 		changed = true;
 	}
 	
