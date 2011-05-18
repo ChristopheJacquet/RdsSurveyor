@@ -32,7 +32,7 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import eu.jacquet80.rds.core.GroupLevelDecoder;
+import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder.BitInversion;
 import eu.jacquet80.rds.input.AudioFileBitReader;
@@ -42,7 +42,6 @@ import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
-import eu.jacquet80.rds.input.StationChangeDetector;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
@@ -50,21 +49,15 @@ import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
-import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.EndOfStream;
-import eu.jacquet80.rds.log.GroupReceived;
-import eu.jacquet80.rds.log.Log;
-import eu.jacquet80.rds.ui.DumpDisplay;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Segmenter;
-import eu.jacquet80.rds.ui.input.InputToolBar;
 
 public class RDSSurveyor {
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.
 	 */
-	private static PrintStream nullConsole = new PrintStream(new OutputStream() {
+	public static PrintStream nullConsole = new PrintStream(new OutputStream() {
 		@Override
 		public void write(int b) throws IOException {
 		}
@@ -170,7 +163,7 @@ public class RDSSurveyor {
 					System.exit(1);
 				}
 			}
-		} else {
+		} else if(showGui) {
 			InputSelectionDialog dialog = new InputSelectionDialog();
 			reader = dialog.makeChoice();
 		}
@@ -180,14 +173,17 @@ public class RDSSurveyor {
 			System.exit(0);
 		}
 		
-		Log log = new Log();
-				
+		
+		
+		// Create a decoder "shell"
+		final PrintStream fConsole = console;
+		DecoderShell ds = new DecoderShell(reader, fConsole);
+		
 		// Create the input toolbar before wrapping the reader into a station change detector
 		// and possibly a group logger (tee)
 		if(showGui) {
-			InputToolBar toolbar = InputToolBar.forReader(reader, log);
-			
-			MainWindow mainWindow = new MainWindow(log, toolbar);
+			MainWindow mainWindow = new MainWindow();
+			mainWindow.setReader(ds.getLog(), reader);
 			mainWindow.setVisible(true);
 		}
 		
@@ -198,6 +194,7 @@ public class RDSSurveyor {
 			String tempDir = System.getProperty("java.io.tmpdir");
 			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 		}
+		// TODO: guess above code is dead
 		
 		if(liveGroupInput && outGroupFile == null) {
 			System.out.print("Using default group output file. ");
@@ -212,17 +209,14 @@ public class RDSSurveyor {
 			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
 		}
 		
-		// add a station change detector
-		reader = new StationChangeDetector(reader);
 		
-		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(log);
-		
+		// TODO Obsolete code!!!
 		// force inversion if necessary
+		/*
 		if(reader instanceof StreamLevelDecoder && inversion != BitInversion.AUTO) {
 			((StreamLevelDecoder) reader).forceInversion(inversion);
 		}
-		
-		final PrintStream fConsole = console;
+		*/
 		
 		if(scan) {
 			if(reader instanceof TunerGroupReader) {
@@ -255,22 +249,9 @@ public class RDSSurveyor {
 
 			
 		if(segmenter != null) {
-			segmenter.registerAtLog(log);
+			segmenter.registerAtLog(ds.getLog());
 		}
 
-		log.addNewMessageListener(new DefaultLogMessageVisitor() {
-			@Override
-			public void visit(EndOfStream endOfStream) {
-				fConsole.println("\nProcessing complete.");
-			}
-			
-			@Override
-			public void visit(GroupReceived groupReceived) {
-				fConsole.printf("%04d: ", groupReceived.getBitTime() / 26);
-				fConsole.println(groupReceived);
-			}
-		});
-		
-		groupDecoder.processStream(reader);
+		ds.process();
 	}
 }

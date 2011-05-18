@@ -1,6 +1,5 @@
 package eu.jacquet80.rds.log;
 
-import java.text.Format;
 
 public class GroupReceived extends LogMessage {
 	private final int[] blocks;
