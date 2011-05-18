@@ -32,6 +32,8 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import com.sun.org.apache.bcel.internal.generic.FCONST;
+
 import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.core.StreamLevelDecoder.BitInversion;
@@ -164,6 +166,7 @@ public class RDSSurveyor {
 				}
 			}
 		} else if(showGui) {
+			console = nullConsole;
 			InputSelectionDialog dialog = new InputSelectionDialog();
 			reader = dialog.makeChoice();
 		}
@@ -176,7 +179,7 @@ public class RDSSurveyor {
 		
 		
 		// Create a decoder "shell"
-		final PrintStream fConsole = console;
+		final PrintStream fConsole = console;		// need a final variable
 		DecoderShell ds = new DecoderShell(reader, fConsole);
 		
 		// Create the input toolbar before wrapping the reader into a station change detector
