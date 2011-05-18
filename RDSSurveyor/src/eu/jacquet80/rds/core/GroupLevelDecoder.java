@@ -55,7 +55,7 @@ import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
 
-public class GroupLevelDecoder implements RDSDecoder {
+public class GroupLevelDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
 	private double time = 0.0;

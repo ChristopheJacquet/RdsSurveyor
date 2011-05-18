@@ -54,10 +54,12 @@ import javax.swing.SwingUtilities;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.LogMessageVisitor;
 import eu.jacquet80.rds.log.StationTuned;
 import eu.jacquet80.rds.ui.app.AppPanel;
 import eu.jacquet80.rds.ui.input.InputToolBar;
@@ -95,6 +97,8 @@ public class MainWindow extends JFrame {
 	
 	private final JProgressBar barBLER = new JProgressBar(0, 100);
 	
+	private final JPanel pnlInputToolbar = new JPanel(new BorderLayout());
+	
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
 			
@@ -104,7 +108,11 @@ public class MainWindow extends JFrame {
 	private TunedStation station;
 	private boolean streamFinished = false;
 	
+	private final DumpDisplay dumpDisplay;
+	
 	private Map<Application, AppPanel> currentAppPanels = new HashMap<Application, AppPanel>();
+	
+	private final LogMessageVisitor windowUpdaterVisitor;
 	
 	private void updateAppTabs() {
 		if(station == null) return;
@@ -151,10 +159,25 @@ public class MainWindow extends JFrame {
 		return panel;
 	}
 	
-	public MainWindow(Log log, InputToolBar toolbar) {
+	public void setReader(Log log, GroupReader reader) {
+		InputToolBar toolbar = InputToolBar.forReader(reader, log);
+
+		pnlInputToolbar.removeAll();
+		if(toolbar != null) {
+			pnlInputToolbar.add(toolbar, BorderLayout.CENTER);
+		}
+		pack();
+		
+		log.addNewMessageListener(windowUpdaterVisitor);
+		
+		dumpDisplay.resetForNewLog(log);
+	}
+	
+	public MainWindow() {
 		super("RDS Surveyor");
 		
 		// menu bar
+		Menu.setWindow(this);
 		JMenuBar menuBar = Menu.buildMenuBar();
 		setJMenuBar(menuBar);
 		
@@ -163,7 +186,7 @@ public class MainWindow extends JFrame {
 		JPanel globalPanel = new JPanel(new BorderLayout());
 		add(globalPanel, BorderLayout.CENTER);
 		
-		if(toolbar != null) add(toolbar, BorderLayout.NORTH);
+		add(pnlInputToolbar, BorderLayout.NORTH);
 		
 		JPanel mainPanel = new JPanel();
 		BoxLayout boxLayout = new BoxLayout(mainPanel, BoxLayout.PAGE_AXIS);
@@ -265,13 +288,14 @@ public class MainWindow extends JFrame {
 		setPreferredSize(new Dimension(1000, 800));
 		
 		// dump display auxiliary window
-		final DumpDisplay dumpDisplay = new DumpDisplay(log, 10000);
+		dumpDisplay = new DumpDisplay(10000);
 		dumpDisplay.setVisible(true);
 		
-		log.addNewMessageListener(new DefaultLogMessageVisitor() {
+		windowUpdaterVisitor = new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationTuned stationTuned) {
 				synchronized(MainWindow.this) {
+					System.out.println("*** STATION TUNED ***");
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
 					pnlRT.setStation(station);
@@ -321,7 +345,7 @@ public class MainWindow extends JFrame {
 					streamFinished = true;
 				}
 			}
-		});
+		};
 		
 		new Thread(new Runnable() {
 			public void run() {
@@ -394,15 +418,6 @@ public class MainWindow extends JFrame {
 
 							// does not work here groupStats.update(station.numericGroupStats());
 							repaint();
-						}
-						
-						if(streamFinished) {
-							// when stream finishes, update all app panels
-							// one last time before exiting
-							for(AppPanel p : currentAppPanels.values()) {
-								p.notifyChange();
-							}
-							return;
 						}
 					}
 				}

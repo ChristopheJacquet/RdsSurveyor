@@ -55,7 +55,7 @@ public class DumpDisplay extends JFrame {
 		ODA_COLOR, Color.BLACK				// 15
 	};
 	
-	public DumpDisplay(Log log, int scrollBackSize) {
+	public DumpDisplay(int scrollBackSize) {
 		super("Group analyzer");
 		
 		this.groups = new GroupReceived[scrollBackSize];
@@ -65,21 +65,10 @@ public class DumpDisplay extends JFrame {
 		this.add(scroll, BorderLayout.EAST);
 		
 		scrollModel = scroll.getModel();
-		scrollModel.setExtent(10);
-		scrollModel.setMinimum(0);
-		scrollModel.setMaximum(1);
-		scrollModel.setValue(0);
 		
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setPreferredSize(new Dimension((int)(2*dim.getWidth()/3), (int)(2*dim.getHeight()/3)));
 		pack();
-
-		log.addNewMessageListener(new DefaultLogMessageVisitor() {
-			@Override
-			public void visit(GroupReceived groupReceived) {
-				addGroup(groupReceived);
-			}
-		});
 
 		new Thread() {
 			public void run() {
@@ -174,5 +163,25 @@ public class DumpDisplay extends JFrame {
 			}
 		}
 		
+	}
+
+	public void resetForNewLog(Log log) {
+		log.addNewMessageListener(new DefaultLogMessageVisitor() {
+			@Override
+			public void visit(GroupReceived groupReceived) {
+				addGroup(groupReceived);
+			}
+		});
+		
+		synchronized(this) {
+			scrollModel.setExtent(0);
+			scrollModel.setMinimum(0);
+			scrollModel.setMaximum(0);
+			scrollModel.setValue(0);
+			
+			firstIndex = 0;
+			nextIndex = 0;
+			size = 0;
+		}
 	}
 }
