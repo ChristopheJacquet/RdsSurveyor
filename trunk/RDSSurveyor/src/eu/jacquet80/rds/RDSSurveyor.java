@@ -53,6 +53,7 @@ import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
+import eu.jacquet80.rds.ui.PlaylistWindow;
 import eu.jacquet80.rds.ui.Segmenter;
 
 public class RDSSurveyor {
@@ -188,6 +189,9 @@ public class RDSSurveyor {
 			MainWindow mainWindow = new MainWindow();
 			mainWindow.setReader(ds.getLog(), reader);
 			mainWindow.setVisible(true);
+			
+			PlaylistWindow playWindow = new PlaylistWindow(mainWindow);
+			playWindow.setVisible(true);
 		}
 		
 		// when input is "live", always create an output file
