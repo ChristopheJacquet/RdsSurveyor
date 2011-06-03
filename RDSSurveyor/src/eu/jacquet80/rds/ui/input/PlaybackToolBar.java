@@ -10,8 +10,10 @@ import javax.swing.JCheckBox;
 
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
+import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.LogMessageVisitor;
 import eu.jacquet80.rds.log.StationLost;
 
 public class PlaybackToolBar extends InputToolBar {
@@ -26,6 +28,9 @@ public class PlaybackToolBar extends InputToolBar {
 	private final Semaphore waitClick = new Semaphore(0);
 	private long initialTime;
 	private int nbGroups = 0;
+	private boolean newStream = false;
+	
+	private final LogMessageVisitor visitor;
 
 	@Override
 	protected void handleButtonAction(ActionEvent e) {
@@ -52,21 +57,28 @@ public class PlaybackToolBar extends InputToolBar {
 		addSeparator(new Dimension(20, 0));
 		add(chkRealtime);
 		
-		log.addNewMessageListener(new DefaultLogMessageVisitor() {
+		visitor = new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationLost stationLost) {
-				btnNext.setEnabled(true);
-				waitClick.acquireUninterruptibly();
+				if(! newStream) {
+					btnNext.setEnabled(true);
+					waitClick.acquireUninterruptibly();
+				} else {
+					newStream = false;
+				}
 				initialTime = System.currentTimeMillis();
 				nbGroups = 0;
 			}
 
-			/*
+			
 			@Override
 			public void visit(EndOfStream endOfStream) {
-				btnNext.setEnabled(false);
+				newStream = true;
+				// If end of stream is reached, then if a new stream is fed into the system,
+				// a station lost event will first be generated. But this one
+				// must not wait for user input. That's what newStream is for.
 			}
-			*/
+			
 			
 			@Override
 			public void visit(GroupReceived groupReceived) {
@@ -79,11 +91,20 @@ public class PlaybackToolBar extends InputToolBar {
 				if(toWait > 0) {
 					try {
 						Thread.sleep((long)toWait);
-					} catch (InterruptedException e) {}
+					} catch (InterruptedException e) {
+						System.err.println("Thread interrupted in PlaybackToolBar");
+					}
 				}
 			}
-		});
+		};
+		
+		log.addNewMessageListener(visitor);
 		
 		initialTime = System.currentTimeMillis();
+	}
+
+	@Override
+	public void unregister() {
+		log.removeNewMessageListener(visitor);
 	}		
 }

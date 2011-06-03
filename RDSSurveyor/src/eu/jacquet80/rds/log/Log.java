@@ -26,12 +26,16 @@
 package eu.jacquet80.rds.log;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Log {
 	private ArrayList<LogMessage> messages = new ArrayList<LogMessage>();
-	//private LinkedList<Runnable> groupListeners = new LinkedList<Runnable>();
-	private LinkedList<LogMessageVisitor> newMessageListeners = new LinkedList<LogMessageVisitor>();
+
+	// create a set of log message visitors in order to ensure that the same
+	// visitor is not registered several times
+	private Set<LogMessageVisitor> newMessageListeners = new HashSet<LogMessageVisitor>();
 	
 	public synchronized void addMessage(LogMessage message) {
 		messages.add(message);
@@ -59,8 +63,12 @@ public class Log {
 		groupListeners.add(r);
 	}*/
 	
-	public void addNewMessageListener(LogMessageVisitor v) {
+	public synchronized void addNewMessageListener(LogMessageVisitor v) {
 		newMessageListeners.add(v);
+	}
+	
+	public synchronized void removeNewMessageListener(LogMessageVisitor v) {
+		newMessageListeners.remove(v);
 	}
 	
 	public String toString() {

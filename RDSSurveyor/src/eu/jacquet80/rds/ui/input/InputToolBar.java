@@ -60,4 +60,6 @@ public abstract class InputToolBar extends JToolBar {
 	}
 	
 	protected abstract void handleButtonAction(ActionEvent e);
+	
+	public abstract void unregister();
 }

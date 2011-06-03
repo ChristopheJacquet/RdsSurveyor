@@ -79,13 +79,8 @@ public class Menu {
 						case Open: {
 							InputSelectionDialog dialog = new InputSelectionDialog();
 							GroupReader reader = dialog.makeChoice();
-							DecoderShell ds = new DecoderShell(reader, RDSSurveyor.nullConsole);
-							mainWindow.setReader(ds.getLog(), reader);
-							try {
-								ds.process();
-							} catch (IOException exc) {
-								JOptionPane.showMessageDialog(mainWindow, "Error while processing stream: " + exc, "Probable bug encountered", JOptionPane.ERROR_MESSAGE);
-							}
+							mainWindow.setReader(DecoderShell.instance.getLog(), reader);
+							DecoderShell.instance.process(reader);
 							break;
 						}
 						default:

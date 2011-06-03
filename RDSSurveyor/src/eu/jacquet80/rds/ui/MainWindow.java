@@ -114,6 +114,8 @@ public class MainWindow extends JFrame {
 	
 	private final LogMessageVisitor windowUpdaterVisitor;
 	
+	private InputToolBar toolbar = null;
+	
 	private void updateAppTabs() {
 		if(station == null) return;
 		for(Application app : station.getApplications()) {
@@ -160,13 +162,16 @@ public class MainWindow extends JFrame {
 	}
 	
 	public void setReader(Log log, GroupReader reader) {
-		InputToolBar toolbar = InputToolBar.forReader(reader, log);
+		if(toolbar != null) toolbar.unregister();
+		
+		toolbar = InputToolBar.forReader(reader, log);
 
 		pnlInputToolbar.removeAll();
 		if(toolbar != null) {
 			pnlInputToolbar.add(toolbar, BorderLayout.CENTER);
 		}
 		pack();
+		repaint();
 		
 		log.addNewMessageListener(windowUpdaterVisitor);
 		
@@ -346,7 +351,11 @@ public class MainWindow extends JFrame {
 			}
 		};
 		
-		new Thread(new Runnable() {
+		new Thread() {
+			{
+				setName("RDSSurveyor-MainWindow-updater");
+			}
+			
 			public void run() {
 				while(true) {
 					try {
@@ -422,7 +431,7 @@ public class MainWindow extends JFrame {
 				}
 			}
 
-		}).start();
+		}.start();
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
