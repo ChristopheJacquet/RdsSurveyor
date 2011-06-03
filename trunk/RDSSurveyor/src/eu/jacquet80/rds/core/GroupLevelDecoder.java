@@ -32,6 +32,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
+import javax.swing.text.html.HTMLDocument.HTMLReader.IsindexAction;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.InHouse;
@@ -588,70 +589,76 @@ public class GroupLevelDecoder {
 		station = new TunedStation(time);
 	}
 	
-	public void processStream(RDSReader rdsReader) throws IOException {
-		GroupReader reader = (GroupReader)rdsReader;
-		//final boolean[] allOk = {true, true, true, true};
-		//final boolean[] noneOk = {false, false, false, false};
+	/**
+	 * Processes one group in the group stream available on the given reader.
+	 * 
+	 * @param reader a group reader
+	 * @return {@code false} if the end of the stream has been reached, 
+	 * {@code true} otherwise
+	 * @throws IOException
+	 */
+	public boolean processOneGroup(GroupReader reader) throws IOException {
 		GroupReaderEvent evt;
-		
-		for(;;) {
-			try {
-				///System.out.print(reader + "> ");
-				evt = reader.getGroup();
-				///System.out.println(evt);
-			} catch(EndOfStream eos) {
-				log.addMessage(new eu.jacquet80.rds.log.EndOfStream(station.getTimeOfLastPI()));
-				return;
+
+		try {
+			///System.out.print(reader + "> ");
+			evt = reader.getGroup();
+			///System.out.println(evt);
+		} catch(EndOfStream eos) {
+			log.addMessage(new eu.jacquet80.rds.log.EndOfStream(station.getTimeOfLastPI()));
+			return false;
+		}
+
+		evt.accept(new GroupReaderEventVisitor() {
+			int bitTime = 0;
+
+			@Override
+			public void visit(StationChangeEvent stationChangeEvent) {
+				if(station != null)
+					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
+				station = new TunedStation(bitTime);
+				log.addMessage(new StationTuned(bitTime, station));
 			}
-			
-			evt.accept(new GroupReaderEventVisitor() {
-				int bitTime = 0;
-				
-				@Override
-				public void visit(StationChangeEvent stationChangeEvent) {
-					if(station != null)
-						log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
+
+			@Override
+			public void visit(GroupEvent groupEvent) {
+				this.bitTime = groupEvent.bitTime;
+
+				// defensive programming: station should not be null...
+				// but a (defective) input driver may forget to send the
+				// StationChangeEvent...
+				if(station == null) {
 					station = new TunedStation(bitTime);
 					log.addMessage(new StationTuned(bitTime, station));
 				}
-				
-				@Override
-				public void visit(GroupEvent groupEvent) {
-					this.bitTime = groupEvent.bitTime;
-					
-					// defensive programming: station should not be null...
-					// but a (defective) input driver may forget to send the
-					// StationChangeEvent...
-					if(station == null) {
-						station = new TunedStation(bitTime);
-						log.addMessage(new StationTuned(bitTime, station));
-					}
-					// end defensive programming section
-					
-					int[] blocks = groupEvent.blocks;
-					
-					boolean[] blocksOk = new boolean[4];
-					int nbOk = 0;
-					for(int i=0; i<4; i++) {
-						blocksOk[i] = (blocks[i] >= 0);
-						if(blocksOk[i]) nbOk++;
-					}
-					
-					processGroup(nbOk, blocksOk, blocks, bitTime);
-					bitTime += 104;  // 104 bits per group
-					if(log != null) log.notifyGroup();
+				// end defensive programming section
+
+				int[] blocks = groupEvent.blocks;
+
+				boolean[] blocksOk = new boolean[4];
+				int nbOk = 0;
+				for(int i=0; i<4; i++) {
+					blocksOk[i] = (blocks[i] >= 0);
+					if(blocksOk[i]) nbOk++;
 				}
 
-				@Override
-				public void visit(FrequencyChangeEvent frequencyChangeEvent) {
-					//console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
-				}
-			});
-			
+				processGroup(nbOk, blocksOk, blocks, bitTime);
+				bitTime += 104;  // 104 bits per group
+				if(log != null) log.notifyGroup();
+			}
 
-			
-			/*
-			 * TODO FIXME: do we really need this?
+			@Override
+			public void visit(FrequencyChangeEvent frequencyChangeEvent) {
+				//console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
+			}
+		});
+		
+		return true;
+
+
+
+		/*
+		 * TODO FIXME: do we really need this?
 			// detect isolated groups with wrong PI
 			// (only if block 0 was received correctly...)
 			if(blocks[0] != -1) {
@@ -659,7 +666,7 @@ public class GroupLevelDecoder {
 					blocksOk = noneOk;
 				} else lastPI = blocks[0];
 			}
-			
+
 			// detect isolated groups with wrong PTY/TP
 			// (only if block 1 was received correctly...)
 			if(blocks[1] != -1) {
@@ -667,7 +674,7 @@ public class GroupLevelDecoder {
 					blocksOk = noneOk;
 				} else lastPTY = ((blocks[1]>>5) & 0x3F);
 			}
-			
+
 			// detect spurious B-type groups
 			// need to have blocks 0, 1 & 2 to do this
 			if(blocks[0] != -1 && blocks[1] != -1 && blocks[2] != -1) { 
@@ -675,10 +682,9 @@ public class GroupLevelDecoder {
 					if(blocks[0] != blocks[2]) blocksOk = noneOk;
 				}
 			}
-			*/
-		}
+		 */
 	}
-	
+
 	private static String toASCII(String s) {
 		StringBuffer res = new StringBuffer(s.length());
 		for(int i=0; i<s.length(); i++) {

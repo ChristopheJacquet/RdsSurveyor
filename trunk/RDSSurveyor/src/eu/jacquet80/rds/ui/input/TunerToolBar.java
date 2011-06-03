@@ -125,4 +125,9 @@ public class TunerToolBar extends InputToolBar {
 		}
 		
 	}
+	
+	@Override
+	public void unregister() {
+		// nothing to do, this toolbar is not registered as a log listener
+	}
 }

@@ -9,6 +9,8 @@ import java.awt.Graphics2D;
 import java.awt.Toolkit;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.swing.BoundedRangeModel;
 import javax.swing.JFrame;
@@ -55,6 +57,8 @@ public class DumpDisplay extends JFrame {
 		ODA_COLOR, Color.BLACK				// 15
 	};
 	
+	private Set<Log> logsImRegisteredAt = new HashSet<Log>();
+	
 	public DumpDisplay(int scrollBackSize) {
 		super("Group analyzer");
 		
@@ -71,6 +75,10 @@ public class DumpDisplay extends JFrame {
 		pack();
 
 		new Thread() {
+			{
+				setName("RDSSurveyor-DumpDisplay-updater");
+			}
+			
 			public void run() {
 				for(;;) {
 					update();
@@ -169,12 +177,19 @@ public class DumpDisplay extends JFrame {
 	}
 
 	public void resetForNewLog(Log log) {
-		log.addNewMessageListener(new DefaultLogMessageVisitor() {
-			@Override
-			public void visit(GroupReceived groupReceived) {
-				addGroup(groupReceived);
-			}
-		});
+		// register at the log, but avoid registering twice at the same log
+		// (otherwise each line read would appear twice (or more) in the
+		// window...)
+		if(! logsImRegisteredAt.contains(log)) {
+			log.addNewMessageListener(new DefaultLogMessageVisitor() {
+				@Override
+				public void visit(GroupReceived groupReceived) {
+					addGroup(groupReceived);
+				}
+			});
+			
+			logsImRegisteredAt.add(log);
+		}
 		
 		synchronized(this) {
 			scrollModel.setExtent(0);

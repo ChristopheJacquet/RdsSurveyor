@@ -141,9 +141,9 @@ public class RDSSurveyor {
 				} else if("-nogui".equals(args[i])) {
 					showGui = false;
 				} else if("-noconsole".equals(args[i])) {
-					console = nullConsole;
+					console = null;
 				} else if("-segment".equals(args[i])) {
-					console = nullConsole;   // implies -noconsole
+					console = null;   // implies -noconsole
 					showGui = false;         // implies -nogui
 					segmenter = new Segmenter(System.out);
 				} else if("-scan".equals(args[i])) {
@@ -167,7 +167,7 @@ public class RDSSurveyor {
 				}
 			}
 		} else if(showGui) {
-			console = nullConsole;
+			console = null;
 			InputSelectionDialog dialog = new InputSelectionDialog();
 			reader = dialog.makeChoice();
 		}
@@ -180,14 +180,14 @@ public class RDSSurveyor {
 		
 		
 		// Create a decoder "shell"
-		final PrintStream fConsole = console;		// need a final variable
-		DecoderShell ds = new DecoderShell(reader, fConsole);
+		final PrintStream fConsole = console == null ? nullConsole : console;
+		DecoderShell.instance.setConsole(console);
 		
 		// Create the input toolbar before wrapping the reader into a station change detector
 		// and possibly a group logger (tee)
 		if(showGui) {
 			MainWindow mainWindow = new MainWindow();
-			mainWindow.setReader(ds.getLog(), reader);
+			mainWindow.setReader(DecoderShell.instance.getLog(), reader);
 			mainWindow.setVisible(true);
 			
 			PlaylistWindow playWindow = new PlaylistWindow(mainWindow);
@@ -256,9 +256,9 @@ public class RDSSurveyor {
 
 			
 		if(segmenter != null) {
-			segmenter.registerAtLog(ds.getLog());
+			segmenter.registerAtLog(DecoderShell.instance.getLog());
 		}
 
-		ds.process();
+		DecoderShell.instance.process(reader);
 	}
 }

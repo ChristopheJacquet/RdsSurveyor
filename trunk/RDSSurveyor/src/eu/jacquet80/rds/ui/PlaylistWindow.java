@@ -38,6 +38,7 @@ public class PlaylistWindow extends JFrame {
 	private static final Pattern linkPattern = Pattern.compile("<a.*?href=['\"](.*?\\.(?:rds|spy))['\"].*?>(.*?)</a>", 
 			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 	private final MainWindow main;
+	private Item currentItem = null;
 
 	public PlaylistWindow(final MainWindow main) {
 		super("RDS Playlist");
@@ -60,27 +61,30 @@ public class PlaylistWindow extends JFrame {
 			
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
-				Item item = (Item)list.getSelectedValue();
+				final Item item = (Item)list.getSelectedValue();
 				
-				final GroupReader reader;
-				try {
-					reader = new HexFileGroupReader(item.url);
-				} catch (IOException e1) {
-					reportError("Could not open selected file");
-					return;
-				}
-				
-				new Thread() {
-					public void run() {
-						DecoderShell ds = new DecoderShell(reader, RDSSurveyor.nullConsole);
-						main.setReader(ds.getLog(), reader);
-						try {
-							ds.process();
-						} catch (IOException exc) {
-							JOptionPane.showMessageDialog(main, "Error while processing stream: " + exc, "Probable bug encountered", JOptionPane.ERROR_MESSAGE);
+				if(item != currentItem) {
+					currentItem = item;
+
+					new Thread() {
+						{
+							setName("RDSSurveyor-PlaylistWindow-Launcher");
 						}
-					}
-				}.start();
+
+						public void run() {
+							final GroupReader reader;
+							try {
+								reader = new HexFileGroupReader(item.url);
+							} catch (IOException e1) {
+								reportError("Could not open selected file");
+								return;
+							}
+
+							main.setReader(DecoderShell.instance.getLog(), reader);
+							DecoderShell.instance.process(reader);						
+						}
+					}.start();
+				}
 			}
 		});
 		
@@ -141,7 +145,8 @@ public class PlaylistWindow extends JFrame {
 		Matcher matcher = linkPattern.matcher(contents);
 		while(matcher.find()) {
 			try {
-				String caption = matcher.group(2).replace("&nbsp;", " ").trim();
+				//String caption = matcher.group(2).replace("&nbsp;", " ").trim();
+				String caption = "<html>" + matcher.group(2) + "</html>";
 				items.add(new Item(caption, new URL(pageURL, matcher.group(1))));
 			} catch (MalformedURLException e) {
 				System.err.println("Warning: bad URL in web page: " + matcher.group(0) + " -> " + e);
