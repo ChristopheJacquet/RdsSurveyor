@@ -6,6 +6,7 @@ import java.util.concurrent.Semaphore;
 
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.StationChangeDetector;
+import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.GroupReceived;
@@ -31,13 +32,26 @@ public class DecoderShell {
 				setName("RDS-Worker");
 
 				try {
-					boolean goOn;
 					while(true) {
 						groupReady.acquireUninterruptibly();
 						
-						synchronized(DecoderShell.this) {
-							goOn = groupDecoder.processOneGroup(reader);
+						GroupReaderEvent evt;
+						boolean goOn;
+
+						try {
+							GroupReader r;
+							synchronized(DecoderShell.this) {
+								r = reader;
+							}
+							evt = r.getGroup();
+							goOn = true;
+							groupDecoder.processOneGroup(evt);
+							
+						} catch(eu.jacquet80.rds.input.GroupReader.EndOfStream eos) {
+							log.addMessage(new eu.jacquet80.rds.log.EndOfStream(-1));
+							goOn = false;
 						}
+
 						if(goOn) groupReady.release();
 					}
 				} catch (IOException e) {

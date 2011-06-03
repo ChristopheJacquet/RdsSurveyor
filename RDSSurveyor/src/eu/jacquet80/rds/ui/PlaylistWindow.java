@@ -26,7 +26,6 @@ import javax.swing.JScrollPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;

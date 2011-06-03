@@ -589,6 +589,51 @@ public class GroupLevelDecoder {
 		station = new TunedStation(time);
 	}
 	
+	
+	private final GroupReaderEventVisitor readerEventVisitor = new GroupReaderEventVisitor() {
+		int bitTime = 0;
+
+		@Override
+		public void visit(StationChangeEvent stationChangeEvent) {
+			if(station != null)
+				log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
+			station = new TunedStation(bitTime);
+			log.addMessage(new StationTuned(bitTime, station));
+		}
+
+		@Override
+		public void visit(GroupEvent groupEvent) {
+			this.bitTime = groupEvent.bitTime;
+
+			// defensive programming: station should not be null...
+			// but a (defective) input driver may forget to send the
+			// StationChangeEvent...
+			if(station == null) {
+				station = new TunedStation(bitTime);
+				log.addMessage(new StationTuned(bitTime, station));
+			}
+			// end defensive programming section
+
+			int[] blocks = groupEvent.blocks;
+
+			boolean[] blocksOk = new boolean[4];
+			int nbOk = 0;
+			for(int i=0; i<4; i++) {
+				blocksOk[i] = (blocks[i] >= 0);
+				if(blocksOk[i]) nbOk++;
+			}
+
+			processGroup(nbOk, blocksOk, blocks, bitTime);
+			bitTime += 104;  // 104 bits per group
+			if(log != null) log.notifyGroup();
+		}
+
+		@Override
+		public void visit(FrequencyChangeEvent frequencyChangeEvent) {
+			//console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
+		}
+	};
+	
 	/**
 	 * Processes one group in the group stream available on the given reader.
 	 * 
@@ -597,64 +642,8 @@ public class GroupLevelDecoder {
 	 * {@code true} otherwise
 	 * @throws IOException
 	 */
-	public boolean processOneGroup(GroupReader reader) throws IOException {
-		GroupReaderEvent evt;
-
-		try {
-			///System.out.print(reader + "> ");
-			evt = reader.getGroup();
-			///System.out.println(evt);
-		} catch(EndOfStream eos) {
-			log.addMessage(new eu.jacquet80.rds.log.EndOfStream(station.getTimeOfLastPI()));
-			return false;
-		}
-
-		evt.accept(new GroupReaderEventVisitor() {
-			int bitTime = 0;
-
-			@Override
-			public void visit(StationChangeEvent stationChangeEvent) {
-				if(station != null)
-					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-				station = new TunedStation(bitTime);
-				log.addMessage(new StationTuned(bitTime, station));
-			}
-
-			@Override
-			public void visit(GroupEvent groupEvent) {
-				this.bitTime = groupEvent.bitTime;
-
-				// defensive programming: station should not be null...
-				// but a (defective) input driver may forget to send the
-				// StationChangeEvent...
-				if(station == null) {
-					station = new TunedStation(bitTime);
-					log.addMessage(new StationTuned(bitTime, station));
-				}
-				// end defensive programming section
-
-				int[] blocks = groupEvent.blocks;
-
-				boolean[] blocksOk = new boolean[4];
-				int nbOk = 0;
-				for(int i=0; i<4; i++) {
-					blocksOk[i] = (blocks[i] >= 0);
-					if(blocksOk[i]) nbOk++;
-				}
-
-				processGroup(nbOk, blocksOk, blocks, bitTime);
-				bitTime += 104;  // 104 bits per group
-				if(log != null) log.notifyGroup();
-			}
-
-			@Override
-			public void visit(FrequencyChangeEvent frequencyChangeEvent) {
-				//console.println("% Frequency changed: " + frequencyChangeEvent.frequency);
-			}
-		});
-		
-		return true;
-
+	public void processOneGroup(GroupReaderEvent evt) throws IOException {
+		evt.accept(readerEventVisitor);
 
 
 		/*
