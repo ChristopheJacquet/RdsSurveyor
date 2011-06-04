@@ -29,6 +29,7 @@ import java.io.PrintStream;
 
 import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
+import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
@@ -53,9 +54,10 @@ public class Segmenter {
 			console.println((int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
 					String.format("%04X", station.getPI()) + "\t " + 
 					String.format("%10s", station.getTotalBlocksOk() + "/" + station.getTotalBlocks()) + "\t " +
-					station.getPS() + "\t " + station.getStationName() + "\t " + station.getDynamicPSmessage());
+					station.getPS() + "\t " + station.getStationName() + "\t " + station.getDynamicPSmessage() +
+					"\t " + station.getDateTime());
 		}
-
+		
 		public void visit(StationTuned stationTuned) {
 			startTime = stationTuned.getBitTime();
 		}

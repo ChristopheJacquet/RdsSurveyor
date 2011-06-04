@@ -26,7 +26,7 @@ public class PlaybackToolBar extends InputToolBar {
 	
 	private final Log log;
 	
-	private boolean realtime = true;
+	private boolean realtime;
 	private final Semaphore waitClick = new Semaphore(0);
 	private long initialTime;
 	private int nbGroups = 0;
@@ -49,9 +49,9 @@ public class PlaybackToolBar extends InputToolBar {
 		
 		btnNext.setEnabled(false);
 		
-		final JCheckBox chkRealtime = 
-			new JCheckBox("Simulate real time", 
-					RDSSurveyor.preferences.getBoolean(PREF_REALTIME, true));
+		realtime = RDSSurveyor.preferences.getBoolean(PREF_REALTIME, true);
+		
+		final JCheckBox chkRealtime = new JCheckBox("Simulate real time", realtime);
 		
 		chkRealtime.addActionListener(new ActionListener() {
 			@Override
