@@ -11,6 +11,7 @@ import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.StationLost;
 
 public class DecoderShell {
 	private final Log log = new Log();
@@ -21,6 +22,7 @@ public class DecoderShell {
 	private GroupReader reader;
 	
 	private final Semaphore groupReady = new Semaphore(0);
+	private boolean quitAfterProcess = false;
 	
 	public final static DecoderShell instance = new DecoderShell();
 	
@@ -28,9 +30,11 @@ public class DecoderShell {
 		final GroupLevelDecoder groupDecoder = new GroupLevelDecoder(log);
 		
 		worker = new Thread() {
-			public void run() {
+			{
 				setName("RDS-Worker");
-
+			}
+			
+			public void run() {
 				try {
 					while(true) {
 						groupReady.acquireUninterruptibly();
@@ -48,8 +52,13 @@ public class DecoderShell {
 							groupDecoder.processOneGroup(evt);
 							
 						} catch(eu.jacquet80.rds.input.GroupReader.EndOfStream eos) {
+							TunedStation lastStation = groupDecoder.getTunedStation();
+							if(lastStation != null) {
+								log.addMessage(new StationLost(-1, lastStation));
+							}
 							log.addMessage(new eu.jacquet80.rds.log.EndOfStream(-1));
 							goOn = false;
+							if(quitAfterProcess) return;
 						}
 
 						if(goOn) groupReady.release();
@@ -93,5 +102,10 @@ public class DecoderShell {
 		this.reader = new StationChangeDetector(reader);
 		
 		this.groupReady.release();
+	}
+	
+	public void processAndQuit(final GroupReader reader) {
+		this.quitAfterProcess = true;
+		process(reader);
 	}
 }

@@ -259,6 +259,10 @@ public class RDSSurveyor {
 			segmenter.registerAtLog(DecoderShell.instance.getLog());
 		}
 
-		DecoderShell.instance.process(reader);
+		if(showGui) {
+			DecoderShell.instance.process(reader);
+		} else {
+			DecoderShell.instance.processAndQuit(reader);
+		}
 	}
 }
