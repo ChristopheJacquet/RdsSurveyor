@@ -109,12 +109,23 @@ public class MainWindow extends JFrame {
 	private boolean streamFinished = false;
 	
 	private final DumpDisplay dumpDisplay;
+	private PlaylistWindow playlistWindow;
 	
 	private Map<Application, AppPanel> currentAppPanels = new HashMap<Application, AppPanel>();
 	
 	private final LogMessageVisitor windowUpdaterVisitor;
 	
 	private InputToolBar toolbar = null;
+	
+	
+	public DumpDisplay getDumpDisplay() {
+		return dumpDisplay;
+	}
+	
+	public PlaylistWindow getPlaylistWindow() {
+		return playlistWindow;
+	}
+	
 	
 	private void updateAppTabs() {
 		if(station == null) return;
@@ -292,9 +303,15 @@ public class MainWindow extends JFrame {
 		
 		setPreferredSize(new Dimension(1000, 800));
 		
+		// playlist auxiliary window
+		this.playlistWindow = new PlaylistWindow(this);
+		///playWindow.setVisible(true);
+
+		
 		// dump display auxiliary window
-		dumpDisplay = new DumpDisplay(10000);
-		dumpDisplay.setVisible(true);
+		this.dumpDisplay = new DumpDisplay(10000);
+		///dumpDisplay.setVisible(true);
+		
 		
 		windowUpdaterVisitor = new DefaultLogMessageVisitor() {
 			@Override
@@ -436,6 +453,7 @@ public class MainWindow extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		pack();
+		setLocationRelativeTo(null);  // center window on screen
 	}
 
 }

@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.prefs.Preferences;
 
 import com.sun.org.apache.bcel.internal.generic.FCONST;
 
@@ -57,6 +58,8 @@ import eu.jacquet80.rds.ui.PlaylistWindow;
 import eu.jacquet80.rds.ui.Segmenter;
 
 public class RDSSurveyor {
+	public final static Preferences preferences = Preferences.userRoot().node("/eu/jacquet80/rdssurveyor");
+	
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.
 	 */
@@ -189,9 +192,6 @@ public class RDSSurveyor {
 			MainWindow mainWindow = new MainWindow();
 			mainWindow.setReader(DecoderShell.instance.getLog(), reader);
 			mainWindow.setVisible(true);
-			
-			PlaylistWindow playWindow = new PlaylistWindow(mainWindow);
-			playWindow.setVisible(true);
 		}
 		
 		// when input is "live", always create an output file

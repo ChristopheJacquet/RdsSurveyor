@@ -8,6 +8,7 @@ import java.util.concurrent.Semaphore;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 
+import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -16,8 +17,9 @@ import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.LogMessageVisitor;
 import eu.jacquet80.rds.log.StationLost;
 
+@SuppressWarnings("serial")
 public class PlaybackToolBar extends InputToolBar {
-	private static final long serialVersionUID = 8528017046827475742L;
+	private final static String PREF_REALTIME = "playback_realtime";
 
 	private final static String NEXT_BUTTON = "NEXT";
 	private final JButton btnNext = addButton("Next station", Image.FFWD, NEXT_BUTTON);
@@ -47,11 +49,15 @@ public class PlaybackToolBar extends InputToolBar {
 		
 		btnNext.setEnabled(false);
 		
-		final JCheckBox chkRealtime = new JCheckBox("Simulate real time", true);
+		final JCheckBox chkRealtime = 
+			new JCheckBox("Simulate real time", 
+					RDSSurveyor.preferences.getBoolean(PREF_REALTIME, true));
+		
 		chkRealtime.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent evt) {
 				realtime = chkRealtime.isSelected();
+				RDSSurveyor.preferences.putBoolean(PREF_REALTIME, realtime);
 			}
 		});
 		addSeparator(new Dimension(20, 0));
@@ -82,6 +88,7 @@ public class PlaybackToolBar extends InputToolBar {
 			
 			@Override
 			public void visit(GroupReceived groupReceived) {
+				newStream = false;  // if group received, not new stream any longer
 				nbGroups++;
 				
 				if(! realtime) return;
