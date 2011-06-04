@@ -18,7 +18,7 @@ dev = "/dev/radio0"
 
 FREQUENCY_MIN =  87500
 FREQUENCY_MAX = 108000
-FREQUENCY_STEP = 50
+FREQUENCY_STEP = 100
 FREQUENCY_FRAC = 16
 
 def readfreq(dev, outfile):
@@ -64,6 +64,7 @@ class RDSHandler(SocketServer.StreamRequestHandler):
 					data = self.rfile.readline().strip().upper()
 					parts = data.split()
 					cmd = parts[0]
+					print cmd + " / " + data
 					if cmd == 'QUIT':
 						return
 					if cmd == "SET_FREQ":
