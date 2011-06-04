@@ -25,21 +25,31 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 
+import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 
+@SuppressWarnings("serial")
 public class NetworkOpenDialog extends JFrame {
-	private static final long serialVersionUID = 8761399836097550548L;
-
+	private final static String
+		PREF_TCP_HOST = "open_net_tcp_host",
+		PREF_TCP_PORT = "open_net_tcp_port",
+		PREF_URL = "open_net_http_url",
+		PREF_NET_TYPE = "open_net_type";
+	
+	private final static int
+		VAL_NET_TYPE_HTTP = 1,
+		VAL_NET_TYPE_TCP = 2;
+	
 	private final JTextField 
-			txtHost = new JTextField(""), 
-			txtPort = new JTextField("8750"),
-			txtURL = new JTextField();
+			txtHost = new JTextField(RDSSurveyor.preferences.get(PREF_TCP_HOST, "")), 
+			txtPort = new JTextField(RDSSurveyor.preferences.get(PREF_TCP_PORT, "8750")),
+			txtURL = new JTextField(RDSSurveyor.preferences.get(PREF_URL, ""));
 	
 	private final JRadioButton
 			radTCP = new JRadioButton("Network connection to a local device (TCP)"),
-			radHTTP = new JRadioButton("Use log file published on a web site (HTTP)", true);
+			radHTTP = new JRadioButton("Use log file published on a web site (HTTP)");
 	
 	private final ButtonGroup buttons = new ButtonGroup();
 	
@@ -49,6 +59,10 @@ public class NetworkOpenDialog extends JFrame {
 	
 	private NetworkOpenDialog() {
 		super("Select network source");
+		
+		int pref_net_type = RDSSurveyor.preferences.getInt(PREF_NET_TYPE, VAL_NET_TYPE_HTTP);
+		radHTTP.setSelected(pref_net_type == VAL_NET_TYPE_HTTP);
+		radTCP.setSelected(pref_net_type == VAL_NET_TYPE_TCP);
 		
 		buttons.add(radHTTP);
 		buttons.add(radTCP);
@@ -145,10 +159,14 @@ public class NetworkOpenDialog extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent evt) {
+				int pref_net_type = 0;
+				
 				if(evt.getSource() == btnOK) {
 					if(radHTTP.isSelected()) {
 						try {
 							source = new HexFileGroupReader(new URL(txtURL.getText()));
+							RDSSurveyor.preferences.put(PREF_URL, txtURL.getText());
+							pref_net_type = VAL_NET_TYPE_HTTP;
 						} catch (MalformedURLException e) {
 							showError("Bad URL.");
 							return;
@@ -161,6 +179,9 @@ public class NetworkOpenDialog extends JFrame {
 					if(radTCP.isSelected()) {
 						try {
 							source = new TCPTunerGroupReader(txtHost.getText(), Integer.parseInt(txtPort.getText()));
+							RDSSurveyor.preferences.put(PREF_TCP_HOST, txtHost.getText());
+							RDSSurveyor.preferences.put(PREF_TCP_PORT, txtPort.getText());
+							pref_net_type = VAL_NET_TYPE_TCP;
 						} catch (NumberFormatException e) {
 							showError("Invalid value for port number.");
 							return;
@@ -169,6 +190,8 @@ public class NetworkOpenDialog extends JFrame {
 							return;
 						}
 					}
+					
+					RDSSurveyor.preferences.putInt(PREF_NET_TYPE, pref_net_type);
 				} else {
 					source = null;
 				}
