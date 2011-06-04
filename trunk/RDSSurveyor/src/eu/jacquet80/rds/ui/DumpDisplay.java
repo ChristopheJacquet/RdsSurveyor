@@ -153,6 +153,11 @@ public class DumpDisplay extends JFrame {
 				// However the actual index of groups[] must take into account
 				// the fact that groups[] is a circular buffer
 				GroupReceived currentGroup = groups[(firstIndex + lineIndex) % groups.length];
+				if(currentGroup == null) {
+					System.err.println("DumpDisplay: null group at index=" + lineIndex + ", firstIndex=" + firstIndex);
+					break;
+				}
+				
 				int type = currentGroup.getGroupType();
 				g.setColor(type == -1 ? Color.GRAY : groupColors[type]);
 				g.drawString(currentGroup.toString(), 0, y);

@@ -4,7 +4,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -16,15 +18,23 @@ import eu.jacquet80.rds.input.GroupReader;
 
 public class Menu {
 	private static enum Item {
-		Open("Open stream..."), 
-		QUIT("Quit");
+		OPEN("Open stream..."), 
+		QUIT("Quit"),
+		WINDOW_PLAYLIST("Playlist", false),
+		WINDOW_GROUP("Group analyzer", false);
+		
 		
 		private final String label;
 		private final JMenuItem menuItem;
 
-		Item(String label) {
+		private Item(String label) {
 			this.label = label;
 			this.menuItem = new JMenuItem(label);
+		}
+		
+		private Item(String label, boolean checked) {
+			this.label = label;
+			this.menuItem = new JCheckBoxMenuItem(label, checked);
 		}
 		
 		public JMenuItem getMenuItem() {
@@ -52,7 +62,8 @@ public class Menu {
 	
 	public static final JMenuBar buildMenuBar() {
 		 JMenuBar bar = new JMenuBar();
-		 bar.add(buildMenu("File", Item.Open, Item.QUIT));
+		 bar.add(buildMenu("File", Item.OPEN, Item.QUIT));
+		 bar.add(buildMenu("Window", Item.WINDOW_GROUP, Item.WINDOW_PLAYLIST));
 		 return bar;
 	}
 	
@@ -72,17 +83,30 @@ public class Menu {
 				// the actions cannot be performed in AWT's dispatch thread
 				new Thread() {
 					public void run() {
+						JFrame window = null;
+						
 						switch(Item.forMenuItem(item)) {
 						case QUIT:
 							System.exit(0);
 							break;
-						case Open: {
+						case OPEN: {
 							InputSelectionDialog dialog = new InputSelectionDialog();
 							GroupReader reader = dialog.makeChoice();
 							mainWindow.setReader(DecoderShell.instance.getLog(), reader);
 							DecoderShell.instance.process(reader);
 							break;
 						}
+						case WINDOW_GROUP: {
+							window = mainWindow.getDumpDisplay();
+							window.setVisible(! window.isVisible());
+							break;
+						}
+						case WINDOW_PLAYLIST: {
+							window = mainWindow.getPlaylistWindow();
+							window.setVisible(! window.isVisible());
+							break;
+						}
+
 						default:
 						}
 					}
