@@ -686,4 +686,8 @@ public class GroupLevelDecoder {
 	private static char toASCII(char c) {
 		return c >= 32 && c < 128 ? c : '.';
 	}
+	
+	public void reset() {
+		station = null;
+	}
 }

@@ -28,6 +28,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -306,5 +307,47 @@ public class TunedStation extends Station {
 	
 	public Application getODAapplication(int aid) {
 		return odaApps.get(aid);
+	}
+	
+	public String getCompactGroupStats() {
+		StringBuilder b = new StringBuilder();
+		List<GroupStatElement> groups = new ArrayList<GroupStatElement>(32);
+		for(int g = 0; g<16; g++) {
+			for(int v=0; v<2; v++) {
+				if(groupStats[g][v] > 0) {
+					groups.add(new GroupStatElement(g, v, groupStats[g][v]));
+				}
+			}
+		}
+		
+		Collections.sort(groups);
+		for(GroupStatElement g : groups) {
+			g.append(b).append(' ');
+		}
+		
+		return b.toString();
+	}
+}
+
+
+class GroupStatElement implements Comparable<GroupStatElement> {
+	private final int group;
+	private final int groupVersion;
+	private final int count;
+	
+	public GroupStatElement(int group, int groupVersion, int count) {
+		this.group = group;
+		this.groupVersion = groupVersion;
+		this.count = count;
+	}
+	
+	@Override
+	public int compareTo(GroupStatElement o) {
+		return o.count - count;
+	}
+	
+	public StringBuilder append(StringBuilder b) {
+		b.append(group).append(groupVersion == 0 ? 'A' : 'B');
+		return b;
 	}
 }

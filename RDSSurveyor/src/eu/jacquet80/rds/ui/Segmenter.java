@@ -51,11 +51,11 @@ public class Segmenter {
 		public void visit(StationLost stationLost) {
 			int endTime = stationLost.getBitTime();
 			TunedStation station = stationLost.getStation();
-			console.println((int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
+			console.println(//(int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
 					String.format("%04X", station.getPI()) + "\t " + 
 					String.format("%10s", station.getTotalBlocksOk() + "/" + station.getTotalBlocks()) + "\t " +
-					station.getPS() + "\t " + station.getStationName() + "\t " + station.getDynamicPSmessage() +
-					"\t " + station.getDateTime());
+					/*station.getPS() + "\t " + */ station.getStationName() + "\t " + //station.getDynamicPSmessage() +
+					station.getCompactGroupStats() + "\t " + station.getDateTime());
 		}
 		
 		public void visit(StationTuned stationTuned) {

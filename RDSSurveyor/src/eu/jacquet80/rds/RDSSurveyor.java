@@ -54,6 +54,7 @@ import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
+import eu.jacquet80.rds.ui.Overviewer;
 import eu.jacquet80.rds.ui.PlaylistWindow;
 import eu.jacquet80.rds.ui.Segmenter;
 
@@ -85,6 +86,7 @@ public class RDSSurveyor {
 		boolean liveInput = false;    // true if input is "live", not playback
 		boolean liveGroupInput = false;
 		boolean scan = false;
+		boolean overview = false;
 		Segmenter segmenter = null;
 		File outBinFile = null;
 		File outGroupFile = null;
@@ -151,6 +153,9 @@ public class RDSSurveyor {
 					segmenter = new Segmenter(System.out);
 				} else if("-scan".equals(args[i])) {
 					scan = true;
+				} else if("-overview".equals(args[i])) {
+					overview = true;
+					showGui = false;
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -210,6 +215,8 @@ public class RDSSurveyor {
 		}
 		
 		
+		final GroupReader actualReader = reader;
+		
 		// use the output hex file if defined
 		if(outGroupFile != null) {
 			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
@@ -225,9 +232,23 @@ public class RDSSurveyor {
 		}
 		*/
 		
+
+			
+		if(segmenter != null) {
+			segmenter.registerAtLog(DecoderShell.instance.getLog());
+		}
+
+		if(showGui) {
+			DecoderShell.instance.process(reader);
+		} else {
+			DecoderShell.instance.processAndQuit(reader);
+		}
+		
+		
+		// Now, set up special modes
 		if(scan) {
-			if(reader instanceof TunerGroupReader) {
-				final TunerGroupReader tgr = (TunerGroupReader) reader;
+			if(actualReader instanceof TunerGroupReader) {
+				final TunerGroupReader tgr = (TunerGroupReader) actualReader;
 				new Thread() {
 					public void run() {
 						while(true) {
@@ -252,17 +273,16 @@ public class RDSSurveyor {
 				console.println("Scanning may be used only with a tuner (" + reader.getClass() + ")");
 				System.exit(1);
 			}
+		} else if(overview) {
+			if(actualReader instanceof TunerGroupReader) {
+				final TunerGroupReader tgr = (TunerGroupReader) actualReader;
+				DecoderShell.instance.setConsole(nullConsole);
+				new Overviewer(tgr, fConsole).start();
+			} else {
+				console.println("Overview may be used only with a tuner (" + reader.getClass() + ")");
+				System.exit(1);
+			}
 		}
 
-			
-		if(segmenter != null) {
-			segmenter.registerAtLog(DecoderShell.instance.getLog());
-		}
-
-		if(showGui) {
-			DecoderShell.instance.process(reader);
-		} else {
-			DecoderShell.instance.processAndQuit(reader);
-		}
 	}
 }
