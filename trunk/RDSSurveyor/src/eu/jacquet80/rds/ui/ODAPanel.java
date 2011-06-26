@@ -27,6 +27,10 @@ public class ODAPanel extends JPanel {
 	
 	public synchronized void setStation(TunedStation station) {
 		this.station = station;
+		
+		// new station => not yet registered ODAs
+		entries.clear();
+		model.fireTableDataChanged();
 	}
 	
 	public synchronized void update() {
