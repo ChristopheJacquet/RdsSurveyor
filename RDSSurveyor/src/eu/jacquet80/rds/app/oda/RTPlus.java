@@ -149,9 +149,12 @@ public class RTPlus extends ODA {
 					String rt = station == null ? null : station.getRT().toString();
 					String text = null;
 					if(rt != null) {
-						if(start[i] + len[i] <= rt.length()) {
+						if(start[i] < rt.length()) {
 							// beware, len is the _additional_ length!
-							text = rt.substring(start[i], start[i] + len[i] + 1);
+							int endIndex = start[i] + len[i] + 1;
+							// handle the case when the currently received RT string is too short
+							if(rt.length() < endIndex) endIndex = rt.length();
+							text = rt.substring(start[i], endIndex);
 						}
 					}
 					console.print(ctype[i] + "/" + classNames[ctype[i]] + "@" + start[i] + ":" + len[i]);
@@ -183,8 +186,12 @@ public class RTPlus extends ODA {
 		StringBuilder res = new StringBuilder();
 		for(RTPlusItem i : history) {
 			if(i.textIndex == textIndex) {
+				int endIndex = i.start + i.len + 1;
+				// handle the case when the currently received RT string is too short
+				if(text.length() < endIndex) endIndex = text.length();
+
 				res.append(classNames[i.type])
-					.append("=\"").append(text.substring(i.start, i.start + i.len + 1))
+					.append("=\"").append(text.substring(i.start, endIndex))
 					.append("\"&nbsp;&nbsp;&nbsp;&nbsp;");
 			}
 		}
