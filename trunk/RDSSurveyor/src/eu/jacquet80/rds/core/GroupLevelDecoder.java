@@ -246,7 +246,16 @@ public class GroupLevelDecoder {
 				} else if(!(app instanceof AlertC)) {
 					console.print("Error: this group indicates the presence of TMC, while group 8A is used for '" + app.getName() + "'!");
 				}
-				break;			
+				break;
+				
+			case 2:
+			{
+				int operatorCode = blocks[2] & 0xFFF;
+				if(operatorCode != 0) {
+					console.printf("Enhanced Paging Operator Code: %03X", operatorCode);
+				}
+				break;
+			}
 				
 			case 3:
 				int langID = blocks[2] & 0xFF;

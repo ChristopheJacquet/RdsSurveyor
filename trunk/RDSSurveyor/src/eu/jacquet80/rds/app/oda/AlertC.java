@@ -38,6 +38,11 @@ import eu.jacquet80.rds.core.RDS;
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
 	
+	private static int[] codesTd = {0, 1, 2, 3};
+	private static int[] codesTa = {1, 2, 4, 8};
+	private static int[] codesTw = {1, 2, 4, 8};
+	private static int[] codesGap = {3, 5, 8, 11};
+	
 	// provider name
 	private String[] providerName = {"????", "????"};
 	
@@ -86,14 +91,15 @@ public class AlertC extends ODA {
 				
 				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS=%s ", ltn, afi, mode, decodeMGS(mgs));
 			} else if(var == 1) {
-				int gap = (blocks[2]>>12) & 3;
+				int gap = codesGap[(blocks[2]>>12) & 3];
 				sid = (blocks[2]>>6) & 0x3F;
-				int ta = (blocks[2]>>4) & 3;
-				int tw = (blocks[2]>>2) & 3;
-				int td = blocks[2] & 3;
+				int ta = codesTa[(blocks[2]>>4) & 3];
+				int tw = codesTw[(blocks[2]>>2) & 3];
+				int td = codesTd[blocks[2] & 3];
 				
 				console.printf("SID=%d", sid);
-				if(mode == 1) console.printf(", mode=1 (enhanced) => gap=%d, Ta=%d, Tw=%d, Td=%d", gap, ta, tw, td);
+				if(mode == 0) console.printf(", mode=0 (basic) => min gap=%d groups", gap);
+				else if(mode == 1) console.printf(", mode=1 (enhanced) => min gap=%d groups, Ta=%ds, Tw=%ds, Td=%ds", gap, ta, tw, td);
 			}
 		}
 		
