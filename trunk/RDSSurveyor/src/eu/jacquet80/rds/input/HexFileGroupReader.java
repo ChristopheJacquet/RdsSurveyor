@@ -43,6 +43,7 @@ public class HexFileGroupReader implements GroupReader {
 	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
 	private final BufferedReader br;
 	private int bitTime = 0;
+	private static final Pattern SPACE = Pattern.compile("\\s+");
 	
 	public HexFileGroupReader(BufferedReader br) {
 		this.br = br;
@@ -72,7 +73,9 @@ public class HexFileGroupReader implements GroupReader {
 		return event;
 	}
 	
-	static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
+	/* package */ static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
+		line = line.trim();
+		
 		// ignore empty lines
 		if(line.length() == 0) return null;
 		
@@ -93,7 +96,7 @@ public class HexFileGroupReader implements GroupReader {
 		// lines beginning with < are specific to RDS Spy. Ignore them altogether
 		if(line.startsWith("<")) return null;
 		
-		String[] components = line.trim().split("\\s+");
+		String[] components = SPACE.split(line);
 		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
 		int[] res = new int[4];
 		
