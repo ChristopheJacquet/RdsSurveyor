@@ -29,11 +29,17 @@ import eu.jacquet80.rds.core.TunedStation;
 
 public class StationLost extends LogMessage {
 	private final TunedStation station;
+	private final boolean lastInStream;
 	
-	public StationLost(int bitTime, TunedStation station) {
+	public StationLost(int bitTime, TunedStation station, boolean lastInStream) {
 		super(bitTime);
 		
 		this.station = station;
+		this.lastInStream = lastInStream;
+	}
+	
+	public StationLost(int bitTime, TunedStation station) {
+		this(bitTime, station, false);
 	}
 	
 	public String toString() {
@@ -47,5 +53,9 @@ public class StationLost extends LogMessage {
 	
 	public TunedStation getStation() {
 		return station;
+	}
+	
+	public boolean isLastInStream() {
+		return lastInStream;
 	}
 }

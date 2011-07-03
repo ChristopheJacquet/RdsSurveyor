@@ -64,7 +64,7 @@ public class PlaybackToolBar extends InputToolBar {
 		visitor = new DefaultLogMessageVisitor() {
 			@Override
 			public void visit(StationLost stationLost) {
-				if(! newStream) {
+				if(! newStream && !stationLost.isLastInStream()) {
 					btnNext.setEnabled(true);
 					waitClick.acquireUninterruptibly();
 				} else {
