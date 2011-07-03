@@ -61,6 +61,9 @@ import eu.jacquet80.rds.ui.Segmenter;
 public class RDSSurveyor {
 	public final static Preferences preferences = Preferences.userRoot().node("/eu/jacquet80/rdssurveyor");
 	
+	public final static String PREF_REALTIME = "playback_realtime";
+	public final static String PREF_RBDS = "core_rbds";
+	
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.
 	 */
@@ -156,6 +159,10 @@ public class RDSSurveyor {
 				} else if("-overview".equals(args[i])) {
 					overview = true;
 					showGui = false;
+				} else if("-rds".equals(args[i])) {
+					preferences.putBoolean(PREF_RBDS, false);
+				} else if("-rbds".equals(args[i])) {
+					preferences.putBoolean(PREF_RBDS, true);
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -171,6 +178,8 @@ public class RDSSurveyor {
 					System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
 					System.out.println("  -nogui                   Do not show the graphical user interface");
 					System.out.println("  -noconsole               No console analysis");
+					System.out.println("  -rds                     Force standard RDS mode (and save as a preference)");
+					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.exit(1);
 				}
 			}

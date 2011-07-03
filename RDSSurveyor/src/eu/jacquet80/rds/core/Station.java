@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import eu.jacquet80.rds.RDSSurveyor;
+
 
 /**
  * Tries to implement javax.microedition.amms.control.tuner.RDSControl
@@ -46,41 +48,15 @@ public abstract class Station {
 	protected String pinText = "";
 	protected int timeOfLastPI = 0;
 	
-	protected static String[] ptyLabels = {
-		"No programme type or undefined",
-		"News",
-		"Current Affairs",
-		"Information",
-		"Sport",
-		"Education",
-		"Drama",
-		"Culture",
-		"Science",
-		"Varied",
-		"Pop Music",
-		"Rock Music",
-		"Easy Listening Music",
-		"Light classical",
-		"Serious classical",
-		"Other Music",
-		"Weather",
-		"Finance",
-		"Children's programmes",
-		"Social Affairs",
-		"Religion",
-		"Phone In",
-		"Travel",
-		"Leisure",
-		"Jazz Music",
-		"Country Music",
-		"National Music",
-		"Oldies Music",
-		"Folk Music",
-		"Documentary",
-		"Alarm Test",
-		"Alarm"
-	};
-
+	/**
+	 * A station uses (World/European) RDS or American RBDS. We use the default
+	 * specified in the preferences (true for RBDS, false for standard RDS),
+	 * which defaults to false (=RDS).
+	 * If a station broadcasts an ECC, then we can set the rbds flag 
+	 * appropriately: true for the USA, Canada and Mexico, false for any other
+	 * country. 
+	 */
+	protected boolean rbds = RDSSurveyor.preferences.getBoolean(RDSSurveyor.PREF_RBDS, false);
 
 	
 	protected void reset(int pi) {
@@ -242,7 +218,7 @@ public abstract class Station {
 	}
 	
 	public String getPTYlabel() {
-		return ptyLabels[pty];
+		return (rbds ? RDS.rbdsPtyLabels : RDS.rdsPtyLabels) [pty];
 	}
 
 	public String addMappedFreq(int channel, int mappedChannel) {
@@ -285,6 +261,14 @@ public abstract class Station {
 	
 	public String getPINText() {
 		return pinText;
+	}
+	
+	public String getCallsign() {
+		if(rbds) {
+			return RBDSCallsigns.callSign(this.pi);
+		} else {
+			return null;
+		}
 	}
 }
 
