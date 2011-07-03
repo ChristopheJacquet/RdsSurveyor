@@ -387,7 +387,16 @@ public class MainWindow extends JFrame {
 									
 									int pi = station.getPI();
 									txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
-									txtPSName.setText(station.getStationName());
+									
+									String callsign = station.getCallsign();	// For RBDS
+									if(callsign != null) {
+										lblPSName.setText("Call sign");
+										txtPSName.setText(callsign);
+									} else {
+										lblPSName.setText("Station name");
+										txtPSName.setText(station.getStationName());
+									}
+									
 									txtDynPS.setText(station.getDynamicPSmessage());
 
 									txtPI.setText(String.format("%04X", pi));

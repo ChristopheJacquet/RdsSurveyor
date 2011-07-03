@@ -116,7 +116,7 @@ public class TunedStation extends Station {
 		
 		if(date != null) res.append("\nLatest CT: " + date);
 		
-		res.append("\nPTY: " + pty + " -> " + ptyLabels[pty]);
+		res.append("\nPTY: " + pty + " -> " + getPTYlabel());
 		if(ptyn != null) res.append(", PTYN=" + ptyn);
 		
 		res.append("\nDI: ")
@@ -254,6 +254,13 @@ public class TunedStation extends Station {
 	
 	public void setECC(int ecc) {
 		this.ecc = ecc;
+		
+		// is this an RBDS country?
+		if(ecc == 0xA0 || 							// US
+				ecc == 0xA1 && pi < 0xF000 ||		// Canada
+				ecc == 0xA5) {						// Mexico
+			this.rbds = true;
+		}
 	}
 	
 	public int getECC() {

@@ -19,8 +19,6 @@ import eu.jacquet80.rds.log.StationLost;
 
 @SuppressWarnings("serial")
 public class PlaybackToolBar extends InputToolBar {
-	private final static String PREF_REALTIME = "playback_realtime";
-
 	private final static String NEXT_BUTTON = "NEXT";
 	private final JButton btnNext = addButton("Next station", Image.FFWD, NEXT_BUTTON);
 	
@@ -49,7 +47,7 @@ public class PlaybackToolBar extends InputToolBar {
 		
 		btnNext.setEnabled(false);
 		
-		realtime = RDSSurveyor.preferences.getBoolean(PREF_REALTIME, true);
+		realtime = RDSSurveyor.preferences.getBoolean(RDSSurveyor.PREF_REALTIME, true);
 		
 		final JCheckBox chkRealtime = new JCheckBox("Simulate real time", realtime);
 		
@@ -57,7 +55,7 @@ public class PlaybackToolBar extends InputToolBar {
 			@Override
 			public void actionPerformed(ActionEvent evt) {
 				realtime = chkRealtime.isSelected();
-				RDSSurveyor.preferences.putBoolean(PREF_REALTIME, realtime);
+				RDSSurveyor.preferences.putBoolean(RDSSurveyor.PREF_REALTIME, realtime);
 			}
 		});
 		addSeparator(new Dimension(20, 0));

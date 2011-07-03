@@ -32,16 +32,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
-import javax.swing.text.html.HTMLDocument.HTMLReader.IsindexAction;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.InHouse;
 import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.ODA;
-import eu.jacquet80.rds.input.GroupReader;
-import eu.jacquet80.rds.input.GroupReader.EndOfStream;
-import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
@@ -120,7 +116,15 @@ public class GroupLevelDecoder {
 		int pi = 0;
 		if(blocksOk[0]) {
 			pi = blocks[0];
-			console.printf("PI=%04X, ", pi);
+			console.printf("PI=%04X", pi);
+			
+			String callsign = station.getCallsign();
+			if(callsign != null) {
+				console.printf(" [" + callsign + "]");
+			}
+			
+			console.print(", ");
+			
 			if(station.getPI() == 0) {
 				// new station
 				station.setPI(pi);
