@@ -178,11 +178,16 @@ public class RBDSCallsigns {
 			return callsign.toString();
 		} else if((pi & 0xF000) == 0xB000) {
 			switch(pi & 0x00FF) {
-			case 0x01: return "NPR";
+			case 0x01: return "NPR-1";
 			case 0x02: return "CBC En-1";
 			case 0x03: return "CBC En-2";
 			case 0x04: return "CBC Fr-1";
 			case 0x05: return "CBC Fr-2";
+			case 0x0A: return "NPR-2";
+			case 0x0B: return "NPR-3";
+			case 0x0C: return "NPR-4";
+			case 0x0D: return "NPR-5";
+			case 0x0E: return "NPR-6";
 			default: return null;
 			}
 		} else {
