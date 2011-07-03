@@ -59,7 +59,7 @@ public class DecoderShell {
 						} catch(eu.jacquet80.rds.input.GroupReader.EndOfStream eos) {
 							TunedStation lastStation = groupDecoder.getTunedStation();
 							if(lastStation != null) {
-								log.addMessage(new StationLost(-1, lastStation));
+								log.addMessage(new StationLost(-1, lastStation, true));
 							}
 							log.addMessage(new eu.jacquet80.rds.log.EndOfStream(-1));
 							goOn = false;
@@ -84,7 +84,7 @@ public class DecoderShell {
 	private final LogMessageVisitor consolePrinter = new DefaultLogMessageVisitor() {
 		@Override
 		public void visit(EndOfStream endOfStream) {
-			console.println("\nProcessing complete.");
+			//console.println("\nProcessing complete.");
 		}
 		
 		@Override
