@@ -115,13 +115,15 @@ public class RTPlus extends ODA {
 			console.print("Applies to " + (ert == 1 ? "eRT" : "RT") + ", ");
 			
 			int cb = (blocks[2]>>12) & 1;
-			console.print((cb == 0 ? "NO " : "") + "template, ");
+			console.print((cb == 0 ? "NO" : "Using") + " template, ");
 			
-			int scb = (blocks[2]>>8) & 0xF;
-			console.printf("SCB=%01X, ", scb);
-			
-			int tn = blocks[2] & 0xFF;
-			console.printf("template #%02X", tn);
+			if(cb == 1) {
+				int scb = (blocks[2]>>8) & 0xF;
+				console.printf("SCB=%01X, ", scb);
+				
+				int tn = blocks[2] & 0xFF;
+				console.printf("template #%02X", tn);
+			}
 		}
 		
 		if(version == 0 && type != 3) {

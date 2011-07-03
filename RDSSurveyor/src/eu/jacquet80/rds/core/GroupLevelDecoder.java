@@ -424,7 +424,7 @@ public class GroupLevelDecoder {
 			case 9: console.print("EWS/ODA "); break;
 			case 11: console.print("ODA "); break;
 			case 12: console.print("ODA "); break;
-			case 13: console.print("ERP "); break;
+			case 13: console.print("ERP/ODA "); break;
 			}
 			
 			if(blocksOk[2] && blocksOk[3]) {
