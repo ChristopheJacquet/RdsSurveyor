@@ -63,6 +63,7 @@ public class RDSSurveyor {
 	
 	public final static String PREF_REALTIME = "playback_realtime";
 	public final static String PREF_RBDS = "core_rbds";
+	public final static String PREF_LAST_DIR = "directory_last";
 	
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.

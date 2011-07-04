@@ -113,9 +113,25 @@ public class GroupLevelDecoder {
 		for(int i=0; i < qualityHistory.length; i++) sum += qualityHistory[i];
 		//float quality = sum / (4f * qualityHistory.length);
 		
-		int pi = 0;
+		// First identify type and version of the group, if possible.
+		// We do this now in order to be able to extract the PI from block 2
+		// if version is B.
+		int type = -1, version = -1;
+		if(blocksOk[1]) {
+			type = ((blocks[1]>>12) & 0xF);
+			version = ((blocks[1]>>11) & 1);
+		}
+		
+		
+		int pi = -1;
+		
 		if(blocksOk[0]) {
 			pi = blocks[0];
+		} else if(version == 1 && blocksOk[2]) {
+			pi = blocks[2];
+		}
+		
+		if(pi != -1) {
 			console.printf("PI=%04X", pi);
 			
 			String callsign = station.getCallsign();
@@ -128,43 +144,12 @@ public class GroupLevelDecoder {
 			if(station.getPI() == 0) {
 				// new station
 				station.setPI(pi);
-			}/*
-			TODO: should be improved
-			the 'StationTuned' message should be emitted when the 
-			StationChangeEvent is received in the first place. 
-			
-			if(station.getPI() == pi) {
-				// same PI as before => same station
-				station.pingPI(bitTime);
-				badPIcount = 0;
-				synced = true;
-			} else {
-				// different PI => new station or PI error
-				badPIcount++;
-				if(badPIcount > 3 ) {
-					// several different PIs in a row => new station
-					log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-					station = new TunedStation(bitTime);
-					log.addMessage(new StationTuned(bitTime, station));
-					station.setPI(pi);
-				} else {
-					// not enough different PIs => guess it's just an error
-					// use a dummy TunedStation to silently ignore this group's info
-					console.print("Ign, ");  // for ignore
-					workingStation = new TunedStation(bitTime); // dummy station
-				}
-				
-			}*/
+			}
 		} else console.print("         ");
 		
 		if(!synced) return;   // after a sync loss, we wait for a PI before processing further data
 		
-		int type = -1, version = -1;
-		
 		if(blocksOk[1]) {
-			type = ((blocks[1]>>12) & 0xF);
-			version = ((blocks[1]>>11) & 1);
-			
 			workingStation.addGroupToStats(type, version, nbOk);
 			
 			int tp = (blocks[1]>>10) & 1;

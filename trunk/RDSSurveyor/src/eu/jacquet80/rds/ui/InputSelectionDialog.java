@@ -16,6 +16,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.core.StreamLevelDecoder;
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.GroupReader;
@@ -81,10 +82,12 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				((USBFMRadioGroupReader)choice).init();
 				choiceDone.release();
 			} else if(source == btnFile) {
-				JFileChooser fc = new JFileChooser();
+				String defaultPath = RDSSurveyor.preferences.get(RDSSurveyor.PREF_LAST_DIR, null);
+				JFileChooser fc = new JFileChooser(defaultPath);
 				if(fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 					choice = new HexFileGroupReader(fc.getSelectedFile());
 					choiceDone.release();
+					RDSSurveyor.preferences.put(RDSSurveyor.PREF_LAST_DIR, fc.getSelectedFile().getParent());
 				}
 			} else if(source == btnTCP) {
 				Thread t = new Thread() {
