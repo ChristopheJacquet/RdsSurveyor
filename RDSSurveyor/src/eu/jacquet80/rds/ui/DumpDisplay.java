@@ -8,19 +8,21 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoundedRangeModel;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.GroupReceived;
@@ -69,6 +71,8 @@ public class DumpDisplay extends JFrame {
 	
 	private Set<Log> logsImRegisteredAt = new HashSet<Log>();
 	
+	private Pattern searchText = null;
+	
 	public DumpDisplay(int scrollBackSize) {
 		super("Group analyzer");
 		
@@ -77,21 +81,37 @@ public class DumpDisplay extends JFrame {
 		this.setLayout(new BorderLayout());
 		this.add(contents, BorderLayout.CENTER);
 		this.add(scroll, BorderLayout.EAST);
-		this.add(search, BorderLayout.NORTH);
+		
+		JPanel searchBox = new JPanel(new BorderLayout());
+		searchBox.add(new JLabel(" Highlight text:  "), BorderLayout.WEST);
+		searchBox.add(search, BorderLayout.CENTER);
+		searchBox.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+		
+		this.add(searchBox, BorderLayout.NORTH);
 		
 		scrollModel = scroll.getModel();
 		
-		search.addKeyListener(new KeyListener() {
+		search.getDocument().addDocumentListener(new DocumentListener() {
+			
 			@Override
-			public void keyTyped(KeyEvent e) {
-				contents.repaint();
+			public void removeUpdate(DocumentEvent e) {
+				update();
 			}
 			
 			@Override
-			public void keyReleased(KeyEvent e) {}
+			public void insertUpdate(DocumentEvent e) {
+				update();
+			}
 			
 			@Override
-			public void keyPressed(KeyEvent e) {}
+			public void changedUpdate(DocumentEvent e) {}
+			
+			private void update() {
+				String text = search.getText();
+				if("".equals(text)) searchText = null;
+				else searchText = Pattern.compile(Pattern.quote(text), Pattern.CASE_INSENSITIVE);
+				contents.repaint();
+			}
 		});
 		
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
@@ -154,9 +174,6 @@ public class DumpDisplay extends JFrame {
 		protected void paintComponent(Graphics g_) {
 			super.paintComponent(g_);
 						
-			String searchText = search.getText();
-			if("".equals(searchText)) searchText = null;
-			
 			Graphics2D g = (Graphics2D) g_;
 			g.setFont(font);
 			FontMetrics fm = g.getFontMetrics();
@@ -195,7 +212,7 @@ public class DumpDisplay extends JFrame {
 				String allLines = currentGroup.toString();
 				String[] lines = NEWLINE_PATTERN.split(allLines);
 
-				if(searchText != null && allLines.contains(searchText)) {
+				if(searchText != null && searchText.matcher(allLines).find()) {
 					g.setColor(HIGHLIGHT_COLOR);
 					g.fillRect(0, y - fm.getMaxAscent(), getWidth(), lineHeight * lines.length);
 				}
