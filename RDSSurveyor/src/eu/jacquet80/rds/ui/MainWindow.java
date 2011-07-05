@@ -43,7 +43,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
@@ -58,15 +57,15 @@ import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
+import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.LogMessageVisitor;
 import eu.jacquet80.rds.log.StationTuned;
 import eu.jacquet80.rds.ui.app.AppPanel;
 import eu.jacquet80.rds.ui.input.InputToolBar;
 
+@SuppressWarnings("serial")
 public class MainWindow extends JFrame {
-	private static final long serialVersionUID = -5219617213305143171L;
-
 	//private final Log log;
 	private final EONTableModel eonTableModel = new EONTableModel();
 	
@@ -95,7 +94,7 @@ public class MainWindow extends JFrame {
 	
 	private final JTabbedPane tabbedPane = new JTabbedPane();
 	
-	private final JProgressBar barBLER = new JProgressBar(0, 100);
+	private final BLERDisplay bler = new BLERDisplay(200);
 	
 	private final JPanel pnlInputToolbar = new JPanel(new BorderLayout());
 	
@@ -227,13 +226,13 @@ public class MainWindow extends JFrame {
 				lblCompressed = new JLabel("Compressed"),
 				lblHead = new JLabel("Artificial head"),
 				lblStereo = new JLabel("Sound"),
-				lblBLER = new JLabel("BLER"),
+				lblBLER = new JLabel("Block error rate"),
 				lblPIN = new JLabel("PIN");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblPS, lblPSName, lblPI, lblBLER},
-				{txtPS, txtPSName, txtPI, barBLER},
+				{txtPS, txtPSName, txtPI, bler},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -290,7 +289,12 @@ public class MainWindow extends JFrame {
 					BorderFactory.createLineBorder(BORDER_COLOR, 1),
 					BorderFactory.createLineBorder(Color.WHITE, 2)));
 		}
-				
+
+		bler.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(BORDER_COLOR, 1),
+				BorderFactory.createLineBorder(Color.BLACK, 1)));
+
+		
 		txtAF.setLineWrap(true);
 		txtAF.setWrapStyleWord(true);
 		
@@ -315,8 +319,14 @@ public class MainWindow extends JFrame {
 		
 		windowUpdaterVisitor = new DefaultLogMessageVisitor() {
 			@Override
+			public void visit(GroupReceived groupReceived) {
+				bler.addGroup(groupReceived.getNbOk());
+			}
+			
+			@Override
 			public void visit(StationTuned stationTuned) {
 				synchronized(MainWindow.this) {
+					bler.clear();
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
 					pnlRT.setStation(station);
@@ -383,7 +393,7 @@ public class MainWindow extends JFrame {
 						if(station != null) {
 							SwingUtilities.invokeLater(new Runnable() {
 								public void run() {
-									barBLER.setValue((int)(100. * station.getBLER()));
+									bler.repaint();
 									
 									int pi = station.getPI();
 									txtPS.setText(station.getPS().getLatestCompleteOrPartialText());
@@ -443,14 +453,9 @@ public class MainWindow extends JFrame {
 									txtHead.setText(station.getArtificialHead() ? "Yes" : "No");
 									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
 									txtDPTY.setText(station.getDPTY() ? "Dynamic" : "Static");
-
-									// update dump display window
-									/// TODO: uncomment this
-									///dumpDisplay.update();
 								};
 							});
 
-							// does not work here groupStats.update(station.numericGroupStats());
 							repaint();
 						}
 					}
@@ -467,8 +472,8 @@ public class MainWindow extends JFrame {
 
 }
 
+@SuppressWarnings("serial")
 class GroupPanel extends JPanel {
-	private static final long serialVersionUID = -8242758630674812962L;
 	private final JTextField[][] txtGroup = new JTextField[17][2];
 	
 	public GroupPanel() {

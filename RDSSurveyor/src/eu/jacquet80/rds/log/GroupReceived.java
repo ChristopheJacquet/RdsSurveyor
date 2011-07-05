@@ -3,12 +3,14 @@ package eu.jacquet80.rds.log;
 
 public class GroupReceived extends LogMessage {
 	private final int[] blocks;
-	private String analysis;
+	private final String analysis;
+	private final int nbOk;
 	
-	public GroupReceived(int bitTime, int[] blocks, String analysis) {
+	public GroupReceived(int bitTime, int[] blocks, int nbOk, String analysis) {
 		super(bitTime);
 		
 		this.blocks = blocks;
+		this.nbOk = nbOk;
 		this.analysis = analysis;
 	}
 	
@@ -19,6 +21,10 @@ public class GroupReceived extends LogMessage {
 	
 	public int[] getBlocks() {
 		return blocks;
+	}
+	
+	public int getNbOk() {
+		return nbOk;
 	}
 	
 	public String getAnalysis() {

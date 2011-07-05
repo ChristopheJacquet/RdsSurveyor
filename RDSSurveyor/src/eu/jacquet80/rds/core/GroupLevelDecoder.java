@@ -571,7 +571,7 @@ public class GroupLevelDecoder {
 		}
 		
 		// add a log message for each group
-		log.addMessage(new GroupReceived(bitTime, blocks, consoleWriter.toString()));
+		log.addMessage(new GroupReceived(bitTime, blocks, nbOk, consoleWriter.toString()));
 
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
