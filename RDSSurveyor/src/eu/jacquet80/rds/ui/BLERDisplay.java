@@ -56,14 +56,14 @@ public class BLERDisplay extends JPanel {
 		g.setColor(Color.GREEN);
 		
 		Insets insets = this.getBorder().getBorderInsets(this);
-		int height = getHeight() - insets.top - insets.bottom;
+		int height = getHeight() - insets.bottom - insets.top;
 		
 		for(int x = 1; x < this.width; x++) {
 			int idxPrev = (this.historyNextEntry + x - 1) % this.width;
 			int idxCur = (this.historyNextEntry + x) % this.width;
 			
 			if(history[idxPrev] >= 0 && history[idxCur] >= 0) {
-				g.drawLine(x-1, height-1 - (int)(history[idxPrev]*height), x, height-1 - (int)(history[idxCur]*height));
+				g.drawLine(x-1, insets.top + height-1 - (int)(history[idxPrev]*height), x, insets.top + height-1 - (int)(history[idxCur]*height));
 			}
 		}
 	}

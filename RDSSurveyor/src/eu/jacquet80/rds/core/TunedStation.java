@@ -256,11 +256,9 @@ public class TunedStation extends Station {
 		this.ecc = ecc;
 		
 		// is this an RBDS country?
-		if(ecc == 0xA0 || 							// US
-				ecc == 0xA1 && pi < 0xF000 ||		// Canada
-				ecc == 0xA5) {						// Mexico
-			this.rbds = true;
-		}
+		this.rbds = ecc == 0xA0 || 						// US
+					ecc == 0xA1 && pi < 0xF000 ||		// Canada
+					ecc == 0xA5;						// Mexico
 	}
 	
 	public int getECC() {
