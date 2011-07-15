@@ -1,13 +1,14 @@
 package eu.jacquet80.rds.log;
 
 
+
 public class GroupReceived extends LogMessage {
 	private final int[] blocks;
 	private final String analysis;
 	private final int nbOk;
 	
-	public GroupReceived(int bitTime, int[] blocks, int nbOk, String analysis) {
-		super(bitTime);
+	public GroupReceived(RDSTime time, int[] blocks, int nbOk, String analysis) {
+		super(time);
 		
 		this.blocks = blocks;
 		this.nbOk = nbOk;
@@ -31,8 +32,14 @@ public class GroupReceived extends LogMessage {
 		return analysis;
 	}
 
-	public String toString() {
-		StringBuilder sb = new StringBuilder("[");
+	public String toString(boolean includeTime) {
+		StringBuilder sb = new StringBuilder();
+		
+		if(includeTime) {
+			sb.append(getTime()).append(": ");
+		}
+		
+		sb.append("[");
 		
 		for(int i=0; i<4; i++) {
 			if(blocks[i] >= 0) sb.append(String.format("%04X", blocks[i]));
@@ -42,6 +49,10 @@ public class GroupReceived extends LogMessage {
 		sb.append("] ").append(getAnalysis());
 		
 		return sb.toString();
+	}
+	
+	public String toString() {
+		return toString(true);
 	}
 	
 	public int getGroupType() {

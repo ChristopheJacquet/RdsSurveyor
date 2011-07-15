@@ -29,15 +29,15 @@ import java.io.PrintStream;
 
 import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.EndOfStream;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.RDSTime;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
 
 public class Segmenter {
 	private final PrintStream console;
 	private final Visitor visitor = new Visitor();
-	private int startTime = 0;
+	private RDSTime startTime = null;
 	
 	public Segmenter(PrintStream console) {
 		this.console = console;
@@ -49,7 +49,7 @@ public class Segmenter {
 	
 	private class Visitor extends DefaultLogMessageVisitor {
 		public void visit(StationLost stationLost) {
-			int endTime = stationLost.getBitTime();
+			RDSTime endTime = stationLost.getTime();
 			TunedStation station = stationLost.getStation();
 			console.println(//(int)(startTime/1187.5f) + "\t " + (int)((endTime-startTime)/1187.5f) + "\t " + 
 					String.format("%04X", station.getPI()) + "\t " + 
@@ -59,7 +59,7 @@ public class Segmenter {
 		}
 		
 		public void visit(StationTuned stationTuned) {
-			startTime = stationTuned.getBitTime();
+			startTime = stationTuned.getTime();
 		}
 		
 	}

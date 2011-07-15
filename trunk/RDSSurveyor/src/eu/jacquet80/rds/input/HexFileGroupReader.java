@@ -32,17 +32,23 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RealTime;
+import eu.jacquet80.rds.log.SequentialTime;
+import eu.jacquet80.rds.log.RDSTime;
 
 public class HexFileGroupReader implements GroupReader {
 	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
+	private final static Pattern RDS_SPY_DATE_FORMAT = 
+			Pattern.compile(".*@(\\d{4})/(\\d{2})/(\\d{2})\\s+(\\d{2}):(\\d{2}):(\\d{2}).(\\d{2})$");
 	private final BufferedReader br;
-	private int bitTime = 0;
+	private int groupTime = 0;
 	private static final Pattern SPACE = Pattern.compile("\\s+");
 	
 	public HexFileGroupReader(BufferedReader br) {
@@ -64,16 +70,14 @@ public class HexFileGroupReader implements GroupReader {
 			String line = br.readLine();
 			if(line == null) throw new EndOfStream();
 
-			int thisBitTime = bitTime;
-			bitTime += 26;
-
-			event = parseHexLine(line, thisBitTime);
+			event = parseHexLine(line, new SequentialTime(groupTime));
+			groupTime++;
 		} while(event == null);
 		
 		return event;
 	}
 	
-	/* package */ static GroupReaderEvent parseHexLine(String line, int bitTime) throws IOException {
+	/* package */ static GroupReaderEvent parseHexLine(String line, RDSTime time) throws IOException {
 		line = line.trim();
 		
 		// ignore empty lines
@@ -86,7 +90,7 @@ public class HexFileGroupReader implements GroupReader {
 				Matcher m = FIRST_NUMBER.matcher(line);
 				int f = 0;
 				if(m.matches()) f = Integer.parseInt(m.group(1));
-				return new FrequencyChangeEvent(f);
+				return new FrequencyChangeEvent(time, f);
 			}
 			
 		    // ignore other lines beginning with '%'
@@ -106,7 +110,20 @@ public class HexFileGroupReader implements GroupReader {
 			else res[i] = Integer.parseInt(s, 16);
 		}
 		
+		
+		// attempt to find explicit time code in the line
+		Matcher m = RDS_SPY_DATE_FORMAT.matcher(line);
+		if(m.matches()) {
+			GregorianCalendar c = new GregorianCalendar( 
+					Integer.parseInt(m.group(1)), 
+					Integer.parseInt(m.group(2)) - 1, 
+					Integer.parseInt(m.group(3)), 
+					Integer.parseInt(m.group(4)), 
+					Integer.parseInt(m.group(5)),
+					Integer.parseInt(m.group(6)));
+			time = new RealTime(c.getTime());
+		}
 
-		return new GroupEvent(bitTime, res, false);
+		return new GroupEvent(time, res, false);
 	}
 }

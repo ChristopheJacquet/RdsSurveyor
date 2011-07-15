@@ -40,6 +40,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
 import eu.jacquet80.rds.input.group.StationChangeEvent;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.RealTime;
 
 public class TestV4L {
 	private final GroupLevelDecoder decoder;
@@ -67,7 +68,7 @@ public class TestV4L {
 						freq += 50;
 						if(freq > 108000) freq = 87500;
 						radio.setFrequency(freq);
-						decoder.notifyFrequencyChange(0);
+						decoder.notifyFrequencyChange(new RealTime());
 					}
 				}
 			};

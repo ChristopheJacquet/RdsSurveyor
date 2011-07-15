@@ -30,14 +30,14 @@ import eu.jacquet80.rds.core.TunedStation;
 public class StationTuned extends LogMessage {
 	private final TunedStation station;
 	
-	public StationTuned(int bitTime, TunedStation station) {
-		super(bitTime);
+	public StationTuned(RDSTime time, TunedStation station) {
+		super(time);
 		
 		this.station = station;
 	}
 	
 	public String toString() {
-		return bitTime + "> Tuned: " + station.getPS();
+		return time + "> Tuned: " + station.getPS();
 	}
 
 	@Override
@@ -45,7 +45,7 @@ public class StationTuned extends LogMessage {
 		visitor.visit(this);
 	}
 	
-	public int getTimeLost() {
+	public RDSTime getTimeLost() {
 		return station.getTimeOfLastPI();
 	}
 	

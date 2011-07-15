@@ -32,6 +32,7 @@ import java.io.IOException;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RealTime;
 
 public class V4LTunerGroupReader implements TunerGroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
@@ -65,7 +66,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		if(newFreq != oldFreq) {
 			// if frequency has just been changed, must report an event
 			oldFreq = newFreq;
-			return new FrequencyChangeEvent(newFreq);
+			return new FrequencyChangeEvent(new RealTime(), newFreq);
 		}
 		
 		int[] res = new int[4];
@@ -94,8 +95,7 @@ public class V4LTunerGroupReader implements TunerGroupReader {
 		}
 		
 		newGroups = true;
-		return new GroupEvent(0, res, false);
-		// TODO FIXME: need to provide meaningful bit time
+		return new GroupEvent(new RealTime(), res, false);
 	}
 
 	static {

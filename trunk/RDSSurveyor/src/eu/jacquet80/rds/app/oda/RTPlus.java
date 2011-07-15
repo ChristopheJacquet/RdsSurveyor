@@ -30,6 +30,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.jacquet80.rds.log.RDSTime;
+
 public class RTPlus extends ODA {
 	public static int AID = 0x4BD7;
 	
@@ -108,7 +110,7 @@ public class RTPlus extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, RDSTime time) {
 		// Main RT+ group handling
 		if(type == 3 && version == 0 && blocksOk[2]) {
 			int ert = (blocks[2]>>13) & 1;

@@ -34,6 +34,7 @@ import java.util.Map;
 
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
+import eu.jacquet80.rds.log.RDSTime;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
@@ -66,7 +67,7 @@ public class AlertC extends ODA {
 	}
 
 	@Override
-	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, RDSTime time) {
 		boolean messageJustCompleted = false;
 		
 		// in all cases, we need all blocks to proceed

@@ -30,8 +30,8 @@ import eu.jacquet80.rds.app.Application;
 public class ApplicationChanged extends LogMessage {
 	private final Application oldApp, newApp;
 
-	public ApplicationChanged(int bitTime, Application oldApp, Application newApp) {
-		super(bitTime);
+	public ApplicationChanged(RDSTime time, Application oldApp, Application newApp) {
+		super(time);
 		this.oldApp = oldApp;
 		this.newApp = newApp;
 	}

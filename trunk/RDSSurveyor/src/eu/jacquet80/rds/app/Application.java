@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.util.LinkedList;
 
 import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.log.RDSTime;
 
 public abstract class Application {
 	protected TunedStation station = null;
@@ -40,7 +41,7 @@ public abstract class Application {
 		this.station = station;
 	}
 	
-	public abstract void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime);
+	public abstract void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, RDSTime time);
 	public abstract String getName();
 
 	public void addChangeListener(ChangeListener l) {

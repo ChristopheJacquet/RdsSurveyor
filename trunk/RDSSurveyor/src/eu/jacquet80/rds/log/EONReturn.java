@@ -30,8 +30,8 @@ import eu.jacquet80.rds.core.Station;
 public class EONReturn extends LogMessage {
 	private final Station on;
 	
-	public EONReturn(int bitTime, Station on) {
-		super(bitTime);
+	public EONReturn(RDSTime time, Station on) {
+		super(time);
 		
 		this.on = on;
 	}

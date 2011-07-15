@@ -31,6 +31,7 @@ import java.io.IOException;
 
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RealTime;
 
 public class SimpleV4LGroupReader implements GroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
@@ -63,8 +64,7 @@ public class SimpleV4LGroupReader implements GroupReader {
 			if((recvBuffer[2] & 0xC0) != 0) res[i] = -1;
 		}
 		
-		// TODO FIXME: need to provide meaningful bit time
-		return new GroupEvent(0, res, false);
+		return new GroupEvent(new RealTime(), res, false);
 	}
 
 }

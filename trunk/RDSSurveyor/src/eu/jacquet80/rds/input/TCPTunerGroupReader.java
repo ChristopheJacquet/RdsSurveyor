@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RealTime;
 
 public class TCPTunerGroupReader implements TunerGroupReader {
 	private String name = "";
@@ -100,7 +101,7 @@ public class TCPTunerGroupReader implements TunerGroupReader {
 			line = reader.readLine();
 			if(line == null) throw new EndOfStream();
 			
-			GroupReaderEvent event = HexFileGroupReader.parseHexLine(line, 0);
+			GroupReaderEvent event = HexFileGroupReader.parseHexLine(line, new RealTime());
 			
 			if(event instanceof GroupEvent) newGroups = true;
 			else if(event instanceof FrequencyChangeEvent) {

@@ -26,11 +26,9 @@
 package eu.jacquet80.rds.core;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +36,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.log.RDSTime;
 
 
 public class TunedStation extends Station {
@@ -45,6 +44,7 @@ public class TunedStation extends Station {
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
 	private String datetime = "";
+	private RDSTime streamTimeForDate = null;
 	private Application[] applications = new Application[32];
 	private List<Application> applicationList = new ArrayList<Application>();
 	private boolean diStereo, diArtif, diCompressed, diDPTY;
@@ -53,19 +53,18 @@ public class TunedStation extends Station {
 	private int latestBlocksOkPtr = 0;
 	private int latestBlocksOkCount = 0;
 	private int ecc, language;
-	private int dateBitTime = -1;
 	private Text rt = new Text(64);
 	
 	private Map<Integer, Integer> odas = new HashMap<Integer, Integer>();
 	private Map<Integer, Application> odaApps = new HashMap<Integer, Application>();
 	
 	
-	public TunedStation(int pi, int time) {
+	public TunedStation(int pi, RDSTime time) {
 		reset(pi);
 		pingPI(time);
 	}
 	
-	public TunedStation(int time) {
+	public TunedStation(RDSTime time) {
 		this(0, time);
 	}
 
@@ -99,7 +98,7 @@ public class TunedStation extends Station {
 	public String toString() {
 		StringBuffer res = new StringBuffer();
 		//System.out.println("pi=" + pi + ", ps=" + new String(ps) + ", time=" + timeOfLastPI);
-		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%.3f", pi, getStationName(), ps.toString(), (float)(timeOfLastPI / (1187.5f))));
+		res.append(String.format("PI=%04X    Station name=\"%s\"    PS=\"%s\"    Time=%s", pi, getStationName(), ps.toString(), timeOfLastPI.toString()));
 		
 		res.append(String.format("\nRT = \"%s\"", rt.toString()));
 
@@ -149,7 +148,7 @@ public class TunedStation extends Station {
 		return groupStats;
 	}
 
-	public int getTimeOfLastPI() {
+	public RDSTime getTimeOfLastPI() {
 		return timeOfLastPI;
 	}
 	
@@ -198,10 +197,10 @@ public class TunedStation extends Station {
 		return applicationList;
 	}
 	
-	public void setDate(Date date, String datetime, int bitTime) {
+	public void setDate(Date date, String datetime, RDSTime streamTime) {
 		this.date = date;
 		this.datetime = datetime;
-		this.dateBitTime = bitTime;
+		this.streamTimeForDate = streamTime;
 	}
 	
 	public String getDateTime() {
@@ -273,12 +272,9 @@ public class TunedStation extends Station {
 		return language;
 	}
 	
-	public Date getDateForBitTime(int bitTime) {
-		if(date == null) return null;
-		Calendar c = new GregorianCalendar();
-		c.setTime(date);
-		c.add(Calendar.SECOND, (int)((bitTime - dateBitTime) / 1187.5f));
-		return c.getTime();
+	public Date getRealTimeForStreamTime(RDSTime time) {
+		if(time == null) return null;
+		return time.getRealTime(streamTimeForDate, date);
 	}
 	
 	public boolean getStereo() {

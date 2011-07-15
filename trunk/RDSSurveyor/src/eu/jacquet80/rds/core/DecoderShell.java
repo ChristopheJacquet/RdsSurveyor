@@ -2,6 +2,7 @@ package eu.jacquet80.rds.core;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.Semaphore;
 
 import eu.jacquet80.rds.RDSSurveyor;
@@ -59,9 +60,9 @@ public class DecoderShell {
 						} catch(eu.jacquet80.rds.input.GroupReader.EndOfStream eos) {
 							TunedStation lastStation = groupDecoder.getTunedStation();
 							if(lastStation != null) {
-								log.addMessage(new StationLost(-1, lastStation, true));
+								log.addMessage(new StationLost(null, lastStation, true));
 							}
-							log.addMessage(new eu.jacquet80.rds.log.EndOfStream(-1));
+							log.addMessage(new eu.jacquet80.rds.log.EndOfStream(null));
 							goOn = false;
 							if(quitAfterProcess) return;
 						}
@@ -89,8 +90,7 @@ public class DecoderShell {
 		
 		@Override
 		public void visit(GroupReceived groupReceived) {
-			console.printf("%04d: ", groupReceived.getBitTime() / 26);
-			console.println(groupReceived);
+			console.println(groupReceived.toString(true));
 		}
 	};
 	
@@ -101,7 +101,7 @@ public class DecoderShell {
 	public synchronized void process(final GroupReader reader) {
 		// implicitly, this is the end of the previous stream
 		// (important to have this for UI parts that may react to stream changes)
-		log.addMessage(new EndOfStream(-1));
+		log.addMessage(new EndOfStream(null));
 		
 		// add a station change detector
 		this.reader = new StationChangeDetector(reader);
