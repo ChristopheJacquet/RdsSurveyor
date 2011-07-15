@@ -34,6 +34,7 @@ import java.util.List;
 
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.log.RDSTime;
 
 public class Paging extends Application {
 	private LinkedList<Message> messages = new LinkedList<Message>();
@@ -61,12 +62,12 @@ public class Paging extends Application {
 	}
 
 	@Override
-	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, int bitTime) {
+	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks, boolean[] blocksOk, RDSTime time) {
 		Message newMessage = null;
-		String time = "-";
+		String timeField = "-";
 		if(station != null) {
-			Date d = station.getDateForBitTime(bitTime);
-			if(d != null) time = timeFormat.format(d);
+			Date d = station.getRealTimeForStreamTime(time);
+			if(d != null) timeField = timeFormat.format(d);
 		}
 
 		synchronized(this) {
@@ -90,12 +91,12 @@ public class Paging extends Application {
 						// address of an alpha message
 						console.print("Alpha message: " + addrStr);
 
-						newMessage = currentMessage = new Message(time, addrStr, MessageType.ALPHA, ab);
+						newMessage = currentMessage = new Message(timeField, addrStr, MessageType.ALPHA, ab);
 						lastIdx = 0;
 					} else {
 						if(currentMessage == null || currentMessage.getType() != MessageType.ALPHA) {
 							// part of an alpha message with missed address
-							newMessage = currentMessage = new Message(time, null, MessageType.ALPHA, ab);
+							newMessage = currentMessage = new Message(timeField, null, MessageType.ALPHA, ab);
 							lastIdx = 0;
 						}
 
@@ -129,14 +130,14 @@ public class Paging extends Application {
 						console.print(addrStr +
 								", msg=" + msg + "...");
 
-						newMessage = currentMessage = new Message(time, addrStr, MessageType.NUMERIC_10, ab);
+						newMessage = currentMessage = new Message(timeField, addrStr, MessageType.NUMERIC_10, ab);
 						currentMessage.addText(msg);
 					} else {
 						String msg = decodeBCDWord(blocks[2]) + decodeBCDWord(blocks[3]);
 						console.print("msg=..." + msg);
 
 						if(currentMessage == null || currentMessage.getType() != MessageType.NUMERIC_10) {
-							newMessage = currentMessage = new Message(time, null, MessageType.NUMERIC_10, ab);
+							newMessage = currentMessage = new Message(timeField, null, MessageType.NUMERIC_10, ab);
 							currentMessage.addText("...");
 						}
 
@@ -146,7 +147,7 @@ public class Paging extends Application {
 				if((blocks[1] & 0xF) == 1) console.print("Part of func");
 				if((blocks[1] & 0xF) == 0) {
 					console.print("Beep: " + addrStr);
-					newMessage = currentMessage = new Message(time, addrStr, MessageType.BEEP, ab);
+					newMessage = currentMessage = new Message(timeField, addrStr, MessageType.BEEP, ab);
 				}
 
 

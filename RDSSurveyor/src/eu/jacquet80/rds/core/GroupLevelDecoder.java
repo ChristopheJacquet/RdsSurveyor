@@ -49,6 +49,7 @@ import eu.jacquet80.rds.log.EONReturn;
 import eu.jacquet80.rds.log.EONSwitch;
 import eu.jacquet80.rds.log.GroupReceived;
 import eu.jacquet80.rds.log.Log;
+import eu.jacquet80.rds.log.RDSTime;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
 
@@ -97,7 +98,7 @@ public class GroupLevelDecoder {
 		return addr;
 	}
 	
-	private void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, int bitTime) {
+	private void processGroup(int nbOk, boolean[] blocksOk, int[] blocks, RDSTime time) {
 		StringWriter consoleWriter = new StringWriter();
 		PrintWriter console = new PrintWriter(consoleWriter);
 		
@@ -105,7 +106,6 @@ public class GroupLevelDecoder {
 		Application newApp = null;
 		
 		TunedStation workingStation = station;
-		time += 104 / 1187.5;
 		
 		qualityHistory[historyPtr] = nbOk;
 		historyPtr = (historyPtr + 1) % qualityHistory.length;
@@ -356,7 +356,7 @@ public class GroupLevelDecoder {
 				
 				console.println();
 				console.print("\t" + app.getName()  + " --> ");
-				app.receiveGroup(console, type, version, blocks, blocksOk, bitTime);
+				app.receiveGroup(console, type, version, blocks, blocksOk, time);
 			}
 		}
 		
@@ -384,8 +384,8 @@ public class GroupLevelDecoder {
 			String datetime = String.format("%02d:%02d%c%dmin %04d-%02d-%02d", 
 					hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
 			console.printf("CT " + datetime);
-			workingStation.setDate(date, datetime, bitTime);
-			log.addMessage(new ClockTime(bitTime, date));
+			workingStation.setDate(date, datetime, time);
+			log.addMessage(new ClockTime(time, date));
 			
 			// is there paging ?
 			Application app = workingStation.getApplicationForGroup(7, 0);
@@ -433,7 +433,7 @@ public class GroupLevelDecoder {
 			if(app != null) {
 				console.println();
 				console.print("\t" + app.getName() +  " --> ");
-				app.receiveGroup(console, type, version, blocks, blocksOk, bitTime);
+				app.receiveGroup(console, type, version, blocks, blocksOk, time);
 			}
 		}
 		
@@ -544,8 +544,8 @@ public class GroupLevelDecoder {
 			} else { // 14B groups
 				int onta = (blocks[1]>>3) & 1;
 				console.print("ON.TA=" + onta + ", " + (onta==1 ? "switch now to ON" : "switch back from ON"));
-				if(onta == 1) log.addMessage(new EONSwitch(bitTime, on));
-				else log.addMessage(new EONReturn(bitTime, on));
+				if(onta == 1) log.addMessage(new EONSwitch(time, on));
+				else log.addMessage(new EONReturn(time, on));
 			}
 			
 		}
@@ -571,11 +571,11 @@ public class GroupLevelDecoder {
 		}
 		
 		// add a log message for each group
-		log.addMessage(new GroupReceived(bitTime, blocks, nbOk, consoleWriter.toString()));
+		log.addMessage(new GroupReceived(time, blocks, nbOk, consoleWriter.toString()));
 
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
-			log.addMessage(new ApplicationChanged(bitTime, null, newApp));
+			log.addMessage(new ApplicationChanged(time, null, newApp));
 	}
 	
 	
@@ -583,32 +583,31 @@ public class GroupLevelDecoder {
 		return station;
 	}
 	
-	public void notifyFrequencyChange(int time) {
+	public void notifyFrequencyChange(RDSTime time) {
 		station = new TunedStation(time);
 	}
 	
 	
 	private final GroupReaderEventVisitor readerEventVisitor = new GroupReaderEventVisitor() {
-		int bitTime = 0;
-
 		@Override
 		public void visit(StationChangeEvent stationChangeEvent) {
 			if(station != null)
 				log.addMessage(new StationLost(station.getTimeOfLastPI(), station));
-			station = new TunedStation(bitTime);
-			log.addMessage(new StationTuned(bitTime, station));
+			RDSTime time = stationChangeEvent.getTime();
+			station = new TunedStation(time);
+			log.addMessage(new StationTuned(time, station));
 		}
 
 		@Override
 		public void visit(GroupEvent groupEvent) {
-			this.bitTime = groupEvent.bitTime;
+			RDSTime time = groupEvent.getTime();
 
 			// defensive programming: station should not be null...
 			// but a (defective) input driver may forget to send the
 			// StationChangeEvent...
 			if(station == null) {
-				station = new TunedStation(bitTime);
-				log.addMessage(new StationTuned(bitTime, station));
+				station = new TunedStation(time);
+				log.addMessage(new StationTuned(time, station));
 			}
 			// end defensive programming section
 
@@ -621,8 +620,7 @@ public class GroupLevelDecoder {
 				if(blocksOk[i]) nbOk++;
 			}
 
-			processGroup(nbOk, blocksOk, blocks, bitTime);
-			bitTime += 104;  // 104 bits per group
+			processGroup(nbOk, blocksOk, blocks, time);
 			if(log != null) log.notifyGroup();
 		}
 

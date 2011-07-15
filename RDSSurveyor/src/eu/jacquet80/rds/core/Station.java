@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import eu.jacquet80.rds.RDSSurveyor;
+import eu.jacquet80.rds.log.RDSTime;
 
 
 /**
@@ -46,7 +47,7 @@ public abstract class Station {
 	protected Text ptyn = new Text(8);
 	private boolean tp, ta;
 	protected String pinText = "";
-	protected int timeOfLastPI = 0;
+	protected RDSTime timeOfLastPI = null;
 	
 	/**
 	 * A station uses (World/European) RDS or American RBDS. We use the default
@@ -73,8 +74,8 @@ public abstract class Station {
 		this.pi = pi;
 	}
 	
-	public void pingPI(int time) {
-		timeOfLastPI = time;
+	public void pingPI(RDSTime time) {
+		this.timeOfLastPI = time;
 	}
 
 	protected static int channelToFrequency(int channel) {

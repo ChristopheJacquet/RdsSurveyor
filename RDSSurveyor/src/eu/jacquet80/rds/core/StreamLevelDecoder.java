@@ -33,6 +33,7 @@ import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.SequentialTime;
 
 
 public class StreamLevelDecoder implements GroupReader {
@@ -203,7 +204,7 @@ public class StreamLevelDecoder implements GroupReader {
 						// return group data
 						int[] theGroup = new int[4];
 						System.arraycopy(group, 0, theGroup, 0, 4);
-						return new GroupEvent(bitTime, theGroup, false);
+						return new GroupEvent(new SequentialTime(bitTime), theGroup, false);
 						//groupLevelDecoder.processGroup(nbOk, blocksOk, group, bitTime);
 					}
 				}

@@ -25,15 +25,16 @@
 
 package eu.jacquet80.rds.log;
 
+
 public abstract class LogMessage {
-	protected int bitTime;
+	protected RDSTime time;
 	
-	protected LogMessage(int bitTime) {
-		this.bitTime = bitTime;
+	protected LogMessage(RDSTime time) {
+		this.time = time;
 	}
 	
-	public int getBitTime() {
-		return bitTime;
+	public RDSTime getTime() {
+		return this.time;
 	}
 	
 	public abstract void accept(LogMessageVisitor visitor);

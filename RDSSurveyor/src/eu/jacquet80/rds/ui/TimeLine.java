@@ -43,9 +43,9 @@ import eu.jacquet80.rds.log.LogMessage;
 import eu.jacquet80.rds.log.StationLost;
 import eu.jacquet80.rds.log.StationTuned;
 
-public class TimeLine extends JPanel {
-	private static final long serialVersionUID = 8291282167930195278L;
 
+public class TimeLine extends JPanel {
+/*
 	private final Log log;
 	private float scale = .003f;
 
@@ -132,4 +132,5 @@ public class TimeLine extends JPanel {
 		}
 
 	}
+*/
 }

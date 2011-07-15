@@ -30,14 +30,14 @@ import java.util.Date;
 public class ClockTime extends LogMessage {
 	private final Date time;
 	
-	public ClockTime(int bitTime, Date time) {
-		super(bitTime);
+	public ClockTime(RDSTime streamTime, Date time) {
+		super(streamTime);
 		
 		this.time = time;
 	}
 	
 	public String toString() {
-		return bitTime + "> CT: " + time;
+		return time + "> CT: " + time;
 	}
 
 	@Override
@@ -45,7 +45,7 @@ public class ClockTime extends LogMessage {
 		visitor.visit(this);
 	}
 	
-	public Date getTime() {
+	public Date getClockTime() {
 		return time;
 	}
 }

@@ -31,19 +31,19 @@ public class StationLost extends LogMessage {
 	private final TunedStation station;
 	private final boolean lastInStream;
 	
-	public StationLost(int bitTime, TunedStation station, boolean lastInStream) {
-		super(bitTime);
+	public StationLost(RDSTime time, TunedStation station, boolean lastInStream) {
+		super(time);
 		
 		this.station = station;
 		this.lastInStream = lastInStream;
 	}
 	
-	public StationLost(int bitTime, TunedStation station) {
-		this(bitTime, station, false);
+	public StationLost(RDSTime time, TunedStation station) {
+		this(time, station, false);
 	}
 	
 	public String toString() {
-		return bitTime + "> Lost: " + station.getPS();
+		return time + "> Lost: " + station.getPS();
 	}
 
 	@Override

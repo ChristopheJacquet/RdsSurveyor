@@ -59,7 +59,7 @@ public class StationChangeDetector implements GroupReader {
 						// 3) enqueue current group
 						queuedGroups.addLast(groupEvent);
 						// 4) send station changed event
-						result = new StationChangeEvent();
+						result = new StationChangeEvent(groupEvent.getTime());
 					} else {	// if PI has not changed
 						// 1) enqueue current group
 						queuedGroups.addLast(groupEvent);
@@ -82,7 +82,7 @@ public class StationChangeDetector implements GroupReader {
 						currentPI = blocks[0];
 						queuedGroups.clear();
 						queuedGroups.addLast(groupEvent);
-						result = new StationChangeEvent();
+						result = new StationChangeEvent(groupEvent.getTime());
 					}
 				}
 			}

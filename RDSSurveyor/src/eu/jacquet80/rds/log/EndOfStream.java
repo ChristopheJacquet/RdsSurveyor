@@ -1,9 +1,10 @@
 package eu.jacquet80.rds.log;
 
+
 public class EndOfStream extends LogMessage {
 
-	public EndOfStream(int bittime) {
-		super(bittime);
+	public EndOfStream(RDSTime time) {
+		super(time);
 	}
 	
 	@Override

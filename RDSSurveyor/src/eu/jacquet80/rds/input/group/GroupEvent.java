@@ -1,9 +1,10 @@
 package eu.jacquet80.rds.input.group;
 
+import eu.jacquet80.rds.log.RDSTime;
+
 
 
 public class GroupEvent extends GroupReaderEvent {
-	public final int bitTime;
 	public final int[] blocks;
 	public final boolean ignored;
 	
@@ -12,8 +13,8 @@ public class GroupEvent extends GroupReaderEvent {
 		visitor.visit(this);
 	}
 
-	public GroupEvent(int bitTime, int[] blocks, boolean ignored) {
-		this.bitTime = bitTime;
+	public GroupEvent(RDSTime time, int[] blocks, boolean ignored) {
+		super(time);
 		this.blocks = blocks;
 		this.ignored = ignored;
 	}

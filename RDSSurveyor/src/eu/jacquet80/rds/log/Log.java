@@ -26,7 +26,6 @@
 package eu.jacquet80.rds.log;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -43,9 +42,11 @@ public class Log {
 		for(LogMessageVisitor v : newMessageListeners) message.accept(v);
 	}
 	
+	/*
 	public synchronized int getLastTime() {
 		return messages.get(messages.size() - 1).getBitTime();
 	}
+	*/
 	
 	// the list of messages can only grow, so it is not really a critical
 	// section issue if some message appears between the moment the count is

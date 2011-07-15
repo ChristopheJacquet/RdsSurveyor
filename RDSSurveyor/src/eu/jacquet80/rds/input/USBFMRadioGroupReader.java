@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RealTime;
 
 
 public class USBFMRadioGroupReader implements GroupReader {
@@ -51,8 +52,8 @@ public class USBFMRadioGroupReader implements GroupReader {
 			short[] res = getRDSRegisters();
 			if(res == null) continue;
 			if((res[10] & 0x8000) == 0) continue;  // RSSI.RDS_Receive
-			// TODO FIXME: need to provide meaningful bit time
-			return new GroupEvent(0, new int[] { 
+
+			return new GroupEvent(new RealTime(), new int[] { 
 					0xFFFF & ((int)res[12]), 
 					0xFFFF & ((int)res[13]),
 					0xFFFF & ((int)res[14]),

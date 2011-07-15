@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import eu.jacquet80.rds.core.RDS;
+import eu.jacquet80.rds.log.RDSTime;
 
 public class InHouse extends Application {
 	private final List<Message> messages = new ArrayList<Message>();
@@ -44,7 +45,7 @@ public class InHouse extends Application {
 
 	@Override
 	public void receiveGroup(PrintWriter console, int type, int version, int[] blocks,
-			boolean[] blocksOk, int bitTime) {
+			boolean[] blocksOk, RDSTime time) {
 		if(blocksOk[1] && blocksOk[2] && blocksOk[3]) {
 			Message m = new Message(blocks[1] & 0x1F, blocks[2], blocks[3]);
 			synchronized(this) {
