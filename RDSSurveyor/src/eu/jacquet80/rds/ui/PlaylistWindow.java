@@ -34,8 +34,14 @@ public class PlaylistWindow extends JFrame {
 	private static final long serialVersionUID = 1711324533473299689L;
 	private final JList list = new JList();
 	private final JLabel lblStatus = new JLabel();
-	private static final Pattern linkPattern = Pattern.compile("<a.*?href=['\"](.*?\\.(?:rds|spy))['\"].*?>(.*?)</a>", 
-			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+	private static final Pattern linkPattern = 
+			Pattern.compile("<a.*?href=['\"](.*?\\.(?:rds|spy))['\"].*?>(.*?)</a>", 
+					Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+	private static final Pattern CONTENT_TYPE = Pattern.compile(".*; charset=(.*)");
+	private static final Pattern HTTP_EQUIV = 
+			Pattern.compile("<\\s*?meta\\s+http-equiv=[\"']Content-Type[\"']\\s+content=[\"'](.*?)[\"']\\s*?/?>",
+					Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+	private static final Pattern TAG = Pattern.compile("<.*?>", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 	private final MainWindow main;
 	private Item currentItem = null;
 
@@ -119,8 +125,7 @@ public class PlaylistWindow extends JFrame {
 		URL pageURL;
 		try {
 			pageURL = new URL(url);
-			URLConnection conn = pageURL.openConnection();
-			br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			br = createReader(pageURL);
 		} catch (MalformedURLException e) {
 			reportError("Malformed URL");
 			return;
@@ -145,7 +150,8 @@ public class PlaylistWindow extends JFrame {
 		while(matcher.find()) {
 			try {
 				//String caption = matcher.group(2).replace("&nbsp;", " ").trim();
-				String caption = "<html>" + matcher.group(2) + "</html>";
+				Matcher m = TAG.matcher(matcher.group(2));
+				String caption = "<html>" + m.replaceAll("") + "</html>";
 				items.add(new Item(caption, new URL(pageURL, matcher.group(1))));
 			} catch (MalformedURLException e) {
 				System.err.println("Warning: bad URL in web page: " + matcher.group(0) + " -> " + e);
@@ -153,6 +159,46 @@ public class PlaylistWindow extends JFrame {
 		}
 		
 		list.setListData(items);
+	}
+	
+	private BufferedReader createReader(URL url) throws IOException {
+		URLConnection conn = url.openConnection();
+		String charset = null;
+		
+		// Was the charset sent in the Content-Type: header?
+		if(conn.getContentType() != null) {
+			Matcher m = CONTENT_TYPE.matcher(conn.getContentType());
+			if(m.matches()) {
+				charset = m.group(1);
+			}
+		}
+		
+		// Otherwise fall-back to parsing the HTML
+		if(charset == null) {
+			BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			StringBuilder contents = new StringBuilder();
+			String line;
+			while((line = br.readLine()) != null) {
+				contents.append(line).append(' ');
+			}
+
+			Matcher mTag = HTTP_EQUIV.matcher(contents);
+			if(mTag.find()) {
+				String contentType = mTag.group(1);
+				Matcher mCharset = CONTENT_TYPE.matcher(contentType);
+				if(mCharset.matches()) {
+					charset = mCharset.group(1);
+				}
+			}
+			
+			conn = url.openConnection();
+		}
+		
+		// As a last resort suppose it's UTF-8
+		if(charset == null) charset = "utf-8";
+		
+		System.out.println("$$ charset = " + charset);
+		return new BufferedReader(new InputStreamReader(conn.getInputStream(), charset));
 	}
 	
 	private static class Item {

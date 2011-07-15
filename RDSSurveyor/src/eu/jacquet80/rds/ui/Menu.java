@@ -20,8 +20,8 @@ public class Menu {
 	private static enum Item {
 		OPEN("Open stream..."), 
 		QUIT("Quit"),
-		WINDOW_PLAYLIST("Playlist", false),
-		WINDOW_GROUP("Group analyzer", false);
+		WINDOW_PLAYLIST("Playlist"),
+		WINDOW_GROUP("Group analyzer");
 		
 		
 		private final String label;
@@ -98,12 +98,12 @@ public class Menu {
 						}
 						case WINDOW_GROUP: {
 							window = mainWindow.getDumpDisplay();
-							window.setVisible(! window.isVisible());
+							window.setVisible(true);
 							break;
 						}
 						case WINDOW_PLAYLIST: {
 							window = mainWindow.getPlaylistWindow();
-							window.setVisible(! window.isVisible());
+							window.setVisible(true);
 							break;
 						}
 

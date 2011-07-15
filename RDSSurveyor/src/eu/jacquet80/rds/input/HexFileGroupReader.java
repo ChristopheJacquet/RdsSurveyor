@@ -101,7 +101,10 @@ public class HexFileGroupReader implements GroupReader {
 		if(line.startsWith("<")) return null;
 		
 		String[] components = SPACE.split(line);
-		if(components.length < 4) throw new IOException("Not enough blocks on line \"" + line + "\"");
+		
+		// ignore incorrect lines
+		if(components.length < 4) return null; //throw new IOException("Not enough blocks on line \"" + line + "\"");
+		
 		int[] res = new int[4];
 		
 		for(int i=0; i<4; i++) {
