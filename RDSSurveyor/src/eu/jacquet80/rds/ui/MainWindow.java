@@ -36,11 +36,13 @@ import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -48,6 +50,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
 
 import eu.jacquet80.rds.app.Application;
@@ -89,6 +92,10 @@ public class MainWindow extends JFrame {
 			txtStereo = new JTextArea(1, 5),
 			txtHead = new JTextArea(1, 5),
 			txtPIN = new JTextArea(1, 12);
+	
+	private final TrafficModel trafficModel = new TrafficModel();
+	private final JList lstTraffic = new JList(trafficModel);
+	
 	private final JLabel txtRT = new JLabel("<html> </html>");
 	private final GroupPanel groupStats = new GroupPanel();
 	
@@ -269,8 +276,9 @@ public class MainWindow extends JFrame {
 		final JPanel pnlEON = new JPanel(new BorderLayout());
 		pnlEON.add(new JScrollPane(tblEON = new JTable(eonTableModel)), BorderLayout.CENTER);
 		
-		final JPanel pnlAF = new JPanel(new BorderLayout());
+		final JPanel pnlAF = new JPanel(new GridLayout(1, 2, 6, 6));
 		pnlAF.add(new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+		pnlAF.add(new JScrollPane(lstTraffic));
 		
 		globalPanel.add(tabbedPane, BorderLayout.CENTER);
 		
@@ -340,7 +348,7 @@ public class MainWindow extends JFrame {
 							tabbedPane.removeAll();
 							tabbedPane.addTab("EON", pnlEON);
 							tabbedPane.addTab("RT", pnlRT);
-							tabbedPane.addTab("AF", pnlAF);
+							tabbedPane.addTab("AF & Traffic", pnlAF);
 							tabbedPane.addTab("ODA", pnlODA);
 							currentAppPanels.clear();
 							updateAppTabs();
@@ -453,6 +461,10 @@ public class MainWindow extends JFrame {
 									txtHead.setText(station.getArtificialHead() ? "Yes" : "No");
 									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
 									txtDPTY.setText(station.getDPTY() ? "Dynamic" : "Static");
+									
+									// Traffic
+									// TODO improve me!
+									trafficModel.update();
 								};
 							});
 
@@ -469,6 +481,25 @@ public class MainWindow extends JFrame {
 		pack();
 		setLocationRelativeTo(null);  // center window on screen
 	}
+	
+	private class TrafficModel extends DefaultListModel {
+		public Object getElementAt(int index) {
+			if(station != null && station.getTrafficEventsList().size() > index) {
+				return station.getTrafficEventsList().get(index);
+			} else return null;
+		}
+		
+		public int getSize() {
+			if(station != null) return station.getTrafficEventsList().size();
+			else return 0;
+		}
+		
+		public void update() {
+			int max = station == null ? 0 : station.getTrafficEventsList().size() - 1;
+			fireContentsChanged(this, 0, max);
+		}
+		
+	};
 
 }
 

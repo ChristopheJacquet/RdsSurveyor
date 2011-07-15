@@ -59,6 +59,7 @@ public class GroupLevelDecoder {
 	private TunedStation station = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
 	private Log log;
+	private int groupCountSinceEonSwitch = 0;
 	//private int badPIcount = 0;
 	
 	private final String[] RP_TNGD_VALUES = {
@@ -80,7 +81,7 @@ public class GroupLevelDecoder {
 		synced = false;
 	}
 	
-	private int processBasicTuningBits(PrintWriter console, int block1) {
+	private int processBasicTuningBits(PrintWriter console, int block1, RDSTime time) {
 		// Groups 0A, 0B, 15B : for TA, M/S and DI we need only block 1 (or block 3 for 15B)
 		int ta = (block1>>4) & 1;
 		int ms = (block1>>3) & 1;
@@ -90,6 +91,12 @@ public class GroupLevelDecoder {
 		
 		boolean diInfo = ((block1>>2) & 1) == 1;		
 		station.setDIbit(addr, diInfo, console);
+		
+		boolean newTa = (ta == 1);
+		
+		if(station.getTP() && (station.getTA() != newTa)) {
+			station.addTrafficEvent(time, (newTa ? "start" : "end") + " of traffic announcement");
+		}
 		
 		station.setTA(ta == 1);
 		
@@ -160,7 +167,7 @@ public class GroupLevelDecoder {
 		
 		// Groups 0A & 0B
 		if(type == 0) {
-			int addr = processBasicTuningBits(console, blocks[1]);
+			int addr = processBasicTuningBits(console, blocks[1], time);
 			
 			// Groups 0A & 0B: to extract PS segment we need blocks 1 and 3
 			if(blocksOk[3]) {
@@ -464,9 +471,10 @@ public class GroupLevelDecoder {
 			Station on = null;
 			console.print("EON, ");
 
-			// in both version if we have block 3 we have ON PI
+			// in both versions if we have block 3 we have ON PI
+			int onPI = -1;
 			if(blocksOk[3]) {
-				int onPI = blocks[3];
+				onPI = blocks[3];
 				console.printf("ON.PI=%04X%s, ", onPI, onPI == workingStation.getPI() ? " (self)" : "");
 				
 				if(onPI != workingStation.getPI()) {
@@ -539,9 +547,17 @@ public class GroupLevelDecoder {
 				}
 			} else { // 14B groups
 				int onta = (blocks[1]>>3) & 1;
-				console.print("ON.TA=" + onta + ", " + (onta==1 ? "switch now to ON" : "switch back from ON"));
-				if(onta == 1) log.addMessage(new EONSwitch(time, on));
-				else log.addMessage(new EONReturn(time, on));
+				String message = (onta==1 ? "Switch now to ON" : "Switch back from ON");
+				console.print("ON.TA=" + onta + ", " + message);
+				if(onta == 1) {
+					log.addMessage(new EONSwitch(time, on));
+				} else {
+					log.addMessage(new EONReturn(time, on));
+				}
+				if(onPI >= 0) message += String.format(": PI=%04X", onPI);
+				if(on != null) message += " (" + on.getStationName().trim() + ")";
+				if(groupCountSinceEonSwitch > 20) station.addTrafficEvent(time, message);
+				groupCountSinceEonSwitch = 0;
 			}
 			
 		}
@@ -562,8 +578,8 @@ public class GroupLevelDecoder {
 		
 		// For 15B we need only group 1, and possibly group 3
 		if(type == 15 && version == 1) {
-			processBasicTuningBits(console, blocks[1]);
-			if(blocksOk[3]) processBasicTuningBits(console, blocks[3]);
+			processBasicTuningBits(console, blocks[1], time);
+			if(blocksOk[3]) processBasicTuningBits(console, blocks[3], time);
 		}
 		
 		// add a log message for each group
@@ -572,6 +588,8 @@ public class GroupLevelDecoder {
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
 			log.addMessage(new ApplicationChanged(time, null, newApp));
+		
+		groupCountSinceEonSwitch++;
 	}
 	
 	
