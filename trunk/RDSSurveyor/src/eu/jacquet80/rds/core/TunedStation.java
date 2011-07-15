@@ -55,6 +55,8 @@ public class TunedStation extends Station {
 	private int ecc, language;
 	private Text rt = new Text(64);
 	
+	private final List<String> trafficEvents = new ArrayList<String>();
+	
 	private Map<Integer, Integer> odas = new HashMap<Integer, Integer>();
 	private Map<Integer, Application> odaApps = new HashMap<Integer, Application>();
 	
@@ -327,6 +329,14 @@ public class TunedStation extends Station {
 		}
 		
 		return b.toString();
+	}
+	
+	public void addTrafficEvent(RDSTime time, String description) {
+		this.trafficEvents.add(time + ": " + description);
+	}
+	
+	public List<String> getTrafficEventsList() {
+		return trafficEvents;
 	}
 }
 
