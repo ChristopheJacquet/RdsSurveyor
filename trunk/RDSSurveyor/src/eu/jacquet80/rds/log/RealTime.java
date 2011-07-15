@@ -23,6 +23,6 @@ public class RealTime implements RDSTime {
 	}
 	
 	public String toString() {
-		return 	TIME_FORMAT.format(this.time);
+		return TIME_FORMAT.format(this.time);
 	}
 }

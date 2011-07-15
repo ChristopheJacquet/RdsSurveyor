@@ -56,7 +56,6 @@ import eu.jacquet80.rds.log.StationTuned;
 public class GroupLevelDecoder {
 	private int[] qualityHistory = new int[40];
 	private int historyPtr = 0;
-	private double time = 0.0;
 	private TunedStation station = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
 	private Log log;
@@ -109,9 +108,6 @@ public class GroupLevelDecoder {
 		
 		qualityHistory[historyPtr] = nbOk;
 		historyPtr = (historyPtr + 1) % qualityHistory.length;
-		int sum = 0;
-		for(int i=0; i < qualityHistory.length; i++) sum += qualityHistory[i];
-		//float quality = sum / (4f * qualityHistory.length);
 		
 		// First identify type and version of the group, if possible.
 		// We do this now in order to be able to extract the PI from block 2
