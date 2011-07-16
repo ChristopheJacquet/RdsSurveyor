@@ -32,6 +32,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,7 +47,7 @@ import eu.jacquet80.rds.log.RDSTime;
 public class HexFileGroupReader implements GroupReader {
 	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
 	private final static Pattern RDS_SPY_DATE_FORMAT = 
-			Pattern.compile(".*@(\\d{4})/(\\d{2})/(\\d{2})\\s+(\\d{2}):(\\d{2}):(\\d{2}).(\\d{2})$");
+			Pattern.compile(".*@(\\d{4})/(\\d{2})/(\\d{2})\\s+(\\d{2}):(\\d{2}):(\\d{2}).(\\d{2,4})$");
 	private final BufferedReader br;
 	private int groupTime = 0;
 	private static final Pattern SPACE = Pattern.compile("\\s+");
@@ -124,6 +125,7 @@ public class HexFileGroupReader implements GroupReader {
 					Integer.parseInt(m.group(4)), 
 					Integer.parseInt(m.group(5)),
 					Integer.parseInt(m.group(6)));
+			c.set(Calendar.MILLISECOND, (int)(Float.parseFloat("0." + m.group(7)) * 1000));
 			time = new RealTime(c.getTime());
 		}
 
