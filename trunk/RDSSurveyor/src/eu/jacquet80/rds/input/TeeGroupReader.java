@@ -41,7 +41,6 @@ import eu.jacquet80.rds.input.group.StationChangeEvent;
 public class TeeGroupReader implements GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
-	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
 	
 	public TeeGroupReader(GroupReader reader, File of) throws IOException {
 		this.reader = reader;
@@ -57,8 +56,8 @@ public class TeeGroupReader implements GroupReader {
 		event.accept(new GroupReaderEventVisitor() {
 			@Override
 			public void visit(FrequencyChangeEvent freqChangeEvent) {
-				writer.println("% Freq " + freqChangeEvent.frequency + ", date=" + 
-						dateFormat.format(Calendar.getInstance().getTime()));
+				writer.print("% Freq " + freqChangeEvent.frequency + ", date=" + 
+						freqChangeEvent.getTime().toLongString());
 			}
 			
 			@Override
@@ -67,6 +66,7 @@ public class TeeGroupReader implements GroupReader {
 					if(groupEvent.blocks[i]>=0) writer.printf("%04X ", groupEvent.blocks[i]);
 					else writer.print("---- ");
 				}
+				writer.print("@" + groupEvent.getTime().toLongString());
 			}
 
 			@Override

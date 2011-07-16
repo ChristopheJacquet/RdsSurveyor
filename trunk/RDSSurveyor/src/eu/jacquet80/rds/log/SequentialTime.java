@@ -23,4 +23,9 @@ public class SequentialTime implements RDSTime {
 	public String toString() {
 		return FORMAT.format(groupTime % 10000);
 	}
+
+	@Override
+	public String toLongString() {
+		return toString();
+	}
 }
