@@ -50,13 +50,12 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
-import eu.jacquet80.rds.input.GroupReader;
+import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -178,10 +177,10 @@ public class MainWindow extends JFrame {
 		return panel;
 	}
 	
-	public void setReader(Log log, GroupReader reader) {
+	public void setReader(Log log, RDSReader readerForToolbar) {
 		if(toolbar != null) toolbar.unregister();
 		
-		toolbar = InputToolBar.forReader(reader, log);
+		toolbar = InputToolBar.forReader(readerForToolbar, log);
 
 		pnlInputToolbar.removeAll();
 		if(toolbar != null) {

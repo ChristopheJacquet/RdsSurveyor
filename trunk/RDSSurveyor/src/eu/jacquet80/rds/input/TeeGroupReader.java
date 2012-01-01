@@ -29,8 +29,6 @@ package eu.jacquet80.rds.input;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;

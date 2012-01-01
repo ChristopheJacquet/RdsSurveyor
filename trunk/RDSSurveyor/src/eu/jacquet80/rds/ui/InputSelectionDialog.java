@@ -17,8 +17,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import eu.jacquet80.rds.RDSSurveyor;
-import eu.jacquet80.rds.core.StreamLevelDecoder;
+import eu.jacquet80.rds.core.BitStreamDecoder;
 import eu.jacquet80.rds.img.Image;
+import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
@@ -75,7 +76,8 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		Object source = e.getSource();
 		try {
 			if(source == btnAudio) {
-				choice = new StreamLevelDecoder(System.out, new LiveAudioBitReader());
+				BitReader br =  new LiveAudioBitReader();
+				choice = new BitStreamDecoder(System.out, br);
 				choiceDone.release();
 			} else if(source == btnTuner) {
 				choice = new USBFMRadioGroupReader();

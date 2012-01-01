@@ -79,10 +79,20 @@ public class StationChangeDetector implements GroupReader {
 					if(currentPI == blocks[0])
 						result = groupEvent;	// "normal" behavior, when not expecting PI
 					else {
+						// defer station change until a new group is found with
+						// a PI different from currentPI
+						// Note: maybe we could improve this by storing which
+						// is the PI to expect...
+						queuedGroups.addLast(groupEvent);
+						expectingPI = true;
+						
+						/* Old code: would fire a StationChangeEvent
+						 * immediately.
 						currentPI = blocks[0];
 						queuedGroups.clear();
 						queuedGroups.addLast(groupEvent);
 						result = new StationChangeEvent(groupEvent.getTime());
+						 */
 					}
 				}
 			}
@@ -96,7 +106,7 @@ public class StationChangeDetector implements GroupReader {
 	}
 	
 	
-	public GroupReaderEvent getGroupOrNull() throws IOException, EndOfStream {
+	private GroupReaderEvent getGroupOrNull() throws IOException, EndOfStream {
 		///System.out.println("queue: " + queuedGroups);
 		if(!expectingPI && !queuedGroups.isEmpty()) {
 			// There are queued groups awaiting to be sent out

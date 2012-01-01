@@ -36,7 +36,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.SequentialTime;
 
 
-public class StreamLevelDecoder implements GroupReader {
+public class BitStreamDecoder implements GroupReader {
 	private final static int SYNC_THRESHOLD = 2;  // need 2 blocks after initial block to confirm synchronization
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
@@ -60,7 +60,7 @@ public class StreamLevelDecoder implements GroupReader {
 	private @SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][][] = new LinkedList[26][4][2];
 	
 	
-	public StreamLevelDecoder(PrintStream console, BitReader reader) {
+	public BitStreamDecoder(PrintStream console, BitReader reader) {
 		this.console = console;
 		//this.log = log;
 		this.reader = reader;

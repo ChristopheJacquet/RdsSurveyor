@@ -25,23 +25,7 @@
 
 package eu.jacquet80.rds.ui;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-
 import javax.swing.JPanel;
-
-import eu.jacquet80.rds.log.ClockTime;
-import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
-import eu.jacquet80.rds.log.EONReturn;
-import eu.jacquet80.rds.log.EONSwitch;
-import eu.jacquet80.rds.log.Log;
-import eu.jacquet80.rds.log.LogMessage;
-import eu.jacquet80.rds.log.StationLost;
-import eu.jacquet80.rds.log.StationTuned;
 
 
 public class TimeLine extends JPanel {
