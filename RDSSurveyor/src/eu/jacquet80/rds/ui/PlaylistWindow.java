@@ -35,7 +35,7 @@ public class PlaylistWindow extends JFrame {
 	private final JList list = new JList();
 	private final JLabel lblStatus = new JLabel();
 	private static final Pattern linkPattern = 
-			Pattern.compile("<a.*?href=['\"](.*?\\.(?:rds|spy))['\"].*?>(.*?)</a>", 
+			Pattern.compile("<a.*?href=['\"]([^'\"]*?\\.(?:rds|spy))['\"].*?>(.*?)</a>", 
 					Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
 	private static final Pattern CONTENT_TYPE = Pattern.compile(".*; charset=(.*)");
 	private static final Pattern HTTP_EQUIV = 
@@ -70,7 +70,7 @@ public class PlaylistWindow extends JFrame {
 				
 				if(item != currentItem) {
 					currentItem = item;
-
+					
 					new Thread() {
 						{
 							setName("RDSSurveyor-PlaylistWindow-Launcher");
@@ -80,13 +80,14 @@ public class PlaylistWindow extends JFrame {
 							final GroupReader reader;
 							try {
 								reader = new HexFileGroupReader(item.url);
-							} catch (IOException e1) {
+							} catch (Exception e) {
+								System.err.println(e);
 								reportError("Could not open selected file");
 								return;
 							}
 
 							main.setReader(DecoderShell.instance.getLog(), reader);
-							DecoderShell.instance.process(reader);						
+							DecoderShell.instance.process(reader);
 						}
 					}.start();
 				}
@@ -159,6 +160,8 @@ public class PlaylistWindow extends JFrame {
 		}
 		
 		list.setListData(items);
+		
+		System.out.println(items);
 	}
 	
 	private BufferedReader createReader(URL url) throws IOException {
@@ -211,7 +214,7 @@ public class PlaylistWindow extends JFrame {
 		}
 		
 		public String toString() {
-			return title;
+			return title + " -> " + url;
 		}
 	}
 }

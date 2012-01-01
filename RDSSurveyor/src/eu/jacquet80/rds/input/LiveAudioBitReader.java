@@ -194,7 +194,7 @@ public class LiveAudioBitReader implements BitReader {
 			bitDuration++;
 		} while(! (prevClock <= clockAvg && clock > clockAvg && bitDuration >= LOWEST_THEORICAL_BIT_DURATION) );
 		
-		if(bitDuration < 6 || bitDuration > 7) System.out.println("!! WARNING: bit duration was " + bitDuration + ", theorical " + SAMPLE_RATE / RDS.RDS_BITRATE);
+		if(bitDuration < 6 || bitDuration > 7) System.out.println("!! WARNING: bit duration was " + bitDuration + ", theoretical " + SAMPLE_RATE / RDS.RDS_BITRATE);
 		bitDuration = 0;
 
 		return data > dataAvg;   /// data > 0; ///

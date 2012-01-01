@@ -1,17 +1,17 @@
 package eu.jacquet80.rds.ui;
 
-import java.awt.BorderLayout;
 import java.awt.EventQueue;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
 import javax.swing.BoxLayout;
-import javax.swing.JRadioButton;
 import javax.swing.ButtonGroup;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
+import javax.swing.border.EmptyBorder;
 
+@SuppressWarnings("serial")
 public class PrefsWindow extends JFrame {
 
 	private JPanel contentPane;

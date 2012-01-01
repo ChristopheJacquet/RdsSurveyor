@@ -2,7 +2,6 @@ package eu.jacquet80.rds.core;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.text.SimpleDateFormat;
 import java.util.concurrent.Semaphore;
 
 import eu.jacquet80.rds.RDSSurveyor;
