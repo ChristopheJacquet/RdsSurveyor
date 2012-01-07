@@ -26,8 +26,6 @@
 package eu.jacquet80.rds.input;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import javax.sound.sampled.AudioFormat;
@@ -72,9 +70,8 @@ public class LiveAudioBitReader extends BitReader {
 	
 	boolean processingComplete = true;
 	
-	private final int BITLENGTHS_WINDOW_LEN = 2000;
+	private final int BITLENGTHS_WINDOW_LEN = 3000;
 	private final NumberRingBuffer bitLengths = new NumberRingBuffer(BITLENGTHS_WINDOW_LEN);
-	private final List<StatusListener> statusListeners = new ArrayList<LiveAudioBitReader.StatusListener>();
 	
 	public LiveAudioBitReader() throws IOException {
 		/*
@@ -201,9 +198,7 @@ public class LiveAudioBitReader extends BitReader {
 			bitDuration++;
 		} while(! (prevClock <= clockAvg && clock > clockAvg && bitDuration >= LOWEST_THEORICAL_BIT_DURATION) );
 		
-		if(bitLengths.addValue(bitDuration)) {
-			reportStatus(SAMPLE_RATE / bitLengths.getAverageValue());
-		}
+		bitLengths.addValue(bitDuration);
 		
 		if(bitDuration < 6 || bitDuration > 7) System.out.println("!! WARNING: bit duration was " + bitDuration + ", theoretical " + SAMPLE_RATE / RDS.RDS_BITRATE);
 		bitDuration = 0;
@@ -213,17 +208,11 @@ public class LiveAudioBitReader extends BitReader {
 
 
 	
-	public static interface StatusListener {
-		public void report(double clockFrequency);
-	}
-	
-	public void addStatusListener(StatusListener l) {
-		statusListeners.add(l);
-	}
-	
-	private void reportStatus(double clockFrequency) {
-		for(StatusListener l : statusListeners) {
-			l.report(clockFrequency);
+	public double getClockFrequency() {
+		if(bitLengths.countValuesAdded() > 0) {
+			return SAMPLE_RATE / bitLengths.getAverageValue();
+		} else {
+			return -1;
 		}
 	}
 }

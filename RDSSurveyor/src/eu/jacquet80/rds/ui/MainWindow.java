@@ -104,6 +104,7 @@ public class MainWindow extends JFrame {
 	private final JTabbedPane tabbedPane = new JTabbedPane();
 	
 	private final BLERDisplay bler = new BLERDisplay(200);
+	private final LatestGroupsDisplay latestGroups = new LatestGroupsDisplay(200);
 	
 	private final JPanel pnlInputToolbar = new JPanel(new FlowLayout(FlowLayout.LEADING));
 	
@@ -242,12 +243,13 @@ public class MainWindow extends JFrame {
 				lblHead = new JLabel("Artificial head"),
 				lblStereo = new JLabel("Sound"),
 				lblBLER = new JLabel("Block error rate"),
+				lblLatestGroups = new JLabel("Latest groups"),
 				lblPIN = new JLabel("PIN");
 		
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblPS, lblPSName, lblPI, lblBLER},
-				{txtPS, txtPSName, txtPI, bler},
+				{lblPS, lblPSName, lblPI, lblLatestGroups, lblBLER},
+				{txtPS, txtPSName, txtPI, latestGroups, bler},
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -310,6 +312,9 @@ public class MainWindow extends JFrame {
 				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.BLACK, 1)));
 
+		latestGroups.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(BORDER_COLOR, 1),
+				BorderFactory.createLineBorder(Color.BLACK, 1)));
 		
 		txtAF.setLineWrap(true);
 		txtAF.setWrapStyleWord(true);
@@ -337,12 +342,14 @@ public class MainWindow extends JFrame {
 			@Override
 			public void visit(GroupReceived groupReceived) {
 				bler.addGroup(groupReceived.getNbOk());
+				latestGroups.addGroup(groupReceived.getOKMask());
 			}
 			
 			@Override
 			public void visit(StationTuned stationTuned) {
 				synchronized(MainWindow.this) {
 					bler.clear();
+					latestGroups.clear();
 					station = stationTuned.getStation();
 					eonTableModel.setTunedStation(station);
 					pnlRT.setStation(station);
@@ -410,6 +417,7 @@ public class MainWindow extends JFrame {
 							SwingUtilities.invokeLater(new Runnable() {
 								public void run() {
 									bler.repaint();
+									latestGroups.repaint();
 									
 									int pi = station.getPI();
 									txtPS.setText(station.getPS().getLatestCompleteOrPartialText());

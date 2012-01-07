@@ -4,10 +4,10 @@ package eu.jacquet80.rds.util;
 public class NumberRingBuffer extends RingBuffer<Number> {
 
 	public NumberRingBuffer(int length) {
-		super(Number.class, length);
+		super(Number.class, length, 0);
 	}
 
-	public double getAverageValue() {
+	public synchronized double getAverageValue() {
 		double sum = 0;
 		
 		for(Number n : values) {

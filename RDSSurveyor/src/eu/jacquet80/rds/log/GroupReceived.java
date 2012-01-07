@@ -28,6 +28,13 @@ public class GroupReceived extends LogMessage {
 		return nbOk;
 	}
 	
+	public int getOKMask() {
+		return (blocks[0] != -1 ? 1 : 0) |
+				(blocks[1] != -1 ? 2 : 0) |
+				(blocks[2] != -1 ? 4 : 0) |
+				(blocks[3] != -1 ? 8 : 0);
+	}
+	
 	public String getAnalysis() {
 		return analysis;
 	}
