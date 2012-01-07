@@ -8,7 +8,9 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JToolBar;
 
+import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.input.GroupReader;
+import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.log.Log;
@@ -27,17 +29,32 @@ public abstract class InputToolBar extends JToolBar {
 		//System.out.println("For reader: " + reader);
 		if(reader instanceof TunerGroupReader) 
 			return new TunerToolBar((TunerGroupReader)reader);
+		else if(reader instanceof BitStreamSynchronizer) return new BitStreamSynchronizerToolBar((BitStreamSynchronizer)reader);
+		else if(reader instanceof LiveAudioBitReader) return new LiveAudioToolBar((LiveAudioBitReader) reader);
 		else if(reader instanceof GroupReader) return new PlaybackToolBar(log);
 		else return null;
 	}
 	
+	/**
+	 * Constructs a new input tool bar with a two-line label.
+	 * 
+	 * @param name1 first line of the label
+	 * @param name2 second line of the label
+	 */
 	protected InputToolBar(String name1, String name2) {
-		setFloatable(false);
+		this();
 		JLabel label = new JLabel("<html>" + name1 + "<br>" + name2 + "</html>");
 		label.setPreferredSize(label.getMinimumSize());
 		label.setMaximumSize(label.getMinimumSize());
 		add(label);
 		addSeparator();
+	}
+	
+	/**
+	 * Constructs a new input tool bar without a label.
+	 */
+	protected InputToolBar() {
+		setFloatable(false);
 	}
 
 	

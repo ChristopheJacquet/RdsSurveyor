@@ -32,7 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class SyncBinaryFileBitReader implements BitReader {
+public class SyncBinaryFileBitReader extends BitReader {
 	private final InputStream isr;
 	private int oct;
 	private int octPtr;

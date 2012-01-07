@@ -33,7 +33,7 @@ import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
-public class SimpleV4LGroupReader implements GroupReader {
+public class SimpleV4LGroupReader extends GroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final FileInputStream reader;

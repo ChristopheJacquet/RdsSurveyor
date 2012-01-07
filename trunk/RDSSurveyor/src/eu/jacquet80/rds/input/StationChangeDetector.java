@@ -9,7 +9,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
 import eu.jacquet80.rds.input.group.StationChangeEvent;
 
-public class StationChangeDetector implements GroupReader {
+public class StationChangeDetector extends GroupReader {
 	private final GroupReader reader;
 	
 	private final LinkedList<GroupEvent> queuedGroups = new LinkedList<GroupEvent>();
@@ -103,6 +103,7 @@ public class StationChangeDetector implements GroupReader {
 	
 	public StationChangeDetector(GroupReader reader) {
 		this.reader = reader;
+		setParent(reader);
 	}
 	
 	

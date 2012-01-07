@@ -36,7 +36,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEventVisitor;
 import eu.jacquet80.rds.input.group.StationChangeEvent;
 
-public class TeeGroupReader implements GroupReader {
+public class TeeGroupReader extends GroupReader {
 	private final PrintWriter writer;
 	private final GroupReader reader;
 	
@@ -44,6 +44,7 @@ public class TeeGroupReader implements GroupReader {
 		this.reader = reader;
 		writer = new PrintWriter(of);
 		writer.println("% RDS hexgroups");
+		setParent(reader);
 	}
 	
 	@Override

@@ -7,7 +7,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
 
-public class USBFMRadioGroupReader implements GroupReader {
+public class USBFMRadioGroupReader extends GroupReader {
 	public native byte init();
 	public native int getFrequency();
 	public native void setFrequency(int frequency);	

@@ -29,9 +29,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
@@ -102,7 +105,7 @@ public class MainWindow extends JFrame {
 	
 	private final BLERDisplay bler = new BLERDisplay(200);
 	
-	private final JPanel pnlInputToolbar = new JPanel(new BorderLayout());
+	private final JPanel pnlInputToolbar = new JPanel(new FlowLayout(FlowLayout.LEADING));
 	
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
@@ -120,7 +123,7 @@ public class MainWindow extends JFrame {
 	
 	private final LogMessageVisitor windowUpdaterVisitor;
 	
-	private InputToolBar toolbar = null;
+	private List<InputToolBar> toolbars = new ArrayList<InputToolBar>();
 	
 	
 	public DumpDisplay getDumpDisplay() {
@@ -178,14 +181,20 @@ public class MainWindow extends JFrame {
 	}
 	
 	public void setReader(Log log, RDSReader readerForToolbar) {
-		if(toolbar != null) toolbar.unregister();
-		
-		toolbar = InputToolBar.forReader(readerForToolbar, log);
-
-		pnlInputToolbar.removeAll();
-		if(toolbar != null) {
-			pnlInputToolbar.add(toolbar, BorderLayout.CENTER);
+		for(InputToolBar toolbar : toolbars) {
+			toolbar.unregister();
 		}
+		pnlInputToolbar.removeAll();
+		
+		for(RDSReader r : readerForToolbar.getAllParentReaders()) {
+			InputToolBar toolbar = InputToolBar.forReader(r, log);
+			System.out.println("Reader: " + r + " -> " + toolbar);
+			
+			if(toolbar != null) {
+				pnlInputToolbar.add(toolbar);
+			}
+		}
+		
 		pack();
 		repaint();
 		
