@@ -1,5 +1,6 @@
 package eu.jacquet80.rds.ui.input;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 
 import javax.swing.JLabel;
@@ -9,6 +10,7 @@ import eu.jacquet80.rds.core.BitStreamSynchronizer.Status;
 
 @SuppressWarnings("serial")
 public class BitStreamSynchronizerToolBar extends InputToolBar {
+	final static Color GREEN_OK_COLOR = new Color(0, 140, 0);
 
 	public BitStreamSynchronizerToolBar(BitStreamSynchronizer bsd) {
 		super();
@@ -20,7 +22,23 @@ public class BitStreamSynchronizerToolBar extends InputToolBar {
 			
 			@Override
 			public void report(Status status) {
-				lblStatus.setText(status.toString());
+				String text;
+				Color color;
+				
+				switch(status) {
+				case SYNCED:
+					text = "<html><br>Synced</html>";
+					color = GREEN_OK_COLOR;
+					break;
+					
+				default:
+				case NOT_SYNCED:
+					text = "<html>Not<br>Synced</html>";
+					color = Color.RED;
+					break;
+				}
+				lblStatus.setText(text);
+				lblStatus.setForeground(color);
 			}
 		});
 	}

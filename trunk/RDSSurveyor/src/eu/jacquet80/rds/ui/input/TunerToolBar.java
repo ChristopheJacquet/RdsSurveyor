@@ -22,6 +22,7 @@ public class TunerToolBar extends InputToolBar {
 	private int frequency;
 	private int signal;
 	private final static int MAX_SIGNAL = 65535;
+	private boolean active = true;
 	
 	private final static String 
 		UP_BUTTON = "UP",
@@ -76,7 +77,7 @@ public class TunerToolBar extends InputToolBar {
 		
 		new Thread() {
 			public void run() {
-				for(;;) {
+				while(active) {
 					update();
 					try {
 						sleep(500);
@@ -128,6 +129,7 @@ public class TunerToolBar extends InputToolBar {
 	
 	@Override
 	public void unregister() {
-		// nothing to do, this toolbar is not registered as a log listener
+		active = false;   // stop update thread
+		// this toolbar is not registered as a log listener
 	}
 }
