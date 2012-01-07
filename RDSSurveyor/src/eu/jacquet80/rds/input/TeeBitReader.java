@@ -29,7 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class TeeBitReader implements BitReader {
+public class TeeBitReader extends BitReader {
 	private final BitReader reader;
 	private final FileOutputStream writer;
 	
@@ -39,6 +39,7 @@ public class TeeBitReader implements BitReader {
 	
 	public TeeBitReader(BitReader reader, File of) throws IOException {
 		this.reader = reader;
+		setParent(reader);
 		writer = new FileOutputStream(of);
 	}
 	

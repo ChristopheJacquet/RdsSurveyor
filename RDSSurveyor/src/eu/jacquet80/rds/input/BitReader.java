@@ -27,6 +27,6 @@ package eu.jacquet80.rds.input;
 import java.io.IOException;
 
 
-public interface BitReader extends RDSReader {
-	public boolean getBit() throws IOException;
+public abstract class BitReader extends RDSReader {
+	public abstract boolean getBit() throws IOException;
 }

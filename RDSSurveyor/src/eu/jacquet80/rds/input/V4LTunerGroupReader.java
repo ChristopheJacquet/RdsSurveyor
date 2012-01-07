@@ -34,7 +34,7 @@ import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
-public class V4LTunerGroupReader implements TunerGroupReader {
+public class V4LTunerGroupReader extends TunerGroupReader {
 	// See V4L2 Spec, section 4.11 <http://v4l2spec.bytesex.org/spec/x7607.htm>
 	
 	private final static String LIB_NAME = "v4ltuner";

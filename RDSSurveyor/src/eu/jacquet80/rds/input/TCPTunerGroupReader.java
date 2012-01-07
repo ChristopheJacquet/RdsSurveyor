@@ -12,7 +12,7 @@ import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
-public class TCPTunerGroupReader implements TunerGroupReader {
+public class TCPTunerGroupReader extends TunerGroupReader {
 	private String name = "";
 	private final BufferedReader reader;
 	private final PrintWriter writer;

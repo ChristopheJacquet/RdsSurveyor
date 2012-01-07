@@ -25,6 +25,25 @@
 
 package eu.jacquet80.rds.input;
 
-public interface RDSReader {
+import java.util.LinkedList;
 
+public abstract class RDSReader {
+	private RDSReader parent = null;
+	
+	protected void setParent(RDSReader parent) {
+		this.parent = parent;
+	}
+	
+	public LinkedList<RDSReader> getAllParentReaders() {
+		final LinkedList<RDSReader> l;
+		
+		if(parent != null) {
+			l = parent.getAllParentReaders();
+		} else {
+			l = new LinkedList<RDSReader>();
+		}
+		
+		l.addLast(this);
+		return l;
+	}
 }

@@ -32,7 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class BinStringFileBitReader implements BitReader {
+public class BinStringFileBitReader extends BitReader {
 	private final InputStream isr;
 	
 	public BinStringFileBitReader(File f) throws FileNotFoundException {

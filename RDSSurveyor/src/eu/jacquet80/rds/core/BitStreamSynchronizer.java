@@ -27,7 +27,9 @@ package eu.jacquet80.rds.core;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
@@ -36,7 +38,7 @@ import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.SequentialTime;
 
 
-public class BitStreamDecoder implements GroupReader {
+public class BitStreamSynchronizer extends GroupReader {
 	private final static int SYNC_THRESHOLD = 2;  // need 2 blocks after initial block to confirm synchronization
 	private final static int SYNC_CONFIRM_DURATION = 5;  // 3 blocks in 5 groups
 	private final static int SYNC_LOSS_DURATION = 10;    // lose synchronization if 10 groups without a good syndrome
@@ -59,11 +61,14 @@ public class BitStreamDecoder implements GroupReader {
 	private boolean negativePolarity = false;
 	private @SuppressWarnings("unchecked") LinkedList<Integer> nbSyncAtOffset[][][] = new LinkedList[26][4][2];
 	
+	private List<StatusChangeListener> statusChangeListeners = new ArrayList<StatusChangeListener>();
 	
-	public BitStreamDecoder(PrintStream console, BitReader reader) {
+	
+	public BitStreamSynchronizer(PrintStream console, BitReader reader) {
 		this.console = console;
 		//this.log = log;
 		this.reader = reader;
+		setParent(reader);
 		
 		eraseSyncArray(nbSyncAtOffset);
 	}
@@ -131,6 +136,7 @@ public class BitStreamDecoder implements GroupReader {
 								for(int k=0; k<i; k++) console.print(".");
 								console.print("S");
 								if(blockCount == 0) console.println();
+								reportStatus();
 							}
 							break;
 
@@ -190,6 +196,7 @@ public class BitStreamDecoder implements GroupReader {
 							//groupLevelDecoder.loseSync();
 							//TODO: need a means to inform a group decoder of a sync loss?
 							console.println(" Lost synchronization.");
+							reportStatus();
 						}
 						
 						
@@ -219,5 +226,28 @@ public class BitStreamDecoder implements GroupReader {
 	
 	public static enum BitInversion {
 		AUTO, INVERT, NOINVERT;
+	}
+	
+	public static enum Status {
+		NOT_SYNCED, SYNCED;
+	}
+	
+	public static interface StatusChangeListener {
+		public void report(Status status);
+	}
+	
+	public void addStatusChangeListener(StatusChangeListener l) {
+		statusChangeListeners.add(l);
+		reportStatus(l);
+	}
+	
+	private void reportStatus() {
+		for(StatusChangeListener l : statusChangeListeners) {
+			reportStatus(l);
+		}
+	}
+	
+	private void reportStatus(StatusChangeListener l) {
+		l.report(synced ? Status.SYNCED : Status.NOT_SYNCED);
 	}
 }

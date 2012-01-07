@@ -44,7 +44,7 @@ import eu.jacquet80.rds.log.RealTime;
 import eu.jacquet80.rds.log.SequentialTime;
 import eu.jacquet80.rds.log.RDSTime;
 
-public class HexFileGroupReader implements GroupReader {
+public class HexFileGroupReader extends GroupReader {
 	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
 	private final static Pattern RDS_SPY_DATE_FORMAT = 
 			Pattern.compile(".*@(\\d{4})/(\\d{2})/(\\d{2})\\s+(\\d{2}):(\\d{2}):(\\d{2}).(\\d{2,4})$");

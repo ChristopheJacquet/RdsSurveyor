@@ -33,7 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 
-public class DumpFileBitReader implements BitReader {
+public class DumpFileBitReader extends BitReader {
 	private final InputStream is;
 	private int nibble;
 	private int nibblePtr;

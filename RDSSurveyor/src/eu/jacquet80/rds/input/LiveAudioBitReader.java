@@ -26,6 +26,8 @@
 package eu.jacquet80.rds.input;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import javax.sound.sampled.AudioFormat;
@@ -35,14 +37,15 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
 import eu.jacquet80.rds.core.RDS;
+import eu.jacquet80.rds.util.NumberRingBuffer;
 
-public class LiveAudioBitReader implements BitReader {
+public class LiveAudioBitReader extends BitReader {
 	private final static int frameLength = 2000;
 	private static byte[] 
 	                    decodeFrame = new byte[2 * frameLength], 
 	                    receiveFrame = new byte[2 * frameLength];
 	private int pos = 2 * frameLength;
-	private long globalPos = 0; //, lastPos = 0;
+	//private long globalPos = 0; //, lastPos = 0;
 	//private final AudioInputStream ais;
 	//private final int frameSize;
 	//private byte prevClock = 0;
@@ -68,6 +71,10 @@ public class LiveAudioBitReader implements BitReader {
 	byte data, clock = -1;
 	
 	boolean processingComplete = true;
+	
+	private final int BITLENGTHS_WINDOW_LEN = 2000;
+	private final NumberRingBuffer bitLengths = new NumberRingBuffer(BITLENGTHS_WINDOW_LEN);
+	private final List<StatusListener> statusListeners = new ArrayList<LiveAudioBitReader.StatusListener>();
 	
 	public LiveAudioBitReader() throws IOException {
 		/*
@@ -190,9 +197,13 @@ public class LiveAudioBitReader implements BitReader {
 			dataAvg = ((float)latestDataSum) / LATEST_WINDOW_LEN;
 						
 			pos += 2;
-			globalPos += 2;
+			//globalPos += 2;
 			bitDuration++;
 		} while(! (prevClock <= clockAvg && clock > clockAvg && bitDuration >= LOWEST_THEORICAL_BIT_DURATION) );
+		
+		if(bitLengths.addValue(bitDuration)) {
+			reportStatus(SAMPLE_RATE / bitLengths.getAverageValue());
+		}
 		
 		if(bitDuration < 6 || bitDuration > 7) System.out.println("!! WARNING: bit duration was " + bitDuration + ", theoretical " + SAMPLE_RATE / RDS.RDS_BITRATE);
 		bitDuration = 0;
@@ -200,4 +211,19 @@ public class LiveAudioBitReader implements BitReader {
 		return data > dataAvg;   /// data > 0; ///
 	}
 
+
+	
+	public static interface StatusListener {
+		public void report(double clockFrequency);
+	}
+	
+	public void addStatusListener(StatusListener l) {
+		statusListeners.add(l);
+	}
+	
+	private void reportStatus(double clockFrequency) {
+		for(StatusListener l : statusListeners) {
+			l.report(clockFrequency);
+		}
+	}
 }

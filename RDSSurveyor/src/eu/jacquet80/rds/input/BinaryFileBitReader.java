@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 
-public class BinaryFileBitReader implements BitReader {
+public class BinaryFileBitReader extends BitReader {
 	private final InputStream isr;
 	private int oct;
 	private int octPtr;

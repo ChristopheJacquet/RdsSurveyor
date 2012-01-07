@@ -33,8 +33,8 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-public class AudioFileBitReader implements BitReader {
-	private int pos = 0; //, lastPos = 0;
+public class AudioFileBitReader extends BitReader {
+	//private int pos = 0; //, lastPos = 0;
 	//private final long frameLength;
 	private final AudioInputStream ais;
 	private final int frameSize;
@@ -80,7 +80,7 @@ public class AudioFileBitReader implements BitReader {
 			ais.read(smpl, 0, frameSize);
 			data = (0xFF & (int)smpl[0]) + ((int)smpl[1]) * 256;
 			clock = (0xFF & (int)smpl[2]) + ((int)smpl[3]) * 256;
-			pos++;
+			//pos++;
 		} while(! (prevClock >= 0 && clock < 0) );
 		//System.out.print("(" + (pos - lastPos) + ")");
 		//lastPos = pos;

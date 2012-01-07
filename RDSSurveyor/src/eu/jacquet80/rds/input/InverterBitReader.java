@@ -33,11 +33,12 @@ import java.io.IOException;
  * @author Christophe Jacquet
  *
  */
-public class InverterBitReader implements BitReader {
+public class InverterBitReader extends BitReader {
 	private final BitReader baseReader;
 	
 	public InverterBitReader(BitReader baseReader) {
 		this.baseReader = baseReader;
+		setParent(baseReader);
 	}
 	
 	@Override

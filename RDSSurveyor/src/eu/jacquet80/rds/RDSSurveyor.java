@@ -34,8 +34,8 @@ import java.util.Date;
 import java.util.prefs.Preferences;
 
 import eu.jacquet80.rds.core.DecoderShell;
-import eu.jacquet80.rds.core.BitStreamDecoder;
-import eu.jacquet80.rds.core.BitStreamDecoder.BitInversion;
+import eu.jacquet80.rds.core.BitStreamSynchronizer;
+import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
@@ -93,7 +93,7 @@ public class RDSSurveyor {
 		File outBinFile = null;
 		File outGroupFile = null;
 		PrintStream console = System.out;
-		BitStreamDecoder.BitInversion inversion = BitInversion.AUTO;
+		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
 		RDSReader nativeLiveReader = null;
 		
 		// Application name for MacOS X
@@ -119,14 +119,14 @@ public class RDSSurveyor {
 						binReader = new TeeBitReader(binReader, outBinFile);
 					}
 					
-					reader = new BitStreamDecoder(console, binReader);
+					reader = new BitStreamSynchronizer(console, binReader);
 					liveInput = true;
 				} else if("-inbinfile".equals(args[i])) {
-					reader = new BitStreamDecoder(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
+					reader = new BitStreamSynchronizer(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
 				} else if("-insyncbinfile".equals(args[i])) {
-					reader = new BitStreamDecoder(console, new SyncBinaryFileBitReader(new File(getParam("insyncbinfile", args, ++i))));
+					reader = new BitStreamSynchronizer(console, new SyncBinaryFileBitReader(new File(getParam("insyncbinfile", args, ++i))));
 				} else if("-inbinstrfile".equals(args[i])) {
-					reader = new BitStreamDecoder(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
+					reader = new BitStreamSynchronizer(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 				} else if("-ingrouphexfile".equals(args[i])) {
 					reader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
 				} else if("-intcp".equals(args[i])) {
@@ -142,7 +142,7 @@ public class RDSSurveyor {
 				} else if("-noinvert".equals(args[i])) {
 					inversion = BitInversion.NOINVERT;
 				} else if("-inaudiofile".equals(args[i])) {
-					reader = new BitStreamDecoder(console, new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i))));
+					reader = new BitStreamSynchronizer(console, new AudioFileBitReader(new File(getParam("inaudiofile", args, ++i))));
 				} else if("-outbinfile".equals(args[i])) {
 					outBinFile = new File(getParam("outbinfile", args, ++i));
 				} else if("-outgrouphexfile".equals(args[i])) {
@@ -204,8 +204,7 @@ public class RDSSurveyor {
 		// and possibly a group logger (tee)
 		if(showGui) {
 			MainWindow mainWindow = new MainWindow();
-			// if the reader is not different from the native reader then "nativeLiveReader" has not been set
-			mainWindow.setReader(DecoderShell.instance.getLog(), nativeLiveReader != null ? nativeLiveReader : reader);
+			mainWindow.setReader(DecoderShell.instance.getLog(), reader);
 			mainWindow.setVisible(true);
 		}
 		
@@ -235,8 +234,8 @@ public class RDSSurveyor {
 		
 		
 		// force inversion if necessary
-		if(nativeLiveReader != null && nativeLiveReader instanceof BitStreamDecoder && inversion != BitInversion.AUTO) {
-			((BitStreamDecoder) nativeLiveReader).forceInversion(inversion);
+		if(nativeLiveReader != null && nativeLiveReader instanceof BitStreamSynchronizer && inversion != BitInversion.AUTO) {
+			((BitStreamSynchronizer) nativeLiveReader).forceInversion(inversion);
 		}
 		
 
