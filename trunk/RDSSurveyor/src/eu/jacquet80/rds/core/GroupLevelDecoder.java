@@ -59,8 +59,9 @@ public class GroupLevelDecoder {
 	private TunedStation station = null;  // realStation is used in case station is a dummy one
 	private boolean synced = true;
 	private Log log;
+	
+	// this allows to merge a bunch of "EON switch" messages together
 	private int groupCountSinceEonSwitch = 0;
-	//private int badPIcount = 0;
 	
 	private final String[] RP_TNGD_VALUES = {
 		"No RP",

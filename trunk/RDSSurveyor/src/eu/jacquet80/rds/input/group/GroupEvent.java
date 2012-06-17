@@ -21,6 +21,13 @@ public class GroupEvent extends GroupReaderEvent {
 	
 	@Override
 	public String toString() {
-		return String.format("(Group: %04X %04X %04X %04X)", blocks[0], blocks[1], blocks[2], blocks[3]);
+		String[] r = new String[4];
+		
+		for(int i=0; i<4; i++) {
+			if(blocks[i] >= 0) r[i] = String.format("%04X", blocks[i]);
+			else r[i] = "----";
+		}
+		
+		return "(Group: " + r[0] + " " + r[1] + " " + r[2] + " " + r[3] + ")";
 	}
 }

@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.prefs.Preferences;
 
 import eu.jacquet80.rds.core.DecoderShell;
@@ -43,6 +44,7 @@ import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
+import eu.jacquet80.rds.input.NativeTunerGroupReader;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
@@ -96,6 +98,9 @@ public class RDSSurveyor {
 		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
 		RDSReader nativeLiveReader = null;
 		
+		// RDS Surveyor is non-localized for the time being
+		Locale.setDefault(Locale.US);
+		
 		// Application name for MacOS X
 		try {
 			System.setProperty("com.apple.mrj.application.apple.menu.about.name", "RDS Surveyor" );
@@ -136,6 +141,9 @@ public class RDSSurveyor {
 					((USBFMRadioGroupReader)reader).init();
 				} else if("-inv4l".equals(args[i])) {
 					reader = new V4LTunerGroupReader(getParam("inv4l", args, ++i));
+					liveGroupInput = true;
+				} else if("-intuner".equals(args[i])) {
+					reader = new NativeTunerGroupReader(getParam("intuner", args, ++i));
 					liveGroupInput = true;
 				} else if("-invert".equals(args[i])) {
 					inversion = BitInversion.INVERT;

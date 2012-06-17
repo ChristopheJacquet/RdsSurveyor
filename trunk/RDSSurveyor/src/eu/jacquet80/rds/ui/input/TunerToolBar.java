@@ -1,9 +1,37 @@
+/*
+ RDS Surveyor -- RDS decoder, analyzer and monitor tool and library.
+ For more information see
+   http://www.jacquet80.eu/
+   http://rds-surveyor.sourceforge.net/
+ 
+ Copyright (c) 2009-2012 Christophe Jacquet
+
+ This file is part of RDS Surveyor.
+
+ RDS Surveyor is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ RDS Surveyor is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser Public License for more details.
+
+ You should have received a copy of the GNU Lesser Public License
+ along with RDS Surveyor.  If not, see <http://www.gnu.org/licenses/>.
+
+*/
+
+
 package eu.jacquet80.rds.ui.input;
 
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.geom.Rectangle2D;
 
@@ -21,14 +49,14 @@ public class TunerToolBar extends InputToolBar {
 	
 	private int frequency;
 	private int signal;
+	private boolean synced;
+	private boolean stereo; 
 	private final static int MAX_SIGNAL = 65535;
 	private boolean active = true;
 	
 	private final static String 
 		UP_BUTTON = "UP",
 		DOWN_BUTTON = "DOWN",
-		PLAY_BUTTON = "PLAY",
-		PAUSE_BUTTON = "PAUSE",
 		FFWD_BUTTON = "FFWD",
 		RWND_BUTTON = "RWND";
 	
@@ -52,6 +80,8 @@ public class TunerToolBar extends InputToolBar {
 	private synchronized void update() {
 		frequency = reader.getFrequency();
 		signal = reader.getSignalStrength();
+		synced = reader.isSynchronized();
+		stereo = reader.isStereo();
 		
 		freqDisplay.repaint();
 	}
@@ -92,6 +122,7 @@ public class TunerToolBar extends InputToolBar {
 	private static final Color DISPLAY_FOREGROUND = Color.CYAN;
 	private static final Color DISPLAY_FOREGROUND_DARK = DISPLAY_FOREGROUND.darker().darker();
 	private static final Font DISPLAY_FREQUENCY_FONT = new Font("Sans", Font.BOLD, 14);
+	private static final Font DISPLAY_INDICATORS_FONT = new Font("Sans", Font.BOLD, 10);
 	
 	private class FrequencyDisplay extends JPanel {
 		private static final long serialVersionUID = 3109732979840091804L;
@@ -105,8 +136,11 @@ public class TunerToolBar extends InputToolBar {
 		}
 		
 		@Override
-		protected void paintComponent(Graphics g) {
-			super.paintComponent(g);
+		protected void paintComponent(Graphics g_) {
+			super.paintComponent(g_);
+			
+			Graphics2D g = (Graphics2D) g_;
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			
 			g.setColor(DISPLAY_FOREGROUND);
 			
@@ -123,6 +157,13 @@ public class TunerToolBar extends InputToolBar {
 			
 			g.setColor(DISPLAY_FOREGROUND_DARK);
 			g.fillRect(10 + barWidth, getHeight() - 8, w - barWidth, 6);
+			
+			g.setFont(DISPLAY_INDICATORS_FONT);
+			g.setColor(synced ? DISPLAY_FOREGROUND : DISPLAY_FOREGROUND_DARK);
+			g.drawString("RDS", getWidth() - 10 - g.getFontMetrics().stringWidth("RDS"), 16);
+			
+			g.setColor(stereo ? DISPLAY_FOREGROUND : DISPLAY_FOREGROUND_DARK);
+			g.drawString("STEREO", 10, 16);
 		}
 		
 	}
