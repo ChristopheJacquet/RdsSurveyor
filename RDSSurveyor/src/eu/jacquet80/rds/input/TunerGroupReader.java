@@ -2,6 +2,8 @@ package eu.jacquet80.rds.input;
 
 public abstract class TunerGroupReader extends GroupReader {
 	public abstract boolean isStereo();
+	
+	public abstract boolean isSynchronized();
 
 	public abstract int setFrequency(int frequency);
 
@@ -15,7 +17,7 @@ public abstract class TunerGroupReader extends GroupReader {
 	
 	public abstract void tune(boolean up);
 	
-	public abstract void seek(boolean up);
+	public abstract boolean seek(boolean up);
 	
 	public abstract String getDeviceName();
 	

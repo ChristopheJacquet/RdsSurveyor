@@ -128,8 +128,9 @@ public class V4LTunerGroupReader extends TunerGroupReader {
 	
 	
 	@Override
-	public void seek(boolean up) {
+	public boolean seek(boolean up) {
 		hwSeek(up);
+		return true;
 		/*
 		int steps = 0;
 		// 87500 to 108000 => 410 50kHz steps
@@ -161,5 +162,10 @@ public class V4LTunerGroupReader extends TunerGroupReader {
 		boolean ng = newGroups;
 		newGroups = false;
 		return ng;
+	}
+
+	@Override
+	public boolean isSynchronized() {
+		return true;
 	}
 }
