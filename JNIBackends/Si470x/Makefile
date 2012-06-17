@@ -1,0 +1,14 @@
+FLAGS=-Wall -W -Wfatal-errors -wunused -pedantic -std=c99 -I hidapi/hidapi
+LINKFLAGS=-framework IOKit -framework CoreFoundation
+
+all: si470x_hidapi si470x_plugin si470x_test
+
+si470x_hidapi: si470x_hidapi.c si470x_hidapi.h
+	gcc -c si470x_hidapi.c $(FLAGS)
+
+si470x_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h si470x_plugin.c
+	gcc -shared -o si470x.dylib si470x_hidapi.o hidapi/mac/hid.o si470x_plugin.c -I /System/Library/Frameworks/JavaVM.framework/Headers $(FLAGS) $(LINKFLAGS)
+
+si470x_test: si470x_test.c si470x_hidapi.o
+	gcc -o si470x_test si470x_test.c si470x_hidapi.o hidapi/mac/hid.o $(FLAGS) $(LINKFLAGS)
+	
