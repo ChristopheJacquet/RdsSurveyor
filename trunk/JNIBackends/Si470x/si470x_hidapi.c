@@ -49,6 +49,9 @@ static inline void put_unaligned_be16(uint16_t val, uint8_t *buf) {
 #define HID_REQ_GET_REPORT              0x01
 #define HID_REQ_SET_REPORT              0x09
 
+// On Windows, one apparently need to use the report size associated with
+// the endpoint. -- To be confirmed.
+#define EP0_REPORT_SIZE 17
 
 /* Reports 1-16 give direct read/write access to the 16 Si470x registers */
 /* with the (REPORT_ID - 1) corresponding to the register address across USB */
@@ -265,7 +268,7 @@ static int si470x_get_report(si470x_dev_t *radio, unsigned char *buf, int size)
 
 	if (retval < 0)
 		dev_warn(
-			"si470x_get_report: usb_control_msg returned %d\n",
+			"si470x_get_report: hid_get_feature_report returned %d\n",
 			retval);
 	return retval;
 }
@@ -282,7 +285,7 @@ static int si470x_set_report(si470x_dev_t *radio, unsigned char *buf, int size)
 
 	if (retval < 0)
 		dev_warn(
-			"si470x_set_report: usb_control_msg returned %d\n",
+			"si470x_set_report: hid_send_feature_report returned %d\n",
 			retval);
 	return retval;
 }
@@ -293,8 +296,10 @@ static int si470x_set_report(si470x_dev_t *radio, unsigned char *buf, int size)
  */
 static int si470x_get_register(si470x_dev_t *radio, int regnr)
 {
-	unsigned char buf[REGISTER_REPORT_SIZE];
+	unsigned char buf[EP0_REPORT_SIZE]; //REGISTER_REPORT_SIZE];
 	int retval;
+
+	memset(buf, 0, EP0_REPORT_SIZE);
 
 	buf[0] = REGISTER_REPORT(regnr);
 
@@ -312,8 +317,10 @@ static int si470x_get_register(si470x_dev_t *radio, int regnr)
  */
 static int si470x_set_register(si470x_dev_t *radio, int regnr)
 {
-	unsigned char buf[REGISTER_REPORT_SIZE];
+	unsigned char buf[EP0_REPORT_SIZE]; //REGISTER_REPORT_SIZE];
 	int retval;
+
+	memset(buf, 0, EP0_REPORT_SIZE);
 
 	buf[0] = REGISTER_REPORT(regnr);
 	put_unaligned_be16(radio->registers[regnr], &buf[1]);
@@ -332,12 +339,14 @@ static int si470x_set_register(si470x_dev_t *radio, int regnr)
 /*
  * si470x_get_all_registers - read entire registers
  */
+/*
 static int si470x_get_all_registers(si470x_dev_t *radio)
 {
 	unsigned char buf[ENTIRE_REPORT_SIZE];
 	int retval;
 	unsigned char regnr;
 
+	memset(buf, 0, EP0_REPORT_SIZE);
 	buf[0] = ENTIRE_REPORT;
 
 	retval = si470x_get_report(radio, (void *) &buf, sizeof(buf));
@@ -349,7 +358,17 @@ static int si470x_get_all_registers(si470x_dev_t *radio)
 
 	return (retval < 0) ? -EINVAL : 0;
 }
+*/
 
+// 2012-06-18 - for now use this dummy version, as I cannot
+// figure out why it doesn't work on Windows. Maybe the
+// report size is not correct?
+static int si470x_get_all_registers(si470x_dev_t *radio)
+{
+    for(int i=0; i<RADIO_REGISTER_NUM; i++) {
+        si470x_get_register(radio, i);
+    }
+}
 
 /*
  * si470x_get_rds_registers - read RDS registers
@@ -389,8 +408,10 @@ static int si470x_get_rds_registers(si470x_dev_t *radio)
 int si470x_set_led_state(si470x_dev_t *radio,
 		unsigned char led_state)
 {
-	unsigned char buf[LED_REPORT_SIZE];
+	unsigned char buf[EP0_REPORT_SIZE]; //LED_REPORT_SIZE];
 	int retval;
+	
+	memset(buf, 0, EP0_REPORT_SIZE);
 
 	buf[0] = LED_REPORT;
 	buf[1] = LED_COMMAND;
