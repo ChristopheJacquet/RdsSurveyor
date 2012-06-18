@@ -1,0 +1,15 @@
+FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -I hidapi/hidapi
+LINKFLAGS=-lsetupapi
+JAVADIR=C:/Program\ Files/Java/jdk1.6.0_31
+
+all: si470x_hidapi si470x_plugin si470x_test
+
+si470x_hidapi: si470x_hidapi.c si470x_hidapi.h
+	gcc -c si470x_hidapi.c $(FLAGS)
+
+si470x_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h si470x_plugin.c
+	gcc -shared -o si470x.dll si470x_hidapi.o hidapi/windows/hid.o si470x_plugin.c -I $(JAVADIR)/include -I $(JAVADIR)/include/win32 $(FLAGS) $(LINKFLAGS)
+
+si470x_test: si470x_test.c si470x_hidapi.o
+	gcc -o si470x_test.exe si470x_test.c si470x_hidapi.o hidapi/windows/hid.o $(FLAGS) $(LINKFLAGS)
+	
