@@ -37,15 +37,11 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    printf("**0\n");
-    
     //si470x_get_scratch_page_versions(dev);
     
     //printf("Versions: HW=%i, SW=%i\n", dev->software_version, dev->hardware_version);
     
     si470x_set_led_state(dev, BLINK_RED_LED);
-
-    printf("**1\n");
 
     /*
     si470x_get_all_registers(dev);
