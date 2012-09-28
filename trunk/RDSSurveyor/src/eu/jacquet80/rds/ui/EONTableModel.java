@@ -33,7 +33,7 @@ import eu.jacquet80.rds.core.TunedStation;
 public class EONTableModel extends AbstractTableModel {
 	private static final long serialVersionUID = 7466888480643372873L;
 	
-	private static final String[] columnNames = {"PI", "PS*", "PTY", "Traffic", "AF"};
+	private static final String[] columnNames = {"PI", "PS*", "PTY", "Traffic", "Frequencies"};
 	
 	private TunedStation station = null;
 	
