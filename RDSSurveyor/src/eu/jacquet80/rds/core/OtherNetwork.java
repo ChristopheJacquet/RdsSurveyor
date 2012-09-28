@@ -24,15 +24,19 @@
 */
 
 package eu.jacquet80.rds.core;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 
 public class OtherNetwork extends Station {
 	private Map<Integer, Set<Integer>> mappedAFs = new HashMap<Integer, Set<Integer>>();
+	private Set<Integer> pseudoMethodAAFs = new HashSet<Integer>();
 	
 	@Override
 	public String addMappedFreq(int channel, int mappedChannel) {
@@ -55,11 +59,32 @@ public class OtherNetwork extends Station {
 	}
 	
 	@Override
-	public String afsToString() {
-		if(mappedAFs.size() == 0)
-			return super.afsToString();
+	public synchronized String addAFPair(int a, int b) {
+		int fA = channelToFrequency(a);
+		int fB = channelToFrequency(b);
+		pseudoMethodAAFs.add(fA);
+		pseudoMethodAAFs.add(fB);
 		
-		String res = "Mapped AFs: ";
+		return "Pseudo-method A: " + frequencyToString(fA) + ", " + frequencyToString(fB);
+	}
+	
+	@Override
+	public String afsToString() {
+		if(mappedAFs.size() == 0) {
+			StringBuffer res = new StringBuffer();
+			List<Integer> afs = new ArrayList<Integer>(pseudoMethodAAFs);
+			Collections.sort(afs);
+			
+			for(int i = 0; i<afs.size(); i++) {
+				res.append(frequencyToString(afs.get(i)));
+				if(i < afs.size()-1) {
+					res.append(' ');
+				}
+			}
+			return res.toString();
+		}
+		
+		String res = "Mapped: ";
 		for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
 			res += "[" + frequencyToString(e.getKey()) + " -> ";
 			for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
