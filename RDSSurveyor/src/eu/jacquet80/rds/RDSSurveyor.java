@@ -34,6 +34,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.prefs.Preferences;
 
+import eu.jacquet80.rds.app.oda.TDC;
 import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
@@ -172,6 +173,14 @@ public class RDSSurveyor {
 					preferences.putBoolean(PREF_RBDS, false);
 				} else if("-rbds".equals(args[i])) {
 					preferences.putBoolean(PREF_RBDS, true);
+				} else if("-tdc".equals(args[i])) {
+					String tdcApp = getParam("tdc", args, ++i);
+					if(TDC.setPreferredTDCApp(tdcApp)) {
+						System.out.println("Using TDC decoder: " + tdcApp);
+					} else {
+						System.out.println("Unknown TDC decoder: " + tdcApp);
+						System.exit(1);
+					}
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -182,6 +191,7 @@ public class RDSSurveyor {
 					System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 					System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
 					System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
+					System.out.println("  -intuner <driver>        Reads from a native tuner, specify driver (.so, .dll, .dylib)");
 					System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 					System.out.println("  -outbinfile <file>       Write bitstream to binary file (if applicable)");
 					System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
@@ -189,6 +199,7 @@ public class RDSSurveyor {
 					System.out.println("  -noconsole               No console analysis");
 					System.out.println("  -rds                     Force standard RDS mode (and save as a preference)");
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
+					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.exit(1);
 				}
 			}

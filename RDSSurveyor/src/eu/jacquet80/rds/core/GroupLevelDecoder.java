@@ -38,6 +38,7 @@ import eu.jacquet80.rds.app.InHouse;
 import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.ODA;
+import eu.jacquet80.rds.app.oda.TDC;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
@@ -428,10 +429,14 @@ public class GroupLevelDecoder {
 			Application app = workingStation.getApplicationForGroup(type, version);
 			
 			if(app == null) {
-				if(type == 6) {
+				if(type == 5) {
+					newApp = TDC.createPreferredTDCApp();
+					workingStation.setApplicationForGroup(5, 0, newApp);
+				} else if(type == 6) {
 					newApp = new InHouse();
 					workingStation.setApplicationForGroup(6, 0, newApp);
 				}
+
 			}
 			
 			if(app != null) {

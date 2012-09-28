@@ -36,9 +36,8 @@ import javax.swing.event.ListDataListener;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.InHouse;
 
+@SuppressWarnings("serial")
 public class InHousePanel extends AppPanel {
-	private static final long serialVersionUID = -8631453045648781335L;
-	
 	private final JList list = new JList();
 	private final IHListModel listModel;
 	
