@@ -22,13 +22,9 @@ public class CatalunyaRadioTDC extends TDC {
 		} else if(contents[3] == 4) {
 			// end of message
 
-			if(currentMessage.length() > 0) {
-				messages.add(currentMessage.toString());
-				fireChangeListeners();
-			}
-			
 			iStart = 0;
-			iStop = 2;
+			iStop = 0;
+			
 		} else {
 			iStart = 0;
 			iStop = 3;
@@ -36,6 +32,13 @@ public class CatalunyaRadioTDC extends TDC {
 		
 		for(int i=iStart; i<=iStop; i++) {
 			currentMessage.append(character(contents[i]));
+		}
+
+		if(contents[3] == 4) {
+			if(currentMessage.length() > 0) {
+				messages.add(currentMessage.toString());
+				fireChangeListeners();
+			}
 		}
 		
 		return "";
