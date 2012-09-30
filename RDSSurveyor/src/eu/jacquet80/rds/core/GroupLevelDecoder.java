@@ -224,7 +224,7 @@ public class GroupLevelDecoder {
 				int ecc = blocks[2] & 0xFF;
 				console.printf("OPC=%01X ECC=%02X ", opc, ecc);
 				workingStation.setECC(ecc);
-				if(pi != 0) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
+				if(pi != -1) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
 				break;
 				
 			case 1:
