@@ -15,8 +15,8 @@ import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.log.Log;
 
+@SuppressWarnings("serial")
 public abstract class InputToolBar extends JToolBar {
-	private static final long serialVersionUID = -1085007696842056447L;
 	
 	private final ActionListener buttonListener = new ActionListener() {
 		@Override
@@ -69,6 +69,15 @@ public abstract class InputToolBar extends JToolBar {
 
 	protected JButton addButton(String caption, Icon icon, String command) {
 		JButton button = new JButton(caption, icon);
+		button.setActionCommand(command);
+		button.addActionListener(buttonListener);
+		add(button);
+		
+		return button;
+	}
+
+	protected JButton addButton(String caption, String command) {
+		JButton button = new JButton(caption);
 		button.setActionCommand(command);
 		button.addActionListener(buttonListener);
 		add(button);

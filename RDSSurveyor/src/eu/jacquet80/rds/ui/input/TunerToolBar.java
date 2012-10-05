@@ -33,16 +33,18 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
 
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.TunerGroupReader;
 
+@SuppressWarnings("serial")
 public class TunerToolBar extends InputToolBar {
-	private static final long serialVersionUID = -5257388808546986303L;
-
 	private final TunerGroupReader reader;
 	
 	private final FrequencyDisplay freqDisplay = new FrequencyDisplay();
@@ -58,7 +60,8 @@ public class TunerToolBar extends InputToolBar {
 		UP_BUTTON = "UP",
 		DOWN_BUTTON = "DOWN",
 		FFWD_BUTTON = "FFWD",
-		RWND_BUTTON = "RWND";
+		RWND_BUTTON = "RWND",
+		TUNE_BUTTON = "TUNE";
 	
 	@Override
 	protected void handleButtonAction(ActionEvent e) {
@@ -74,7 +77,21 @@ public class TunerToolBar extends InputToolBar {
 		} else if(e.getActionCommand() == DOWN_BUTTON) {
 			reader.tune(false);
 			update();
+		} else if(e.getActionCommand() == TUNE_BUTTON) {
+			tune();
 		}
+	}
+	
+	private void tune() {
+		String res = JOptionPane.showInputDialog(null, "Enter frequency to tune to", Double.toString(frequency/1000.));
+		try {
+			double freq = Double.parseDouble(res);
+			if(freq >= 87.5 && freq <= 108.) {
+				reader.setFrequency((int)(freq * 1000));
+			}
+		} catch(NumberFormatException e) {}
+		
+		update();
 	}
 	
 	private synchronized void update() {
@@ -102,6 +119,19 @@ public class TunerToolBar extends InputToolBar {
 		
 		addButton(Image.UP, UP_BUTTON);
 		addButton(Image.FFWD, FFWD_BUTTON);
+		
+		addSeparator();
+		
+		addButton("Tune", TUNE_BUTTON);
+		
+		freqDisplay.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent event) {
+				if(event.getClickCount() >= 2) {
+					tune();
+				}
+			}
+		});
 		
 		update();
 		
@@ -145,7 +175,7 @@ public class TunerToolBar extends InputToolBar {
 			g.setColor(DISPLAY_FOREGROUND);
 			
 			g.setFont(DISPLAY_FREQUENCY_FONT);
-			String freq = String.format("%.2f", frequency/1000f);
+			String freq = String.format("%.1f", frequency/1000f);
 			Rectangle2D bounds = g.getFontMetrics().getStringBounds(freq, g);
 			g.drawString(freq, (getWidth() - (int)bounds.getWidth())/2, (int)bounds.getHeight()+2);
 			
