@@ -189,7 +189,7 @@ public class MainWindow extends JFrame {
 		
 		for(RDSReader r : readerForToolbar.getAllParentReaders()) {
 			InputToolBar toolbar = InputToolBar.forReader(r, log);
-			System.out.println("Reader: " + r + " -> " + toolbar);
+			//System.out.println("Reader: " + r + " -> " + toolbar);
 			
 			if(toolbar != null) {
 				pnlInputToolbar.add(toolbar);
