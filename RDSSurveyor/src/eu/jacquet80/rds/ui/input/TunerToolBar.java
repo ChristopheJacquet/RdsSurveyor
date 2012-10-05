@@ -40,6 +40,7 @@ import java.awt.geom.Rectangle2D;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.TunerGroupReader;
 
@@ -101,12 +102,16 @@ public class TunerToolBar extends InputToolBar {
 		stereo = reader.isStereo();
 		
 		freqDisplay.repaint();
+		
+		RDSSurveyor.preferences.putInt(RDSSurveyor.PREF_TUNER_FREQ, frequency);
 	}
 	
 	public TunerToolBar(TunerGroupReader reader) {
 		super("Live", reader.getDeviceName());
 		
 		this.reader = reader;
+		
+		reader.setFrequency(RDSSurveyor.preferences.getInt(RDSSurveyor.PREF_TUNER_FREQ, 105500));
 		
 		addButton(Image.RWND, RWND_BUTTON);
 		addButton(Image.DOWN, DOWN_BUTTON);

@@ -529,7 +529,7 @@ class GroupPanel extends JPanel {
 		
 		add(new JLabel(""));
 		for(int i=0; i<16; i++) add(new JLabel(Integer.toString(i), JLabel.CENTER));
-		add(new JLabel("Unk", JLabel.CENTER));
+		add(new JLabel("Bad", JLabel.CENTER));
 		for(int j=0; j<2; j++) {
 			add(new JLabel(Character.toString((char)('A' + j))));
 			for(int i=0; i<17; i++) {
