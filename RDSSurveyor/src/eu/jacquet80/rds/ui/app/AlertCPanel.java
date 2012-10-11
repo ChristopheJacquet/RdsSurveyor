@@ -40,6 +40,7 @@ import javax.swing.table.AbstractTableModel;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
+import eu.jacquet80.rds.app.oda.tmc.TMC;
 
 public class AlertCPanel extends AppPanel {
 	private static final long serialVersionUID = 4835434126469108572L;
@@ -144,7 +145,13 @@ public class AlertCPanel extends AppPanel {
 			
 			switch(column) {
 			case 0: return msg.getLocation();
-			case 1: return msg.getEvents();
+			case 1:
+				StringBuffer buf = new StringBuffer();
+				for(int event : msg.getEvents()) {
+					if(buf.length() > 0) buf.append(" / ");
+					buf.append(TMC.EVENTS.get(event).text);
+				}
+				return buf.toString();
 			case 2: return msg.getUpdateCount();
 			default: return null;
 			}

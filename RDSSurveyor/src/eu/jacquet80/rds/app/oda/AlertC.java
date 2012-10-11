@@ -27,11 +27,16 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
+import eu.jacquet80.rds.app.oda.tmc.TMC;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
@@ -290,6 +295,10 @@ public class AlertC extends ODA {
 			
 			//System.out.println("*** Current TMC messages: ");
 			//for(Message m : messages) System.out.println("\t" + m);
+			
+			// 3) display it
+			console.println();
+			console.print(currentMessage);
 		}
 		
 		fireChangeListeners();
@@ -373,8 +382,8 @@ public class AlertC extends ODA {
 		
 		@Override
 		public String toString() {
-			StringBuffer res = new StringBuffer();
-			StringBuffer theBits = new StringBuffer(Long.toBinaryString(bits));
+			StringBuilder res = new StringBuilder();
+			StringBuilder theBits = new StringBuilder(Long.toBinaryString(bits));
 			res.append(count).append('/');
 			for(int i=0; i<count-theBits.length(); i++)
 				res.append('0');
@@ -383,36 +392,65 @@ public class AlertC extends ODA {
 	}
 	
 	public static class Message {
+		// basic information
 		private final int direction;
 		private final int extent;
-		private final List<Integer> events;
 		private final int location;
-		private int diversion = 0;
-		private int duration = 0;
-		private int urgency = 0;
-		private boolean directional = true;  // TODO default
-		private boolean dynamic = true;      // TODO default
-		private boolean spoken = false;      // TODO default
-		private int steps = 0;               // TODO default
-		private int length = 0;
-		private int speed = 0;
-		private int quantifier = 0;
-		private int suppInfo = 0;
+
+		
+		private int duration = 0;		// 0- duration
+		private int startTime = -1;		// 7- start time
+		private int stopTime = -1;		// 8- stop time
+		// 13- cross linkage to source
+
+		// 1.0, 1.1
+		private boolean directional = true;  // TODO default   // 1.2
+		private boolean dynamic = true;      // TODO default   // 1.3
+		private boolean spoken = false;      // TODO default   // 1.4
+		private int diversion = 0;							   // 1.5
+		private int steps = 0;               // TODO default   // 1.6, 1.7		
+		
+		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
+		private InformationBlock currentInformationBlock;
+		
 		private boolean complete = false;
 		private int updateCount = 0;
 		
 		public final static int[] labelSizes = {3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0};
 		
-		public Message(int direction, int extent, int event, int location) {
-			this.direction = direction;
-			this.extent = extent;
-			this.events = new ArrayList<Integer>(1);
-			events.add(event);
-			this.location = location;
+		private void addInformationBlock(int eventCode) {
+			this.currentInformationBlock = new InformationBlock(eventCode);
+			this.informationBlocks.add(currentInformationBlock);			
+		}
+
+		private void addInformationBlock() {
+			this.currentInformationBlock = new InformationBlock();
+			this.informationBlocks.add(currentInformationBlock);			
+		}
+
+		private String formatTime(int time) {
+			if(time >= 0 && time <= 95) {
+				return String.format("%02d:%02d", time / 4, (time % 4) * 15);
+			} else if(time >= 96 && time <= 200) {
+				return String.format("midnight + %d days, %d hours", (time-96) / 24, (time-96) % 24);
+			} else if(time >= 201 && time <= 231) {
+				return "day " + (time - 200) + " this month";
+			} else if(time >= 232 && time <= 255) {
+				return String.format("%02d/%02d", 15 + 16*((time-231)%2),(time-231)/2);
+			} else {
+				return "INVALID";
+			}
 		}
 		
-		public Message(int direction, int extent, int event, int location, int diversion, int duration) {
-			this(direction, extent, event, location);
+		public Message(int direction, int extent, int eventCode, int location) {
+			this.direction = direction;
+			this.extent = extent;
+			this.location = location;
+			addInformationBlock(eventCode);
+		}
+		
+		public Message(int direction, int extent, int eventCode, int location, int diversion, int duration) {
+			this(direction, extent, eventCode, location);
 			this.diversion = diversion;
 			this.duration = duration;
 		}
@@ -425,9 +463,10 @@ public class AlertC extends ODA {
 			
 			// control code
 			case 1:
+				Event evt = this.informationBlocks.get(0).events.get(0);
 				switch(value) {
-				case 0: urgency++; break;
-				case 1: urgency--; break;
+				case 0: evt.urgency = evt.urgency.next(); break;
+				case 1: evt.urgency = evt.urgency.prev(); break;
 				case 2: directional = !directional; break;
 				case 3: dynamic = !dynamic; break;
 				case 4: spoken = !spoken; break;
@@ -439,30 +478,54 @@ public class AlertC extends ODA {
 
 			
 			case 2:
-				if(value == 0) length = 100;
-				else if(value <= 10) length = value;
-				else if(value <= 15) length = 10 + (value-10)*2;
-				else length = 20 + (value-15)*5;
+				if(value == 0) currentInformationBlock.length = 100;
+				else if(value <= 10) currentInformationBlock.length = value;
+				else if(value <= 15) currentInformationBlock.length = 10 + (value-10)*2;
+				else currentInformationBlock.length = 20 + (value-15)*5;
 				break;
 			
 			case 3:
-				speed = 5*value;
+				currentInformationBlock.speed = 5*value;
 				break;
 			
 			case 4:
 			case 5:
-				quantifier = value;
+				currentInformationBlock.currentEvent.quantifier = value;
 				break;
 				
 			case 6:
-				suppInfo = value;
+				currentInformationBlock.currentEvent.suppInfo.add(TMC.SUPP_INFOS.get(value));
+				break;
+				
+			case 7:
+				startTime = value;
+				break;
+				
+			case 8:
+				stopTime = value;
 				break;
 			
 			case 9:		// additional event
-				events.add(value);
+				currentInformationBlock.addEvent(value);
 				break;
 				
-			// TODO complete!
+			case 11:
+				//addInformationBlock();
+				// TODO the spec says we should maybe create a new information block
+				// also, a 11 may be followed only by a 6 (sup info)
+				currentInformationBlock.destination = value;
+				break;
+				
+			case 10:
+			case 13:
+				// TODO
+				System.err.println("ERR");
+				break;
+				
+			case 14:
+				addInformationBlock();
+				break;
+				
 			}
 		}
 		
@@ -484,9 +547,15 @@ public class AlertC extends ODA {
 		 * @return
 		 */
 		private boolean hasAnEventFromTheSameUpdateClassAs(Message m) {
-			for(Integer u : events) {
-				for(Integer v : m.events) {
-					if(updateClasses[u] == updateClasses[v]) return true;
+			for(InformationBlock mib : m.informationBlocks) {
+				for(Event me : mib.events) {
+					for(InformationBlock ib : this.informationBlocks) {
+						for(Event e : ib.events) {
+							if(me.tmcEvent.updateClass == e.tmcEvent.updateClass) {
+								return true;
+							}
+						}
+					}
 				}
 			}
 			return false;
@@ -498,16 +567,26 @@ public class AlertC extends ODA {
 		 * @return
 		 */
 		private boolean isForecastMessage() {
-			for(Integer u : events) {
-				int c = updateClasses[u];
-				if(c >= 32 && c <= 39) return true;
+			for(InformationBlock ib : informationBlocks) {
+				for(Event e : ib.events) {
+					int c = e.tmcEvent.updateClass;
+					if(c >= 32 && c <= 39) return true;
+				}
 			}
 			return false;
 		}
 		
 		@Override
 		public String toString() {
-			return location + ": " + events + "(" + updateCount + ")";
+			StringBuilder res = new StringBuilder("Location: ").append(location);
+			if(startTime != -1) res.append(", Start=").append(formatTime(startTime));
+			if(stopTime != -1) res.append(", Stop=").append(formatTime(stopTime));
+			res.append('\n');
+			for(InformationBlock ib : informationBlocks) {
+				res.append(ib);
+			}
+			
+			return res.toString();
 		}
 		
 		public int getLocation() {
@@ -515,7 +594,15 @@ public class AlertC extends ODA {
 		}
 		
 		public List<Integer> getEvents() {
-			return events;
+			List<Integer> result = new ArrayList<Integer>();
+			
+			for(InformationBlock ib : informationBlocks) {
+				for(Event e : ib.events) {
+					result.add(e.tmcEvent.code);
+				}
+			}
+			
+			return result;
 		}
 		
 		public int getUpdateCount() {
@@ -658,4 +745,74 @@ public class AlertC extends ODA {
 		 0, 19, 21, 22,  0,  0, 28, 30,  0,  0,  0,  0,  0,  0,  0, 31, 
 	};
 
+	
+	public static class InformationBlock {
+		private int length = -1;
+		private int speed = -1;
+		private int destination = -1;
+
+		private final List<Event> events = new ArrayList<Event>();
+		private Event currentEvent;
+
+		public InformationBlock(int eventCode) {
+			addEvent(eventCode);
+		}
+		
+		public InformationBlock() {
+			this.currentEvent = null;
+		}
+		
+		private void addEvent(int eventCode) {
+			this.currentEvent = new Event(eventCode);
+			events.add(this.currentEvent);		
+		}
+		
+		@Override
+		public String toString() {
+			StringBuilder res = new StringBuilder();
+			res.append("-------------\n");
+			if(destination != -1) res.append("For destination: " + destination);
+			if(length != -1) res.append("  length=").append(length);
+			if(speed != -1) res.append("  speed=").append(speed);
+			if(length != -1 || speed != -1 || destination != -1) res.append('\n');
+			for(Event e : events) {
+				res.append(e).append('\n');
+			}
+			
+			return res.toString();
+		}
+	}
+	
+	public static class Event {
+		private TMCEvent tmcEvent;
+		private TMCEvent.EventUrgency urgency;
+
+		private int quantifier = -1;
+		private List<SupplementaryInfo> suppInfo = new ArrayList<SupplementaryInfo>();
+
+		public Event(int eventCode) {
+			this.tmcEvent = TMC.EVENTS.get(eventCode);
+			
+			if(this.tmcEvent== null) {
+				System.err.println("No such TMC event: " + eventCode);
+			}
+			
+			urgency = this.tmcEvent.urgency;
+		}
+		
+		@Override
+		public String toString() {
+			String text;
+			if(quantifier != -1) {
+				text = tmcEvent.textQ.replace("$Q", tmcEvent.formatQuantifier(quantifier));
+			} else {
+				text = tmcEvent.text;
+			}
+			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
+			if(this.quantifier != -1) res.append(", Q=").append(quantifier);
+			res.append(", urgency=").append(urgency);
+			if(this.suppInfo.size() > 0) res.append('\n').append(this.suppInfo);
+			return res.toString();
+		}
+	}
 }
