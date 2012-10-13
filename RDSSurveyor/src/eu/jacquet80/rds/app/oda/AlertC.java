@@ -128,7 +128,7 @@ public class AlertC extends ODA {
 					currentMessage = new Message(dir, extent, event, location);
 					
 					// single-group message is complete
-					currentMessage.complete = true;
+					currentMessage.complete();
 					messageJustCompleted = true;
 					
 					// reset "expected" indicators
@@ -394,21 +394,23 @@ public class AlertC extends ODA {
 	public static class Message {
 		// basic information
 		private final int direction;
-		private final int extent;
+		private int extent;		// extent, affected by 1.6 and 1.7
 		private final int location;
+		private boolean reversedDirectionality = false;
+		private boolean bidirectional = true;
 
 		
-		private int duration = 0;		// 0- duration
+		private int duration = 0;		// 0- duration = number of steps
+										// (see ISO 81419-1, par. 5.5.2 a)   [ 31 steps max ]
 		private int startTime = -1;		// 7- start time
 		private int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
 
-		// 1.0, 1.1
-		private boolean directional = true;  // TODO default   // 1.2
+		// urgency: that of 1st event?   // 1.0, 1.1
+		// directionality: that of 1st event?    // 1.2
 		private boolean dynamic = true;      // TODO default   // 1.3
 		private boolean spoken = false;      // TODO default   // 1.4
-		private int diversion = 0;							   // 1.5
-		private int steps = 0;               // TODO default   // 1.6, 1.7		
+		private boolean diversion = false;							   // 1.5
 		
 		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
 		private InformationBlock currentInformationBlock;
@@ -449,7 +451,7 @@ public class AlertC extends ODA {
 			addInformationBlock(eventCode);
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location, int diversion, int duration) {
+		public Message(int direction, int extent, int eventCode, int location, boolean diversion, int duration) {
 			this(direction, extent, eventCode, location);
 			this.diversion = diversion;
 			this.duration = duration;
@@ -467,12 +469,12 @@ public class AlertC extends ODA {
 				switch(value) {
 				case 0: evt.urgency = evt.urgency.next(); break;
 				case 1: evt.urgency = evt.urgency.prev(); break;
-				case 2: directional = !directional; break;
+				case 2: reversedDirectionality = true; break;
 				case 3: dynamic = !dynamic; break;
 				case 4: spoken = !spoken; break;
-				case 5: diversion = 1; break;
-				case 6: steps += 8; break;
-				case 7: steps += 16; break;
+				case 5: diversion = true; break;
+				case 6: extent += 8; break;			// extent == number of steps
+				case 7: extent += 16; break;		// extent == number of steps
 				}
 				break;
 
@@ -529,6 +531,17 @@ public class AlertC extends ODA {
 			}
 		}
 		
+		public void complete() {
+			this.complete = true;
+			
+			this.bidirectional = true;
+			for(InformationBlock ib : informationBlocks) {
+				for(Event e : ib.events) {
+					this.bidirectional &= e.tmcEvent.bidirectional;
+				}
+			}
+		}
+		
 		public boolean overrides(Message m) {
 			return
 				(location == m.location || location == 65535) &&
@@ -578,7 +591,12 @@ public class AlertC extends ODA {
 		
 		@Override
 		public String toString() {
+			if(! complete) {
+				return "Incomplete!";
+			}
 			StringBuilder res = new StringBuilder("Location: ").append(location);
+			res.append(", extent=" + this.extent);
+			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			if(startTime != -1) res.append(", Start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", Stop=").append(formatTime(stopTime));
 			res.append('\n');
@@ -797,7 +815,7 @@ public class AlertC extends ODA {
 				System.err.println("No such TMC event: " + eventCode);
 			}
 			
-			urgency = this.tmcEvent.urgency;
+			this.urgency = this.tmcEvent.urgency;
 		}
 		
 		@Override
