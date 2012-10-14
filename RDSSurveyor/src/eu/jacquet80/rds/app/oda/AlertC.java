@@ -27,7 +27,6 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Formatter;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,7 +35,6 @@ import java.util.Map;
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
-import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
@@ -125,7 +123,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location);
+					currentMessage = new Message(dir, extent, event, location, div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -151,7 +149,7 @@ public class AlertC extends ODA {
 							int extent = (blocks[2]>>11) & 7;
 							int event = blocks[2] & 0x7FF;
 							int location = blocks[3];
-							console.print("DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
+							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
 							currentMessage = new Message(dir, extent, event, location);
 							multiGroupBits = new Bitstream();
@@ -208,7 +206,7 @@ public class AlertC extends ODA {
 								
 								// message is complete if no remaining group
 								if(remaining == 0) {
-									currentMessage.complete = true;
+									currentMessage.complete();
 									messageJustCompleted = true;
 								}
 								
@@ -394,14 +392,14 @@ public class AlertC extends ODA {
 	public static class Message {
 		// basic information
 		private final int direction;
-		private int extent;		// extent, affected by 1.6 and 1.7
+		private int extent;		
+		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		private final int location;
 		private boolean reversedDirectionality = false;
 		private boolean bidirectional = true;
 
 		
-		private int duration = 0;		// 0- duration = number of steps
-										// (see ISO 81419-1, par. 5.5.2 a)   [ 31 steps max ]
+		private int duration = -1;		// 0- duration 
 		private int startTime = -1;		// 7- start time
 		private int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
@@ -480,7 +478,7 @@ public class AlertC extends ODA {
 
 			
 			case 2:
-				if(value == 0) currentInformationBlock.length = 100;
+				if(value == 0) currentInformationBlock.length = 1000;
 				else if(value <= 10) currentInformationBlock.length = value;
 				else if(value <= 15) currentInformationBlock.length = 10 + (value-10)*2;
 				else currentInformationBlock.length = 20 + (value-15)*5;
@@ -519,9 +517,13 @@ public class AlertC extends ODA {
 				break;
 				
 			case 10:
+				currentInformationBlock.diversionRoute.add(value);
+				break;
+				
 			case 13:
-				// TODO
-				System.err.println("ERR");
+				if(currentInformationBlock.currentEvent != null) {
+					currentInformationBlock.currentEvent.sourceLocation = value;
+				}
 				break;
 				
 			case 14:
@@ -531,15 +533,20 @@ public class AlertC extends ODA {
 			}
 		}
 		
+		/**
+		 * Used to indicate that this message is complete. 
+		 */
 		public void complete() {
-			this.complete = true;
-			
 			this.bidirectional = true;
 			for(InformationBlock ib : informationBlocks) {
 				for(Event e : ib.events) {
 					this.bidirectional &= e.tmcEvent.bidirectional;
 				}
 			}
+			
+			if(reversedDirectionality) this.bidirectional = !this.bidirectional;
+			
+			this.complete = true;
 		}
 		
 		public boolean overrides(Message m) {
@@ -597,8 +604,10 @@ public class AlertC extends ODA {
 			StringBuilder res = new StringBuilder("Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
-			if(startTime != -1) res.append(", Start=").append(formatTime(startTime));
-			if(stopTime != -1) res.append(", Stop=").append(formatTime(stopTime));
+			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			if(this.diversion) res.append(", diversion advised");
+			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
+			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
@@ -771,6 +780,8 @@ public class AlertC extends ODA {
 
 		private final List<Event> events = new ArrayList<Event>();
 		private Event currentEvent;
+		
+		private final List<Integer> diversionRoute = new ArrayList<Integer>();
 
 		public InformationBlock(int eventCode) {
 			addEvent(eventCode);
@@ -789,13 +800,22 @@ public class AlertC extends ODA {
 		public String toString() {
 			StringBuilder res = new StringBuilder();
 			res.append("-------------\n");
-			if(destination != -1) res.append("For destination: " + destination);
-			if(length != -1) res.append("  length=").append(length);
-			if(speed != -1) res.append("  speed=").append(speed);
+			if(destination != -1) res.append("For destination: " + destination + "  ");
+			
+			if(length != -1) {
+				String lengthKM;
+				if(length > 100) lengthKM = "> 100 km";
+				else lengthKM = " = " + length + " km";				
+				res.append("length ").append(lengthKM).append("  ");
+			}
+			
+			if(speed != -1) res.append("speed limit = ").append(speed).append(" km/h");
 			if(length != -1 || speed != -1 || destination != -1) res.append('\n');
 			for(Event e : events) {
 				res.append(e).append('\n');
 			}
+			
+			if(diversionRoute.size() > 0) res.append("Diversion route: " + diversionRoute).append('\n');
 			
 			return res.toString();
 		}
@@ -804,6 +824,7 @@ public class AlertC extends ODA {
 	public static class Event {
 		private TMCEvent tmcEvent;
 		private TMCEvent.EventUrgency urgency;
+		private int sourceLocation = -1;
 
 		private int quantifier = -1;
 		private List<SupplementaryInfo> suppInfo = new ArrayList<SupplementaryInfo>();
@@ -827,8 +848,9 @@ public class AlertC extends ODA {
 				text = tmcEvent.text;
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
-			if(this.quantifier != -1) res.append(", Q=").append(quantifier);
 			res.append(", urgency=").append(urgency);
+			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
+			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
 			if(this.suppInfo.size() > 0) res.append('\n').append(this.suppInfo);
 			return res.toString();
 		}
