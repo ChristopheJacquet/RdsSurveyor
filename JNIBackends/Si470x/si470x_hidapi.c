@@ -103,10 +103,10 @@ static inline void put_unaligned_be16(uint16_t val, uint8_t *buf) {
 #define DEVICEID_PN		0xf000	/* bits 15..12: Part Number */
 #define DEVICEID_MFGID		0x0fff	/* bits 11..00: Manufacturer ID */
 
-#define CHIPID			1	/* Chip ID */
-#define CHIPID_REV		0xfc00	/* bits 15..10: Chip Version */
-#define CHIPID_DEV		0x0200	/* bits 09..09: Device */
-#define CHIPID_FIRMWARE		0x01ff	/* bits 08..00: Firmware Version */
+#define CHIPID			1	/* Chip ID. Note: this field changed with firmware r16 */
+#define CHIPID_REV		0xfc00	/* bits 15..10: Silicon revision */
+#define CHIPID_DEV		0x03C0	/* bits 09..06: Device */
+#define CHIPID_FIRMWARE		0x003f	/* bits 05..00: Firmware Version */
 
 #define POWERCFG		2	/* Power Configuration */
 #define POWERCFG_DSMUTE		0x8000	/* bits 15..15: Softmute Disable */
@@ -136,7 +136,7 @@ static inline void put_unaligned_be16(uint16_t val, uint8_t *buf) {
 
 #define SYSCONFIG2		5	/* System Configuration 2 */
 #define SYSCONFIG2_SEEKTH	0xff00	/* bits 15..08: RSSI Seek Threshold */
-#define SYSCONFIG2_BAND		0x0080	/* bits 07..06: Band Select */
+#define SYSCONFIG2_BAND		0x00C0	/* bits 07..06: Band Select */
 #define SYSCONFIG2_SPACE	0x0030	/* bits 05..04: Channel Spacing */
 #define SYSCONFIG2_VOLUME	0x000f	/* bits 03..00: Volume */
 
@@ -160,6 +160,8 @@ static inline void put_unaligned_be16(uint16_t val, uint8_t *buf) {
 #define STATUSRSSI_STC		0x4000	/* bits 14..14: Seek/Tune Complete */
 #define STATUSRSSI_SF		0x2000	/* bits 13..13: Seek Fail/Band Limit */
 #define STATUSRSSI_AFCRL	0x1000	/* bits 12..12: AFC Rail */
+#define STATUSRSSI_RDSE     0x0E00  /* bits 11..09: RDS Errors (firmware rev <= 12 or "standard mode") */
+/* The next two fields are supported only in "verbose mode", available with firmware revs >12 */
 #define STATUSRSSI_RDSS		0x0800	/* bits 11..11: RDS Synchronized (Si4701 only) */
 #define STATUSRSSI_BLERA	0x0600	/* bits 10..09: RDS Block A Errors (Si4701 only) */
 #define STATUSRSSI_ST		0x0100	/* bits 08..08: Stereo Indicator */
@@ -183,6 +185,7 @@ static inline void put_unaligned_be16(uint16_t val, uint8_t *buf) {
 #define RDSD			15	/* RDSD */
 #define RDSD_RDSD		0xffff	/* bits 15..00: RDS Block D Data (Si4701 only) */
 
+#define MIN_CHIP_FIRMWARE_REV_FOR_VERBOSE_MODE 13
 
 
 typedef struct si470x_dongle {
@@ -199,6 +202,7 @@ static si470x_dongle_t known_devices[] = {
     { 0x10c4, 0x818a, "ADS/Tech FM Radio Receiver (formerly Instant FM Music)" },
     { 0x06e1, 0xa155, "KWorld USB FM Radio SnapMusic Mobile 700 (FM700)" },
     { 0x1b80, 0xd700, "Sanei Electric, Inc. FM USB Radio (DealExtreme.com PCear)" },
+    { 0x10c5, 0x819a, "Sanei Electric, Inc. FM USB Radio (DealExtreme.com PCear)" },
 };
 
 struct si470x_dev {
@@ -220,6 +224,8 @@ struct si470x_dev {
 	wchar_t product_name[80];
 	wchar_t vendor_name[80];
 	uint16_t pid, vid;
+	
+	int chip_firmware_rev;
 };
 
 
@@ -360,6 +366,7 @@ static int si470x_get_all_registers(si470x_dev_t *radio)
 }
 */
 
+
 // 2012-06-18 - for now use this dummy version, as I cannot
 // figure out why it doesn't work on Windows. Maybe the
 // report size is not correct?
@@ -369,6 +376,7 @@ static int si470x_get_all_registers(si470x_dev_t *radio)
         si470x_get_register(radio, i);
     }
 }
+
 
 /*
  * si470x_get_rds_registers - read RDS registers
@@ -446,6 +454,7 @@ int si470x_get_scratch_page_versions(si470x_dev_t *radio)
 	else {
 		radio->software_version = buf[1];
 		radio->hardware_version = buf[2];
+		printf("Versions: sw=%d, hw=%d\n", buf[1], buf[2]);
 	}
 
 	return (retval < 0) ? -EINVAL : 0;
@@ -468,19 +477,39 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
     
     retval = si470x_get_rds_registers(radio);
     if(retval < 0) return retval;
-    
-        
-    data->bler[0] = (radio->registers[STATUSRSSI] & STATUSRSSI_BLERA) >> 9;
+
+    /* RDS data */    
     data->block[0] = radio->registers[RDSA];
-
-    data->bler[1] = (radio->registers[READCHAN] & READCHAN_BLERB) >> 14;
     data->block[1] = radio->registers[RDSB];
-
-    data->bler[2] = (radio->registers[READCHAN] & READCHAN_BLERC) >> 12;
     data->block[2] = radio->registers[RDSC];
-
-    data->bler[3] = (radio->registers[READCHAN] & READCHAN_BLERD) >> 10;
     data->block[3] = radio->registers[RDSD];
+
+    /* Error info */
+    if(radio->chip_firmware_rev >= MIN_CHIP_FIRMWARE_REV_FOR_VERBOSE_MODE) {
+        /* Verbose mode */
+        data->bler[0] = (radio->registers[STATUSRSSI] & STATUSRSSI_BLERA) >> 9;
+        data->bler[1] = (radio->registers[READCHAN] & READCHAN_BLERB) >> 14;
+        data->bler[2] = (radio->registers[READCHAN] & READCHAN_BLERC) >> 12;
+        data->bler[3] = (radio->registers[READCHAN] & READCHAN_BLERD) >> 10;
+    } else {
+        /* Standard mode */
+        /* If one or more errors, mark the BLER of any block as "errorful" (3) */
+        int bler = ((radio->registers[STATUSRSSI] & STATUSRSSI_RDSE) >> 9) > 0 ? 3 : 0;
+        
+        data->bler[0] =
+        data->bler[1] =
+        data->bler[2] =
+        data->bler[3] = bler;
+    }
+
+/*
+    printf("%04X/%d %04X/%d %04X/%d %04X/%d     STATUS=%04X\n",
+        data->block[0], data->bler[0],
+        data->block[1], data->bler[1],
+        data->block[2], data->bler[2],
+        data->block[3], data->bler[3],
+        radio->registers[SYSCONFIG1]);
+*/
 
     data->sync = (radio->registers[STATUSRSSI] & STATUSRSSI_RDSS) != 0;
     data->stereo = (radio->registers[STATUSRSSI] & STATUSRSSI_ST) != 0;
@@ -495,14 +524,14 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
         si470x_set_register(radio, POWERCFG);
     }
 
-
     if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0) {
         cleared = 1;
         return -2; // TODO FIXME No RDS group available???
     }
 
 
-    if ((radio->registers[STATUSRSSI] & STATUSRSSI_RDSS) == 0) {
+    if (radio->chip_firmware_rev >= MIN_CHIP_FIRMWARE_REV_FOR_VERBOSE_MODE &&
+    (radio->registers[STATUSRSSI] & STATUSRSSI_RDSS) == 0) {
         cleared = 1;
         return -3; // TODO FIXME Not synced
     }
@@ -606,6 +635,9 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 int si470x_start(si470x_dev_t *dev, uint8_t space, uint8_t band, uint8_t de) {
     if(si470x_get_all_registers(dev) < 0) return -1;
 
+    /* Store chip/dongle version info */
+    dev->chip_firmware_rev = dev->registers[CHIPID] & CHIPID_FIRMWARE;
+
 	/* powercfg */
 	dev->registers[POWERCFG] =
 		POWERCFG_DMUTE | POWERCFG_ENABLE | POWERCFG_RDSM;
@@ -619,7 +651,7 @@ int si470x_start(si470x_dev_t *dev, uint8_t space, uint8_t band, uint8_t de) {
 
 	/* sysconfig 2 */
 	dev->registers[SYSCONFIG2] =
-		(20  << 8) |				/* SEEKTH */
+		(16  << 8) |				/* SEEKTH */
 		((band  << 6) & SYSCONFIG2_BAND)  |	/* BAND */
 		((space << 4) & SYSCONFIG2_SPACE) |	/* SPACE */
 		15;					/* VOLUME (max) */
@@ -654,6 +686,47 @@ int si470x_start(si470x_dev_t *dev, uint8_t space, uint8_t band, uint8_t de) {
 			dev->band_bottom = 87500;
 			dev->band_top = 108000;
 	}
+	
+	si470x_get_scratch_page_versions(dev);
+	
+	
+	
+	/* Part number */
+	int pn = (dev->registers[DEVICEID] & DEVICEID_PN)>>12;
+	
+	printf("Part number:     0x%01X", pn);
+	
+	switch(pn) {
+	    case 0x1: printf(" (Si4700/01/02/03)\n"); break;
+	    default: printf(" (Unknown)\n"); break;
+	}
+	
+	/* Manufacturer */
+	int mfg = dev->registers[DEVICEID] & DEVICEID_MFGID;
+	
+	printf("Manufacturer ID: 0x%03X", mfg);
+	
+	switch(mfg) {
+	    case 0x242: printf(" (Silicon Labs)\n"); break;
+	    default: printf(" (Unknown)\n"); break;
+	}
+	
+	/* Chip revisions */
+	printf("Chip revision:   %c\n", 64 + ((dev->registers[CHIPID] & CHIPID_REV)>>10));
+
+    /* Device type */
+    int dev_type = (dev->registers[CHIPID] & CHIPID_DEV)>>6;
+
+	printf("Device type:     0x%01X", dev_type);
+	
+	switch(dev_type) {
+	    case 0x0: printf(" (Si4700)\n"); break;
+	    case 0x1: printf(" (Si4702)\n"); break;
+	    case 0x8: printf(" (Si4701)\n"); break;
+	    case 0x9: printf(" (Si4703)\n"); break;
+	}
+
+	printf("Si470x firmware: %d\n", dev->registers[CHIPID] & CHIPID_FIRMWARE);
 	
 	return 0;
 }
