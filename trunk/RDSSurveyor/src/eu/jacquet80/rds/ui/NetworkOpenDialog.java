@@ -26,8 +26,8 @@ import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 
 import eu.jacquet80.rds.RDSSurveyor;
+import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
-import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 
 @SuppressWarnings("serial")
@@ -164,7 +164,7 @@ public class NetworkOpenDialog extends JFrame {
 				if(evt.getSource() == btnOK) {
 					if(radHTTP.isSelected()) {
 						try {
-							source = new HexFileGroupReader(new URL(txtURL.getText()));
+							source = FileFormatGuesser.createReader(new URL(txtURL.getText()));
 							RDSSurveyor.preferences.put(PREF_URL, txtURL.getText());
 							pref_net_type = VAL_NET_TYPE_HTTP;
 						} catch (MalformedURLException e) {

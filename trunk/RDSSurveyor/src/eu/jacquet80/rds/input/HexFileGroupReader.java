@@ -30,8 +30,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.regex.Matcher;
@@ -40,9 +38,9 @@ import java.util.regex.Pattern;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
+import eu.jacquet80.rds.log.RDSTime;
 import eu.jacquet80.rds.log.RealTime;
 import eu.jacquet80.rds.log.SequentialTime;
-import eu.jacquet80.rds.log.RDSTime;
 
 public class HexFileGroupReader extends GroupReader {
 	private final static Pattern FIRST_NUMBER = Pattern.compile(".*\\D(\\d+)");
@@ -56,10 +54,7 @@ public class HexFileGroupReader extends GroupReader {
 		this.br = br;
 	}
 	
-	public HexFileGroupReader(URL url) throws IOException {
-		this(new BufferedReader(new InputStreamReader(url.openStream())));
-	}
-	
+	// TODO: remove?
 	public HexFileGroupReader(File file) throws FileNotFoundException {
 		this(new BufferedReader(new FileReader(file)));
 	}

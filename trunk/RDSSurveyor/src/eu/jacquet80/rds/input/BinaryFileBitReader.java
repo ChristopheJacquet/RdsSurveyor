@@ -33,14 +33,19 @@ import java.io.InputStream;
 
 
 public class BinaryFileBitReader extends BitReader {
-	private final InputStream isr;
+	private final InputStream is;
 	private int oct;
 	private int octPtr;
 	
+	public BinaryFileBitReader(InputStream is) {
+		this.is = is;
+		this.oct = 0;
+		this.octPtr = 0;
+		
+	}
+	
 	public BinaryFileBitReader(File f) throws FileNotFoundException {
-		isr = new FileInputStream(f);
-		oct = 0;
-		octPtr = 0;
+		this(new FileInputStream(f));
 	}
 	
 	
@@ -48,7 +53,7 @@ public class BinaryFileBitReader extends BitReader {
 		oct = oct<<1;
 
 		if(octPtr==0) {
-			oct = isr.read();
+			oct = is.read();
 			if(oct == -1) {
 				throw new EOFException();
 			}

@@ -54,6 +54,7 @@ public class TunedStation extends Station {
 	private int latestBlocksOkCount = 0;
 	private int ecc, language;
 	private Text rt = new Text(64);
+	private ServiceStat serviceStat;
 	
 	private final List<String> trafficEvents = new ArrayList<String>();
 	
@@ -94,6 +95,8 @@ public class TunedStation extends Station {
 		totalBlocksOk = 0;
 		
 		applications = new Application[32];
+		
+		serviceStat = new ServiceStat();
 	}
 
 	
@@ -338,6 +341,17 @@ public class TunedStation extends Station {
 	public List<String> getTrafficEventsList() {
 		return trafficEvents;
 	}
+	
+	public void addServiceStat(ServiceStat statsOfGroup) {
+		int totalBitCount = statsOfGroup.getTotalCount();
+		
+		if(totalBitCount != 64) {
+			System.err.println("addServiceStat: each bit of a group's 64 bits must be assigned. " 
+					+ "Only " + totalBitCount + " bits were assigned.");
+		}
+		
+		serviceStat.merge(statsOfGroup);
+	}
 }
 
 
@@ -361,4 +375,46 @@ class GroupStatElement implements Comparable<GroupStatElement> {
 		b.append(group).append(groupVersion == 0 ? 'A' : 'B');
 		return b;
 	}
+}
+
+class ServiceStat {
+	private Map<String, Integer> stats = new HashMap<String, Integer>();
+	
+	public void add(String service, int bits) {
+		Integer previousCount = stats.get(service);
+		if(previousCount == null) previousCount = 0;
+		stats.put(service, bits + previousCount);
+	}
+	
+	public int getTotalCount() {
+		int count = 0;
+		for(int c : stats.values()) {
+			count += c;
+		}
+		
+		return count;
+	}
+	
+	public void merge(ServiceStat other) {
+		for(Map.Entry<String, Integer> e : other.stats.entrySet()) {
+			this.add(e.getKey(), e.getValue());
+		}
+	}
+	
+	public static final String 
+			OVERHEAD = "Protocol overhead",		// addressing, very basic features, etc.
+			PROG_TYPE = "Program type",		// PTY + TA/TP
+			PI = "Program Identification",
+			NAME = "Station name",
+			RT = "Radiotext",
+			AF = "Alternative frequencies",
+			ON = "Other networks",
+			CT = "Clock time",
+			PAGING = "Paging",
+			IH = "In-house data",
+			TDC = "Transparent data channels",
+			PTYN = "Program type name",
+			WASTE = "Wasted bandwidth",
+			PIN = "Program Item Number",
+			ODA = "ODA";
 }
