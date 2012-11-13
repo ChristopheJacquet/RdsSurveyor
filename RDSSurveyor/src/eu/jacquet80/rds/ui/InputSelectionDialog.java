@@ -20,6 +20,7 @@ import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
@@ -87,7 +88,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				String defaultPath = RDSSurveyor.preferences.get(RDSSurveyor.PREF_LAST_DIR, null);
 				JFileChooser fc = new JFileChooser(defaultPath);
 				if(fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-					choice = new HexFileGroupReader(fc.getSelectedFile());
+					choice = FileFormatGuesser.createReader(fc.getSelectedFile());
 					choiceDone.release();
 					RDSSurveyor.preferences.put(RDSSurveyor.PREF_LAST_DIR, fc.getSelectedFile().getParent());
 				}

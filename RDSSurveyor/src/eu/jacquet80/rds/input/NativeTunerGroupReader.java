@@ -26,6 +26,7 @@
 
 package eu.jacquet80.rds.input;
 
+import java.io.File;
 import java.io.IOException;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
@@ -116,7 +117,10 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	}
 	
 	public NativeTunerGroupReader(String libPath) {
-		System.load(libPath);
+		File path = new File(libPath);
+		String absoluteLibPath = path.getAbsolutePath();
+		System.out.println("Using native library: " + absoluteLibPath);
+		System.load(absoluteLibPath);
 		if(! open()) {
 			throw new RuntimeException("NativeTunerGroupReader: Cannot find suitable device for " + libPath);
 			// TODO throw a more appropriate exception here

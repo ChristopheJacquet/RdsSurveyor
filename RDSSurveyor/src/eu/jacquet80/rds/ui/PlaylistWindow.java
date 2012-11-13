@@ -27,8 +27,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import eu.jacquet80.rds.core.DecoderShell;
+import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
-import eu.jacquet80.rds.input.HexFileGroupReader;
 
 public class PlaylistWindow extends JFrame {
 	private static final long serialVersionUID = 1711324533473299689L;
@@ -79,7 +79,7 @@ public class PlaylistWindow extends JFrame {
 						public void run() {
 							final GroupReader reader;
 							try {
-								reader = new HexFileGroupReader(item.url);
+								reader = FileFormatGuesser.createReader(item.url);
 							} catch (Exception e) {
 								System.err.println(e);
 								reportError("Could not open selected file");

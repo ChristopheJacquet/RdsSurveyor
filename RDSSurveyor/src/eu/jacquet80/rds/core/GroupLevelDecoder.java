@@ -167,6 +167,13 @@ public class GroupLevelDecoder {
 			//console.print("Group (" + (nbOk == 4 ? "full" : "part") + ") type " + type + (char)('A' + version) + ", TP=" + tp + ", PTY=" + pty + ", ");
 		} else workingStation.addUnknownGroupToStats(nbOk);
 		
+		// initialize service stats
+		ServiceStat serviceStat = new ServiceStat();
+		serviceStat.add(ServiceStat.PI, 16);  // always a PI code on 16 bits
+		serviceStat.add(ServiceStat.OVERHEAD, 5);	// group type: protocol overhead
+		serviceStat.add(ServiceStat.PROG_TYPE, 5+1);	// PTY+TP: program type
+		if(version == 1) serviceStat.add(ServiceStat.PI, 16);	// second PI code on B-type groups
+		
 		// Groups 0A & 0B
 		if(type == 0) {
 			int addr = processBasicTuningBits(console, blocks[1], time);
@@ -184,6 +191,10 @@ public class GroupLevelDecoder {
 				//console.printf("Raw AF: %d %d", (blocks[2]>>8) & 0xFF, blocks[2] & 0xFF);
 				console.print(workingStation.addAFPair((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
 			}
+			
+			serviceStat.add(ServiceStat.PROG_TYPE, 3);	// TA, M/S, DI
+			serviceStat.add(ServiceStat.NAME, 2+16);	// address + characters
+			if(version == 0) serviceStat.add(ServiceStat.AF, 16);
 		}
 
 		// Group 1A: to extract RP info we need only block 1
@@ -204,6 +215,13 @@ public class GroupLevelDecoder {
 				console.print(", " + ((Paging)app).syncInfo((bsi >> 1) & 1, bsi & 1));
 			}
 			console.print("], ");
+			
+			serviceStat.add(ServiceStat.OVERHEAD, 16);
+		}
+		
+		if(type==1) {
+			serviceStat.add(ServiceStat.PIN, 16);
+			serviceStat.add(ServiceStat.OVERHEAD, 5);
 		}
 		
 		// Groups 1A & 1B: to extract PIN we need blocks 1 and 3
@@ -314,6 +332,8 @@ public class GroupLevelDecoder {
 			console.print('\"');
 		}
 		
+		if(type == 2) serviceStat.add(ServiceStat.RT, version == 0 ? 5+16+16 : 5+16); 
+		
 		// Groups 3A: to extract AID we need blocks 1 and 3
 		if(type == 3 && version == 0 && blocksOk[3]) {
 			int aid = blocks[3];
@@ -364,6 +384,7 @@ public class GroupLevelDecoder {
 				app.receiveGroup(console, type, version, blocks, blocksOk, time);
 			}
 		}
+		if(type == 3 && version==0) serviceStat.add(ServiceStat.ODA, 5+16+16);	// TODO refine per ODA
 		
 		// Groups 4A: to extract time we need blocks 1, 2 and 3
 		if(type == 4 && version == 0 && blocksOk[2] && blocksOk[3]) {
@@ -399,6 +420,10 @@ public class GroupLevelDecoder {
 				console.print(", [RT: " + ((Paging)app).fullMinute() + "]");
 			}
 			
+		}
+		if(type == 4 && version == 0) {
+			serviceStat.add(ServiceStat.CT, 2+16+16);
+			serviceStat.add(ServiceStat.OVERHEAD, 3);
 		}
 		
 		// Groups 5A-9A, 11A-13A: TDC, we need blocks 1, 2 and 3
@@ -443,6 +468,10 @@ public class GroupLevelDecoder {
 				console.println();
 				console.print("\t" + app.getName() +  " --> ");
 				app.receiveGroup(console, type, version, blocks, blocksOk, time);
+				
+				serviceStat.add(app.getName(), 5+16+16);
+			} else {
+				serviceStat.add(ServiceStat.WASTE, 5+16+16);
 			}
 		}
 		
@@ -470,6 +499,9 @@ public class GroupLevelDecoder {
 			} else console.print("??");
 			
 			console.print("\"");
+			
+			serviceStat.add(ServiceStat.PTYN, 2+16+16);
+			serviceStat.add(ServiceStat.OVERHEAD, 3);
 		}
 		
 		// Groups 14: to extract variant we need only block 1
@@ -551,6 +583,7 @@ public class GroupLevelDecoder {
 						}
 					}
 				}
+				serviceStat.add(ServiceStat.ON, 5+16+16);
 			} else { // 14B groups
 				int onta = (blocks[1]>>3) & 1;
 				String message = (onta==1 ? "Switch now to ON" : "Switch back from ON");
@@ -564,6 +597,9 @@ public class GroupLevelDecoder {
 				if(on != null) message += " (" + on.getStationName().trim() + ")";
 				if(groupCountSinceEonSwitch > 20) station.addTrafficEvent(time, message);
 				groupCountSinceEonSwitch = 0;
+				
+				serviceStat.add(ServiceStat.ON, 2+16);
+				serviceStat.add(ServiceStat.OVERHEAD, 3);
 			}
 			
 		}
@@ -580,22 +616,36 @@ public class GroupLevelDecoder {
 				} else console.print("??");
 			}
 			console.print("\", TA=" + ((blocks[1]>>4) & 1));
+			
+			serviceStat.add(ServiceStat.PROG_TYPE, 1);	// TA bit
+			serviceStat.add(ServiceStat.NAME, 1+16+16);	// address + 4 characters
+			serviceStat.add(ServiceStat.OVERHEAD, 3);	// 3 unused bits
 		}
 		
 		// For 15B we need only group 1, and possibly group 3
 		if(type == 15 && version == 1) {
 			processBasicTuningBits(console, blocks[1], time);
 			if(blocksOk[3]) processBasicTuningBits(console, blocks[3], time);
+		
+			serviceStat.add(ServiceStat.OVERHEAD, 5);	// group type: protocol overhead in group D
+			serviceStat.add(ServiceStat.PROG_TYPE, 6);	// PTY+TP: program type in group D
+			serviceStat.add(ServiceStat.PROG_TYPE, 2*5);	// TA, MS, DIseg and DI in groups B and D
 		}
 		
 		// add a log message for each group
 		log.addMessage(new GroupReceived(time, blocks, nbOk, consoleWriter.toString()));
+
+		// if the last 3 blocks of a group were received completely, then commit service stats
+		if(blocksOk[1] && blocksOk[2] && blocksOk[3]) {
+			station.addServiceStat(serviceStat);
+		}
 
 		// post log message for app creation only if the group is not being ignored
 		if(newApp != null && station == workingStation)
 			log.addMessage(new ApplicationChanged(time, null, newApp));
 		
 		groupCountSinceEonSwitch++;
+		
 	}
 	
 	

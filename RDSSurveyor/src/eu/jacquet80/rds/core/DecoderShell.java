@@ -70,6 +70,7 @@ public class DecoderShell {
 					}
 				} catch (IOException e) {
 					System.err.println("In RDS worker thread: " + e);
+					e.printStackTrace(System.err);
 				}
 			};
 		};
