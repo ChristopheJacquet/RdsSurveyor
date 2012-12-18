@@ -82,6 +82,8 @@ int main(int argc, char **argv) {
             //printf("%i ", retval);
             //fflush(stdout);
         } else {
+            printf("%02X  ", data.rssi);
+        
             for(int i=0; i<4; i++) {
                 if(bler[i] == 0) {
                     printf("%04X ", rds[i]);
