@@ -524,18 +524,25 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
         si470x_set_register(radio, POWERCFG);
     }
 
+/* Should suppress this? TODO (this only detects if RDS is enabled)
     if ((radio->registers[SYSCONFIG1] & SYSCONFIG1_RDS) == 0) {
         cleared = 1;
         return -2; // TODO FIXME No RDS group available???
     }
+*/
 
-
+/*
     if (radio->chip_firmware_rev >= MIN_CHIP_FIRMWARE_REV_FOR_VERBOSE_MODE &&
-    (radio->registers[STATUSRSSI] & STATUSRSSI_RDSS) == 0) {
+    (radio->registers[STATUSRSSI] & STATUSRSSI_RDSS) == 0) {*/
+    if((radio->registers[STATUSRSSI] & STATUSRSSI_RDSR) == 0) {
         cleared = 1;
+        //printf("<!> ");
         return -3; // TODO FIXME Not synced
     }
+    //printf("<Rdy> ");
 
+
+    cleared = 0;
 
     for(int i=0; i<4; i++) {
         if(old_rds[i] != data->block[i]) {
@@ -544,6 +551,8 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
         }
     }
     
+    if(cleared) return 0; else return -5;
+/*    
     count++;
     
     if(cleared) {
@@ -556,6 +565,7 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
         }
         return -4;
     }
+*/
 }
 
 
