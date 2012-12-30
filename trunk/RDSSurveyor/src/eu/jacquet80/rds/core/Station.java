@@ -91,8 +91,12 @@ public abstract class Station {
 		return String.format("%d.%d", freq/10, freq%10);
 	}
 	
+	protected static boolean isListLengthIndicator(int a) {
+		return a >= 224 && a <= 249;
+	}
+	
 	public synchronized String addAFPair(int a, int b) {
-		if(a >= 224 && a <= 249) {
+		if(isListLengthIndicator(a)) {
 			if(b >= 0 && b <= 205) {
 				currentAFList = afs.get(b);
 				if(currentAFList == null) {
