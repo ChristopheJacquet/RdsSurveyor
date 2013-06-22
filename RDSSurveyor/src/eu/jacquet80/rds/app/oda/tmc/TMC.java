@@ -18,7 +18,7 @@ public class TMC {
 	
 	static Pattern colonPattern = Pattern.compile(";");
 
-	public static Map<Integer, TMCEvent> EVENTS = new HashMap<Integer, TMCEvent>();
+	private static Map<Integer, TMCEvent> EVENTS = new HashMap<Integer, TMCEvent>();
 	static {
 		try {
 			BufferedReader br = openTMCFile("EL.DAT");
@@ -46,5 +46,13 @@ public class TMC {
 			e.printStackTrace(System.err);
 			System.exit(1);
 		}
+	}
+	
+	public static TMCEvent getEvent(int code) {
+		TMCEvent r = EVENTS.get(code);
+		if(r == null) {
+			r = new TMCEvent("1;unknown#" + code + ";;;;;;D;1;U;1;A50;");
+		}
+		return r;
 	}
 }
