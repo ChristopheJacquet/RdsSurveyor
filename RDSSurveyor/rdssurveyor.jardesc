@@ -11,8 +11,8 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
-        <file path="/RDSSurveyor/.project"/>
         <file path="/RDSSurveyor/.classpath"/>
+        <file path="/RDSSurveyor/.project"/>
         <javaElement handleIdentifier="=RDSSurveyor/src"/>
         <file path="/RDSSurveyor/rdssurveyor.jardesc"/>
     </selectedElements>
