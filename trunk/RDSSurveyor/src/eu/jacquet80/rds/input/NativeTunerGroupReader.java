@@ -125,8 +125,8 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 			throw new RuntimeException("NativeTunerGroupReader: Cannot find suitable device for " + libPath);
 			// TODO throw a more appropriate exception here
 		}
-		setFrequency(95400);
-		data.frequency = 95400;
+		setFrequency(87500);
+		data.frequency = 87500;
 	}
 
 	private native int readTuner();

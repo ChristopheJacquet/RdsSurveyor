@@ -22,9 +22,8 @@ import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
-import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
-import eu.jacquet80.rds.input.USBFMRadioGroupReader;
+import eu.jacquet80.rds.input.NativeTunerGroupReader;
 
 public class InputSelectionDialog extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 2745048916894636582L;
@@ -81,8 +80,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				choice = new BitStreamSynchronizer(System.out, br);
 				choiceDone.release();
 			} else if(source == btnTuner) {
-				choice = new USBFMRadioGroupReader();
-				((USBFMRadioGroupReader)choice).init();
+				choice = new NativeTunerGroupReader("si470x");
 				choiceDone.release();
 			} else if(source == btnFile) {
 				String defaultPath = RDSSurveyor.preferences.get(RDSSurveyor.PREF_LAST_DIR, null);
