@@ -830,7 +830,7 @@ public class AlertC extends ODA {
 		private List<SupplementaryInfo> suppInfo = new ArrayList<SupplementaryInfo>();
 
 		public Event(int eventCode) {
-			this.tmcEvent = TMC.EVENTS.get(eventCode);
+			this.tmcEvent = TMC.getEvent(eventCode);
 			
 			if(this.tmcEvent== null) {
 				System.err.println("No such TMC event: " + eventCode);

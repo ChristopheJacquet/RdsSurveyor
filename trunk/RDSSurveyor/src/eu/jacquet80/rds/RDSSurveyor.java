@@ -85,7 +85,7 @@ public class RDSSurveyor {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2012.");
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2013.");
 		
 		GroupReader reader = null;
 		boolean showGui = true;

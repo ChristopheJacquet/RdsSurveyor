@@ -149,7 +149,7 @@ public class AlertCPanel extends AppPanel {
 				StringBuffer buf = new StringBuffer();
 				for(int event : msg.getEvents()) {
 					if(buf.length() > 0) buf.append(" / ");
-					buf.append(TMC.EVENTS.get(event).text);
+					buf.append(TMC.getEvent(event).text);
 				}
 				return buf.toString();
 			case 2: return msg.getUpdateCount();
