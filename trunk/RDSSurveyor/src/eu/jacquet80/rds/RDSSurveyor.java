@@ -68,6 +68,24 @@ public class RDSSurveyor {
 	public final static String PREF_LAST_DIR = "directory_last";
 	public final static String PREF_TUNER_FREQ = "tuner_frequency";
 	
+	private final static String[] candidateTempDirs = {
+		"log", "Log",
+		"logs", "Logs",
+	};
+	
+	private final static String tempDir;
+	
+	static {
+		String d = System.getProperty("java.io.tmpdir");
+		for(String c : candidateTempDirs) {
+			if(new File(c).isDirectory()) {
+				d = c;
+				break;
+			}
+		}
+		tempDir = d;
+	}
+	
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.
 	 */
@@ -120,7 +138,6 @@ public class RDSSurveyor {
 					nativeLiveReader = binReader;
 					// TODO Ugly hack
 					{
-						String tempDir = System.getProperty("java.io.tmpdir");
 						outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 						
 						System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
@@ -233,14 +250,12 @@ public class RDSSurveyor {
 		// if there is no output file, create one in the temp directory
 		if(liveInput && outBinFile == null) {
 			System.out.print("Using default output file. ");
-			String tempDir = System.getProperty("java.io.tmpdir");
 			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
 		}
 		// TODO: guess above code is dead
 		
 		if(liveGroupInput && outGroupFile == null) {
 			System.out.print("Using default group output file. ");
-			String tempDir = System.getProperty("java.io.tmpdir");
 			outGroupFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".l2");			
 		}
 		

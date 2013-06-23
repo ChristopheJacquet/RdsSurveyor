@@ -10,10 +10,7 @@
             <packagesToUnSeal/>
         </sealing>
     </manifest>
-    <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
-        <file path="/RDSSurveyor/.classpath"/>
-        <file path="/RDSSurveyor/.project"/>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
         <javaElement handleIdentifier="=RDSSurveyor/src"/>
-        <file path="/RDSSurveyor/rdssurveyor.jardesc"/>
     </selectedElements>
 </jardesc>
