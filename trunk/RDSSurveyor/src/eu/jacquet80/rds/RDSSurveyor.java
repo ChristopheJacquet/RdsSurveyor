@@ -53,6 +53,7 @@ import eu.jacquet80.rds.input.TeeBitReader;
 import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
+import eu.jacquet80.rds.input.UnavailableInputMethod;
 import eu.jacquet80.rds.input.V4LTunerGroupReader;
 import eu.jacquet80.rds.ui.InputSelectionDialog;
 import eu.jacquet80.rds.ui.MainWindow;
@@ -84,7 +85,7 @@ public class RDSSurveyor {
 		return args[pos];
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, UnavailableInputMethod {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2013.");
 		
 		GroupReader reader = null;

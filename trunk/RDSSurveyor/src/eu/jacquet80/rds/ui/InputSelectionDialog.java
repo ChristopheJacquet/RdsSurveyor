@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.BorderFactory;
@@ -24,6 +25,7 @@ import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
+import eu.jacquet80.rds.input.UnavailableInputMethod;
 
 public class InputSelectionDialog extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 2745048916894636582L;
@@ -80,7 +82,27 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				choice = new BitStreamSynchronizer(System.out, br);
 				choiceDone.release();
 			} else if(source == btnTuner) {
-				choice = new NativeTunerGroupReader("si470x");
+				String libDir = "lib";
+				boolean found = false;
+				String attempts = "Attempts to connect to a device:\n";
+				
+				for(File path : new File(libDir).listFiles()) {
+					try {
+						choice = new NativeTunerGroupReader(path.getAbsolutePath());
+						found = true;
+						break;
+					} catch(UnavailableInputMethod exc) {
+						// try the next one
+						System.out.println(exc.getMessage());
+						attempts += exc.getMessage() + "\n";
+					}
+				}
+				
+				if(! found) {
+					throw new RuntimeException("No available device found\n" + attempts);
+				}
+
+				
 				choiceDone.release();
 			} else if(source == btnFile) {
 				String defaultPath = RDSSurveyor.preferences.get(RDSSurveyor.PREF_LAST_DIR, null);
