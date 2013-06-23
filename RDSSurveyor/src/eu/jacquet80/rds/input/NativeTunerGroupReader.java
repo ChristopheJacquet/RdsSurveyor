@@ -116,23 +116,33 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 		return new GroupEvent(new RealTime(), res, false);
 	}
 	
-	public NativeTunerGroupReader(String libPath) {
-		File path = new File(libPath);
+	public NativeTunerGroupReader(String filename) throws UnavailableInputMethod {
+		File path = new File(filename);
 		String absoluteLibPath = path.getAbsolutePath();
-		System.out.println("Using native library: " + absoluteLibPath);
-		System.load(absoluteLibPath);
-		if(! open()) {
-			throw new RuntimeException("NativeTunerGroupReader: Cannot find suitable device for " + libPath);
-			// TODO throw a more appropriate exception here
+		String aFilename = path.getAbsolutePath();
+		try {
+			System.load(absoluteLibPath);
+		} catch(UnsatisfiedLinkError e) {
+			throw new UnavailableInputMethod(
+					aFilename + ": cannot load library");
 		}
-		setFrequency(87500);
-		data.frequency = 87500;
+
+		if(open()) {
+			System.out.println(
+					aFilename + ": device found, using it!");
+			setFrequency(87500);
+			data.frequency = 87500;
+		} else {
+			throw new UnavailableInputMethod(
+					aFilename + ": no device found");
+		}
 	}
+	
 
 	private native int readTuner();
 	private native boolean open();
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, UnavailableInputMethod {
 		String path = dir + sep + "si470x.dylib";
 		NativeTunerGroupReader r = new NativeTunerGroupReader(path);
 		//System.out.println("Tuned to: " + r.setFrequency(95400));
