@@ -616,6 +616,26 @@ public class AlertC extends ODA {
 			return res.toString();
 		}
 		
+		public String html() {
+			if(! complete) {
+				return "Incomplete!";
+			}
+			StringBuilder res = new StringBuilder("<html>Location: ").append(location);
+			res.append(", extent=" + this.extent);
+			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
+			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			if(this.diversion) res.append(", diversion advised");
+			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
+			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
+			res.append('\n');
+			for(InformationBlock ib : informationBlocks) {
+				res.append(ib.html());
+			}
+			res.append("</html>");
+			
+			return res.toString();			
+		}
+		
 		public int getLocation() {
 			return location;
 		}
@@ -819,6 +839,29 @@ public class AlertC extends ODA {
 			
 			return res.toString();
 		}
+		
+		public String html() {
+			StringBuilder res = new StringBuilder();
+			res.append("<hr>");
+			if(destination != -1) res.append("For destination: " + destination + "  ");
+			
+			if(length != -1) {
+				String lengthKM;
+				if(length > 100) lengthKM = "> 100 km";
+				else lengthKM = " = " + length + " km";				
+				res.append("length ").append(lengthKM).append("  ");
+			}
+			
+			if(speed != -1) res.append("speed limit = ").append(speed).append(" km/h");
+			if(length != -1 || speed != -1 || destination != -1) res.append("<br>");
+			for(Event e : events) {
+				res.append(e.toString()).append("<br>");
+			}
+			
+			if(diversionRoute.size() > 0) res.append("Diversion route: " + diversionRoute).append("<br>");
+			
+			return res.toString();			
+		}
 	}
 	
 	public static class Event {
@@ -839,6 +882,7 @@ public class AlertC extends ODA {
 			this.urgency = this.tmcEvent.urgency;
 		}
 		
+
 		@Override
 		public String toString() {
 			String text;
@@ -854,5 +898,6 @@ public class AlertC extends ODA {
 			if(this.suppInfo.size() > 0) res.append('\n').append(this.suppInfo);
 			return res.toString();
 		}
+		
 	}
 }

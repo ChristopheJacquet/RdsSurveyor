@@ -29,6 +29,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
 
 import javax.swing.Box;
 import javax.swing.JLabel;
@@ -36,16 +37,21 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
+import eu.jacquet80.rds.app.oda.AlertC.Message;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
+import eu.jacquet80.rds.ui.Util;
 
+@SuppressWarnings("serial")
 public class AlertCPanel extends AppPanel {
-	private static final long serialVersionUID = 4835434126469108572L;
 	private AlertC app;
 	private final MessageTableModel model = new MessageTableModel();
+	private final JTable tblList;
 
 	private final JLabel 
 		lblProviderName = new JLabel(),
@@ -89,7 +95,26 @@ public class AlertCPanel extends AppPanel {
 		
 		add(pnlInfo, BorderLayout.NORTH);
 		
-		add(new JScrollPane(new JTable(model)), BorderLayout.CENTER);
+		final JPanel pnlMain = new JPanel(new GridLayout(1, 2, 6, 6));
+		
+		tblList = new JTable(model);
+		final JLabel txtDetails = new JLabel();
+		txtDetails.setVerticalAlignment(JLabel.TOP);
+		
+		pnlMain.add(new JScrollPane(tblList));
+		pnlMain.add(new JScrollPane(txtDetails));
+		
+		tblList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+			
+			@Override
+			public void valueChanged(ListSelectionEvent evt) {
+				int row = tblList.getSelectedRow();
+				Message msg = app.getMessages().get(row);
+				txtDetails.setText(msg.html());
+			}
+		});
+		
+		add(pnlMain, BorderLayout.CENTER);
 	}
 	
 	public AlertCPanel(Application app) {
@@ -113,11 +138,10 @@ public class AlertCPanel extends AppPanel {
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
 		model.fireTableDataChanged();
+		Util.packColumns(tblList);
 	}
 	
 	private class MessageTableModel extends AbstractTableModel {
-		private static final long serialVersionUID = -6489769864816692235L;
-		
 		@Override
 		public int getColumnCount() {
 			return 3;
@@ -128,7 +152,7 @@ public class AlertCPanel extends AppPanel {
 			switch(column) {
 			case 0: return "Location";
 			case 1: return "Events";
-			case 2: return "#Upd";
+			case 2: return "Updates";
 			default: return "ERR";
 			}
 		}
