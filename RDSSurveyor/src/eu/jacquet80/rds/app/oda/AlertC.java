@@ -287,7 +287,10 @@ public class AlertC extends ODA {
 			}
 			
 			// 2) second we just need to add the current message
-			messages.add(currentMessage);
+			// (unless it is a cancellation message)
+			if(! currentMessage.isCancellation()) {
+				messages.add(currentMessage);
+			}
 			
 			currentMessage.updateCount = oldUpdate + 1;
 			
@@ -596,6 +599,22 @@ public class AlertC extends ODA {
 			return false;
 		}
 		
+		/**
+		 * Tells whether it is a cancellation message.
+		 * @return
+		 */
+		private boolean isCancellation() {
+			if(this.informationBlocks.size() > 0) {
+				InformationBlock ib1 = this.informationBlocks.get(0);
+				if(ib1.events.size() > 0) {
+					Event e1 = ib1.events.get(0);
+					return e1.tmcEvent.isCancellation();
+				}
+			}
+			
+			return false; // if empty event
+		}
+		
 		@Override
 		public String toString() {
 			if(! complete) {
@@ -625,9 +644,9 @@ public class AlertC extends ODA {
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
 			if(this.diversion) res.append(", diversion advised");
-			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
-			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
-			res.append('\n');
+			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
+			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
 			}
@@ -855,7 +874,7 @@ public class AlertC extends ODA {
 			if(speed != -1) res.append("speed limit = ").append(speed).append(" km/h");
 			if(length != -1 || speed != -1 || destination != -1) res.append("<br>");
 			for(Event e : events) {
-				res.append(e.toString()).append("<br>");
+				res.append(e.html()).append("<br>");
 			}
 			
 			if(diversionRoute.size() > 0) res.append("Diversion route: " + diversionRoute).append("<br>");
@@ -895,7 +914,27 @@ public class AlertC extends ODA {
 			res.append(", urgency=").append(urgency);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
-			if(this.suppInfo.size() > 0) res.append('\n').append(this.suppInfo);
+			if(this.suppInfo.size() > 0) res.append("\nSupplementary information: ").append(this.suppInfo);
+			return res.toString();
+		}
+		
+		public String html() {
+			String text;
+			if(quantifier != -1) {
+				text = tmcEvent.textQ.replace("$Q", tmcEvent.formatQuantifier(quantifier));
+			} else {
+				text = tmcEvent.text;
+			}
+			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
+			res.append(", urgency=").append(urgency);
+			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
+			if(this.suppInfo.size() > 0) {
+				res.append("<font color='#555555'><br>Supplementary information: <br>");
+				for(SupplementaryInfo si : suppInfo) {
+					res.append("- " + si  +"<br>");
+				}
+				res.append("</font>");
+			}
 			return res.toString();
 		}
 		

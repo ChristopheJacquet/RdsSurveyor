@@ -148,4 +148,8 @@ public class TMCEvent {
 			
 		}
 	}
+	
+	public boolean isCancellation() {
+		return "message cancelled".equals(this.text);
+	}
 }

@@ -36,6 +36,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -104,13 +105,18 @@ public class AlertCPanel extends AppPanel {
 		pnlMain.add(new JScrollPane(tblList));
 		pnlMain.add(new JScrollPane(txtDetails));
 		
+		tblList.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			
 			@Override
 			public void valueChanged(ListSelectionEvent evt) {
 				int row = tblList.getSelectedRow();
-				Message msg = app.getMessages().get(row);
-				txtDetails.setText(msg.html());
+				if(row >= 0) {
+					Message msg = app.getMessages().get(row);
+					txtDetails.setText(msg.html());
+				} else {
+					txtDetails.setText("");
+				}
 			}
 		});
 		
