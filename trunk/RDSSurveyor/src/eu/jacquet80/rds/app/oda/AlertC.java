@@ -26,11 +26,14 @@
 package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
+import java.text.Format;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
@@ -65,6 +68,8 @@ public class AlertC extends ODA {
 	private int currentContIndex = -1;
 	private int nextGroupExpected = -1;
 	private int totalGroupsExpected = -1;
+	
+	private Set<String> onInfo = new HashSet<String>();
 	
 	public AlertC() {
 	}
@@ -231,6 +236,8 @@ public class AlertC extends ODA {
 					if(on == null) on = new OtherNetwork(blocks[3]);
 					otherNetworks.put(blocks[3], on);
 				}
+				
+				String newOnInfo = null;
 
 				
 				switch(addr) {
@@ -243,28 +250,33 @@ public class AlertC extends ODA {
 					int af1 = (blocks[2] >> 8) & 0xFF;
 					int af2 = blocks[2] & 0xFF;
 					
-					console.printf("Other Network, ON.PI=%04X", blocks[3]);
-					console.print(", ON." + on.addAFPair(af1, af2));
+					newOnInfo = String.format("ON.PI=%04X", blocks[3]);
+					newOnInfo += ", ON.AF=(" + on.addAFPair(af1, af2) + ")";
 					break;
 					
 				case 7:
-					console.printf("Other Networks, ON.PI=%04X", blocks[3]);
-					console.printf(", ON.", on.addMappedFreq((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF));
+					newOnInfo = String.format("ON.PI=%04X", blocks[3]);
+					newOnInfo += ", ON.AF=(" + on.addMappedFreq((blocks[2]>>8) & 0xFF, blocks[2] & 0xFF) + ")";
 					break;
 					
 				case 8:
-					console.printf("Other Networks, ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
+					newOnInfo = String.format("ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
 					break;
 					
 				case 9:
-					console.printf("Other Network, ON.PI=%04X", blocks[3]);
+					newOnInfo = String.format("ON.PI=%04X", blocks[3]);
 					int ltn = (blocks[2]>>10) & 0x3F;
 					int mgs = (blocks[2]>>6) & 0xF;
 					int sid = blocks[2] & 0x3F;
-					console.printf(", ON.LTN=" + ltn + ", ON.MGS=" + decodeMGS(mgs) + ", ON.SID=" + sid);
+					newOnInfo += ", ON.LTN=" + ltn + ", ON.MGS=" + decodeMGS(mgs) + ", ON.SID=" + sid;
 					break;
 					
 				default: console.print("addr=" + addr);
+				}
+				
+				if(newOnInfo != null) {
+					console.print("Other Network, " + newOnInfo);
+					onInfo.add(newOnInfo);
 				}
 			}
 		}
@@ -350,6 +362,10 @@ public class AlertC extends ODA {
 	
 	public int getSID() {
 		return sid;
+	}
+	
+	public Set<String> getONInfo() {
+		return onInfo;
 	}
 	
 	private static class Bitstream {

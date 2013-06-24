@@ -30,9 +30,13 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import javax.swing.Box;
+import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -63,6 +67,8 @@ public class AlertCPanel extends AppPanel {
 		lblSID = new JLabel(),
 		lblMessageCount = new JLabel();
 	
+	private final JButton btnON = new JButton("Other Networks");
+	
 	private JLabel[] fields = {lblProviderName, lblLTN, lblMGS, lblAFI, lblMode, lblSID, lblMessageCount};
 	private Component[] infoComponents = {
 			new JLabel("Provider:"), lblProviderName,
@@ -77,7 +83,9 @@ public class AlertCPanel extends AppPanel {
 			Box.createHorizontalStrut(20),
 			new JLabel("SID:"), lblSID,
 			Box.createHorizontalStrut(20),
-			new JLabel("Messages:"), lblMessageCount
+			new JLabel("Messages:"), lblMessageCount,
+			Box.createHorizontalStrut(40),
+			btnON,
 	};
 	
 	public AlertCPanel() {
@@ -121,6 +129,23 @@ public class AlertCPanel extends AppPanel {
 		});
 		
 		add(pnlMain, BorderLayout.CENTER);
+		
+		btnON.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent evt) {
+				StringBuilder sb = new StringBuilder();
+				for(String s : app.getONInfo()) {
+					sb.append(s).append('\n');
+				}
+				
+				if(sb.length() == 0) {
+					sb.append("No information.");
+				}
+				
+				JOptionPane.showMessageDialog(null, sb, "Other Networks", JOptionPane.PLAIN_MESSAGE);
+			}
+		});
 	}
 	
 	public AlertCPanel(Application app) {
