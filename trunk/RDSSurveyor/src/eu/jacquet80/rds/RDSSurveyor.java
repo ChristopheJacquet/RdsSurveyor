@@ -33,10 +33,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.app.oda.TDC;
 import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
+import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
@@ -85,6 +88,8 @@ public class RDSSurveyor {
 		}
 		tempDir = d;
 	}
+	
+	static final private Pattern GROUP_AID = Pattern.compile("(\\d{1,2})([AB]):([0-9A-F]{4})");
 	
 	/**
 	 * The nullConsole just does nothing. It silently discards any message.
@@ -200,6 +205,20 @@ public class RDSSurveyor {
 						System.out.println("Unknown TDC decoder: " + tdcApp);
 						System.exit(1);
 					}
+				} else if("-force".equals(args[i])) {
+					String arg = getParam("force", args, ++i);
+					Matcher m = GROUP_AID.matcher(arg);
+					if(m.matches()) {
+						int num = Integer.parseInt(m.group(1));
+						char v = m.group(2).charAt(0);
+						int aid = Integer.parseInt(m.group(3), 16);
+						
+						TunedStation.addForcedODA((num<<1) + (v=='A'?0:1), aid);
+						System.out.printf("Forcing ODA: %d%c -> %04X\n", num, v, aid);
+					} else {
+						System.out.println("Malformed -force option");
+						System.exit(1);
+					}
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -219,6 +238,7 @@ public class RDSSurveyor {
 					System.out.println("  -rds                     Force standard RDS mode (and save as a preference)");
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
+					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
 					System.exit(1);
 				}
 			}

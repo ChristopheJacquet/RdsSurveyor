@@ -36,6 +36,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import eu.jacquet80.rds.app.Application;
+import eu.jacquet80.rds.app.oda.ODA;
 import eu.jacquet80.rds.log.RDSTime;
 
 
@@ -65,6 +66,7 @@ public class TunedStation extends Station {
 	public TunedStation(int pi, RDSTime time) {
 		reset(pi);
 		pingPI(time);
+		registerForcedODAs();
 	}
 	
 	public TunedStation(RDSTime time) {
@@ -352,6 +354,31 @@ public class TunedStation extends Station {
 		
 		serviceStat.merge(statsOfGroup);
 	}
+	
+	
+	/* Forced ODAs */
+	
+	private static Map<Integer, Integer> forcedODAs = new HashMap<Integer, Integer>();
+	
+	public static void addForcedODA(int groupId, int aid) {
+		forcedODAs.put(groupId, aid);
+	}
+	
+	public void registerForcedODAs() {
+		for(Map.Entry<Integer, Integer> e : forcedODAs.entrySet()) {
+			int group = e.getKey();
+			int groupN = group>>1;
+			int groupV = group & 1;
+			ODA app = ODA.forAID(e.getValue());
+			this.setODA(e.getValue(), e.getKey(), app);
+			
+			if(app != null) {
+				setApplicationForGroup(groupN, groupV, app);
+				app.setStation(this);
+			}
+		}
+	}
+
 }
 
 
