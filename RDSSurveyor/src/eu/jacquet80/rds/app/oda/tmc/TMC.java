@@ -51,7 +51,7 @@ public class TMC {
 	public static TMCEvent getEvent(int code) {
 		TMCEvent r = EVENTS.get(code);
 		if(r == null) {
-			r = new TMCEvent("1;unknown#" + code + ";;;;;;D;1;U;1;A50;");
+			r = new TMCEvent(code + ";unknown#" + code + ";;;;;;D;1;;1;A50;");
 		}
 		return r;
 	}
