@@ -182,7 +182,7 @@ public abstract class Station {
 		String prev = null;
 		for(int i=msg.size()-1; i>=0 && res.length() < 80; i--) {
 			String current = msg.get(i);
-			if(prev != null && prev.substring(0, 6).equals(current.substring(1, 7))) {
+			if(prev != null && prev.length() == 8 && current.length() == 8 && prev.substring(0, 6).equals(current.substring(1, 7))) {
 				// if the 7 rightmost characters of the current PS correspond
 				// to the 7 leftmost characters of the "previous" PS (going 
 				// backward in time), then the PS is scrolling one character

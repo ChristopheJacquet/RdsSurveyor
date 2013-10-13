@@ -36,6 +36,7 @@ import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.CatalunyaRadioTDC;
 import eu.jacquet80.rds.app.oda.EN301700;
+import eu.jacquet80.rds.app.oda.ITunesTagging;
 
 public abstract class AppPanel extends JPanel implements ChangeListener {
 	private static final long serialVersionUID = -6735379516008375660L;
@@ -66,6 +67,7 @@ public abstract class AppPanel extends JPanel implements ChangeListener {
 		if(app instanceof InHouse) return new InHousePanel(app);
 		if(app instanceof EN301700) return new EN301700Panel(app);
 		if(app instanceof CatalunyaRadioTDC) return new CatalunyaRadioTDCPanel(app);
+		if(app instanceof ITunesTagging) return new ITunesTaggingPanel(app);
 		return null;
 	}
 }

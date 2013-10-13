@@ -57,6 +57,7 @@ public class AlertCPanel extends AppPanel {
 	private AlertC app;
 	private final MessageTableModel model = new MessageTableModel();
 	private final JTable tblList;
+	private int latestSelectedLocation = -1;
 
 	private final JLabel 
 		lblProviderName = new JLabel(),
@@ -121,6 +122,7 @@ public class AlertCPanel extends AppPanel {
 				int row = tblList.getSelectedRow();
 				if(row >= 0) {
 					Message msg = app.getMessages().get(row);
+					latestSelectedLocation = msg.getLocation();
 					txtDetails.setText(msg.html());
 				} else {
 					txtDetails.setText("");
@@ -168,7 +170,14 @@ public class AlertCPanel extends AppPanel {
 		lblMode.setText(Integer.toString(app.getMode()));
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
+
 		model.fireTableDataChanged();
+		
+		// try to restore selection
+		int selectedRow = model.getRowForLocation(latestSelectedLocation);
+		if(selectedRow >= 0 && selectedRow < model.getRowCount()) {
+			tblList.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
+		}
 		Util.packColumns(tblList);
 	}
 	
@@ -215,6 +224,18 @@ public class AlertCPanel extends AppPanel {
 		@Override
 		public int getRowCount() {
 			return app.getMessages().size();
+		}
+		
+		private int getRowForLocation(int location) {
+			int row = 0;
+			for(AlertC.Message m : app.getMessages()) {
+				if(m.getLocation() == location) {
+					return row;
+				}
+				row++;
+			}
+			
+			return -1;
 		}
 	}
 }
