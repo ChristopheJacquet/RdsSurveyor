@@ -47,7 +47,7 @@ public class TMC {
 			System.exit(1);
 		}
 	}
-	
+
 	public static TMCEvent getEvent(int code) {
 		TMCEvent r = EVENTS.get(code);
 		if(r == null) {
