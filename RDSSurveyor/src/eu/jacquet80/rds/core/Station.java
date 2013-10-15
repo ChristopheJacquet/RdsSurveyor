@@ -182,14 +182,23 @@ public abstract class Station {
 		String prev = null;
 		for(int i=msg.size()-1; i>=0 && res.length() < 80; i--) {
 			String current = msg.get(i);
-			if(prev != null && prev.length() == 8 && current.length() == 8 && prev.substring(0, 6).equals(current.substring(1, 7))) {
+			boolean done = false;
+			if(prev != null && prev.length() == 8 && current.length() == 8) {
 				// if the 7 rightmost characters of the current PS correspond
 				// to the 7 leftmost characters of the "previous" PS (going 
 				// backward in time), then the PS is scrolling one character
 				// at a time, so we just add *the* leftmost character at the
 				// start
-				res.insert(0, current.charAt(0));
-			} else {
+				if(prev.substring(0, 6).equals(current.substring(1, 7))) {
+					res.insert(0, current.charAt(0));
+					done = true;
+				} else if(prev.substring(0, 5).equals(current.subSequence(2, 7))) {
+					res.insert(0, current.substring(0, 2));
+					done = true;
+				}
+			} 
+			
+			if(! done) {
 				// otherwise, the PS is not scrolling, it's just displaying a
 				// succession of 8-character words/sentences
 				res.insert(0, current.trim() + " ");
