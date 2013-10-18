@@ -13,7 +13,7 @@ import eu.jacquet80.rds.app.oda.CatalunyaRadioTDC;
 
 @SuppressWarnings("serial")
 public class CatalunyaRadioTDCPanel extends AppPanel {
-	private final JList<Object> list;
+	private final JList list;
 	private final Vector<String> messageList;
 	private final NewsMessageListModel listModel;
 	
@@ -24,7 +24,7 @@ public class CatalunyaRadioTDCPanel extends AppPanel {
 		
 		messageList = ((CatalunyaRadioTDC)app).getMessageList();
 		listModel = new NewsMessageListModel();
-		list = new JList<Object>(listModel);
+		list = new JList(listModel);
 		add(new JScrollPane(list), BorderLayout.CENTER);
 		
 		new SwingWorker<Object, Object>() {
@@ -44,7 +44,7 @@ public class CatalunyaRadioTDCPanel extends AppPanel {
 	protected void doNotifyChange() {
 	}
 
-	private class NewsMessageListModel extends DefaultListModel<Object> {
+	private class NewsMessageListModel extends DefaultListModel {
 		@Override
 		public int getSize() {
 			return messageList.size();
