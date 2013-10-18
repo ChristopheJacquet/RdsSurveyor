@@ -14,7 +14,7 @@ import eu.jacquet80.rds.app.oda.ITunesTagging;
 public class ITunesTaggingPanel extends AppPanel {
 
 	private Vector<?> tagList;
-	private JList<Object> list;
+	private JList list;
 	
 	public ITunesTaggingPanel(Application app) {
 		super(new BorderLayout());
@@ -22,7 +22,7 @@ public class ITunesTaggingPanel extends AppPanel {
 		setApplication(app);
 		
 		tagList = ((ITunesTagging)app).getTagList();
-		list = new JList<Object>( model );
+		list = new JList( model );
 		add(new JScrollPane(list), BorderLayout.CENTER);
 	}
 		
@@ -34,7 +34,7 @@ public class ITunesTaggingPanel extends AppPanel {
 
 	private TagModel model = new TagModel();
 	
-	class TagModel extends AbstractListModel<Object> {
+	class TagModel extends AbstractListModel {
 
 		@Override
 		public int getSize() {
