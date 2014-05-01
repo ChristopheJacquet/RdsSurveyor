@@ -149,4 +149,14 @@ public class TCPTunerGroupReader extends TunerGroupReader {
 		return true;
 	}
 
+	@Override
+	public boolean isAudioCapable() {
+		return false;
+	}
+
+	@Override
+	public boolean isPlayingAudio() {
+		return false;
+	}
+
 }
