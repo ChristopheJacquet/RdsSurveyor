@@ -12,6 +12,10 @@ public abstract class TunerGroupReader extends GroupReader {
 	public abstract int mute();
 
 	public abstract int unmute();
+	
+	public abstract boolean isAudioCapable();
+	
+	public abstract boolean isPlayingAudio();
 
 	public abstract int getSignalStrength();
 	

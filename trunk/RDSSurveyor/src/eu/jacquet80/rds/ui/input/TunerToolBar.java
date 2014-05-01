@@ -33,10 +33,12 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
 
+import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -62,7 +64,10 @@ public class TunerToolBar extends InputToolBar {
 		DOWN_BUTTON = "DOWN",
 		FFWD_BUTTON = "FFWD",
 		RWND_BUTTON = "RWND",
-		TUNE_BUTTON = "TUNE";
+		TUNE_BUTTON = "TUNE",
+		SPEAKER_BUTTON = "SPKR";
+	
+	private final JButton speakerButton;
 	
 	@Override
 	protected void handleButtonAction(ActionEvent e) {
@@ -80,6 +85,8 @@ public class TunerToolBar extends InputToolBar {
 			update();
 		} else if(e.getActionCommand() == TUNE_BUTTON) {
 			tune();
+		} else if(e.getActionCommand() == SPEAKER_BUTTON) {
+			toggleAudio();
 		}
 	}
 	
@@ -93,6 +100,16 @@ public class TunerToolBar extends InputToolBar {
 		} catch(NumberFormatException e) {}
 		
 		update();
+	}
+	
+	private void toggleAudio() {
+		if(reader.isPlayingAudio()) {
+			reader.mute();
+			speakerButton.setIcon(Image.SPEAKER_ON);
+		} else {
+			reader.unmute();
+			speakerButton.setIcon(Image.SPEAKER_OFF);
+		}
 	}
 	
 	private synchronized void update() {
@@ -113,8 +130,8 @@ public class TunerToolBar extends InputToolBar {
 		
 		reader.setFrequency(RDSSurveyor.preferences.getInt(RDSSurveyor.PREF_TUNER_FREQ, 105500));
 		
-		addButton(Image.RWND, RWND_BUTTON);
-		addButton(Image.DOWN, DOWN_BUTTON);
+		addButton(Image.RWND, RWND_BUTTON, KeyEvent.VK_DOWN);
+		addButton(Image.DOWN, DOWN_BUTTON, KeyEvent.VK_LEFT);
 		
 		addSeparator();
 
@@ -122,12 +139,20 @@ public class TunerToolBar extends InputToolBar {
 		
 		addSeparator();
 		
-		addButton(Image.UP, UP_BUTTON);
-		addButton(Image.FFWD, FFWD_BUTTON);
+		addButton(Image.UP, UP_BUTTON, KeyEvent.VK_RIGHT);
+		addButton(Image.FFWD, FFWD_BUTTON, KeyEvent.VK_UP);
 		
 		addSeparator();
 		
-		addButton("Tune", TUNE_BUTTON);
+		speakerButton = addButton(
+				reader.isPlayingAudio() ? Image.SPEAKER_OFF : Image.SPEAKER_ON, 
+				SPEAKER_BUTTON, KeyEvent.VK_A);
+		speakerButton.setDisabledIcon(Image.SPEAKER_NO);
+		if(!reader.isAudioCapable()) speakerButton.setEnabled(false);
+
+		addSeparator();
+		
+		addButton(Image.DIAL, TUNE_BUTTON, KeyEvent.VK_T);
 		
 		freqDisplay.addMouseListener(new MouseAdapter() {
 			@Override

@@ -28,6 +28,16 @@ package eu.jacquet80.rds.input;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.Semaphore;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.TargetDataLine;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
@@ -38,6 +48,9 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	private boolean newGroups;
 	private TunerData data = new TunerData();
 	private static final String dir, sep;
+	private boolean audioCapable = false;
+	private boolean audioPlaying = false;
+	private final Semaphore resumePlaying = new Semaphore(0);
 
 	
 	@Override
@@ -50,17 +63,19 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 
 	@Override
 	public int getFrequency() {
-		//System.out.println("*** " + data.frequency);
 		return data.frequency;
 	}
 
 	@Override
-	public int mute() {
+	public synchronized int mute() {
+		audioPlaying = false;
 		return 0;
 	}
 
 	@Override
-	public int unmute() {
+	public synchronized int unmute() {
+		audioPlaying = true;
+		resumePlaying.release();
 		return 0;
 	}
 
@@ -136,6 +151,8 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 			throw new UnavailableInputMethod(
 					aFilename + ": no device found");
 		}
+		
+		new SoundPlayer().start();
 	}
 	
 
@@ -159,6 +176,86 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	static {
 		dir = System.getProperty("user.dir");
 		sep = System.getProperty("file.separator");
+	}
+
+
+	private final static String[] okVendors = {
+		"SILICON LABORATORIES INC.",
+		"www.rding.cn"
+	};
+
+	private class SoundPlayer extends Thread {
+		@Override
+		public void run() {
+			Mixer mixer = null;
+			TargetDataLine inLine;
+			SourceDataLine outLine;
+
+			for(Mixer.Info mixInfo : AudioSystem.getMixerInfo()) {
+				if(Arrays.asList(okVendors).contains(mixInfo.getVendor())) {
+					mixer = AudioSystem.getMixer(mixInfo);
+					break;
+				}
+			}
+			
+			if(mixer == null) {
+				System.out.println("Native tuner: not found audio device.");
+				return;
+			}
+			
+			try {
+				Line.Info[] linesInfo = mixer.getTargetLineInfo();
+				inLine = (TargetDataLine) mixer.getLine(linesInfo[0]);
+				AudioFormat inFormat =  
+						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 96000, 8, 1, 1, 96000, false);
+				inLine.open(inFormat);
+
+				AudioFormat outFormat =  
+						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000, 16, 1, 2, 48000, false);
+				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4*48000);
+				outLine = (SourceDataLine) AudioSystem.getLine(outInfo);
+				outLine.open(outFormat);
+			} catch(Exception e) {
+				System.out.println("Native tuner: audio device, but could not open lines:");
+				System.out.println("\t" + e);
+				return;
+			}
+		
+			audioCapable = true;
+			audioPlaying = true;
+				
+			byte[] data = new byte[48000];
+			
+			inLine.start();
+			outLine.start();
+			
+			// simple audio pass through
+			while(true) {
+				inLine.read(data, 0, data.length);
+				outLine.write(data, 0, data.length);
+				
+				if(! audioPlaying) {
+					inLine.stop();
+					outLine.stop();
+					inLine.flush();
+					outLine.flush();
+					resumePlaying.acquireUninterruptibly();
+					inLine.start();
+					outLine.start();
+				}
+			}
+		}
+	}
+
+
+	@Override
+	public synchronized boolean isAudioCapable() {
+		return audioCapable;
+	}
+
+	@Override
+	public synchronized boolean isPlayingAudio() {
+		return audioPlaying;
 	}
 }
 

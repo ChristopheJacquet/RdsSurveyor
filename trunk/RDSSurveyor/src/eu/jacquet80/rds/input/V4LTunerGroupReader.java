@@ -168,4 +168,14 @@ public class V4LTunerGroupReader extends TunerGroupReader {
 	public boolean isSynchronized() {
 		return true;
 	}
+
+	@Override
+	public boolean isAudioCapable() {
+		return false;
+	}
+
+	@Override
+	public boolean isPlayingAudio() {
+		return false;
+	}
 }
