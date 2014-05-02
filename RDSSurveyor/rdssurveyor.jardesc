@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <jardesc>
-    <jar path="/Users/jacquet/Documents/P/RDSSurveyor/rdssurveyor.jar"/>
+    <jar path="/Users/jacquet/Documents/P/RDSSurveyor/Distrib/0_9/rdssurveyor.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/RDSSurveyor/rdssurveyor.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>
