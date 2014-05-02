@@ -36,7 +36,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		btnFile = new JButton("<html><b>File</b><br>(playback)</html>", Image.OPEN),
 		btnTCP = new JButton("<html><b>Network</b><br>(Web site or TCP)</html>", Image.NETWORK);
 	
-	private final JButton[] buttons = {btnAudio, btnTuner, btnFile, btnTCP};
+	private final JButton[] buttons = {btnTuner, btnFile, btnAudio, btnTCP};
 	
 	private GroupReader choice;
 	private final Semaphore choiceDone = new Semaphore(0);

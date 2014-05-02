@@ -312,7 +312,7 @@ public class RDS {
 	public static float RDS_BITRATE = 1187.5f;
 	
 	public static String[] rdsPtyLabels = {
-		"No programme type or undefined",
+		"None/Undefined",
 		"News",
 		"Current Affairs",
 		"Information",

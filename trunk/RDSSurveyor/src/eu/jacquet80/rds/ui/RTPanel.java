@@ -22,7 +22,7 @@ public class RTPanel extends JPanel {
 	public RTPanel() {
 		super(new BorderLayout());
 		
-		messageList.setFont(new Font("monospaced", Font.PLAIN, messageList.getFont().getSize()));
+		messageList.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, messageList.getFont().getSize()));
 		messageList.setSelectionBackground(new Color(255, 255, 200));
 		messageList.setSelectionForeground(Color.BLACK);
 		

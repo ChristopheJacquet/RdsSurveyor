@@ -41,7 +41,7 @@ public class DumpDisplay extends JFrame {
 	private final JScrollBar scroll = new JScrollBar(JScrollBar.VERTICAL);
 	private final JTextField search = new JTextField();
 	private final BoundedRangeModel scrollModel;
-	private final static Font font = new Font("monospaced", Font.PLAIN, 12);
+	private final static Font font = new Font(MainWindow.MONOSPACED, Font.PLAIN, 12);
 	
 	private final static Color DARK_CYAN = Color.CYAN.darker();
 	private final static Color DARK_ORANGE = new Color(0xDD, 0x66, 0x00);
