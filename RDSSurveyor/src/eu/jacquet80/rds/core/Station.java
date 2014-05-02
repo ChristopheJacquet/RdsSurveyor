@@ -127,12 +127,27 @@ public abstract class Station {
 		for(AFList l : afs.values()) {
 			i++;
 			if(l.getTransmitterFrequency() == 0) continue;
-			res.append("AF ").append(l);
+			res.append(l);
 			if(i < afs.size()) res.append("\n");
 		}
 
 		return res.toString();
 	}
+
+	public synchronized String afsToHTML(String font) {
+		StringBuffer res = new StringBuffer("<html><body style='font-family: \"").append(font).append("\";'");
+		int i = 0;
+		for(AFList l : afs.values()) {
+			i++;
+			if(l.getTransmitterFrequency() == 0) continue;
+			res.append(l.toHTML());
+			if(i < afs.size()) res.append("<br>\n");
+		}
+		res.append("</body></html>");
+
+		return res.toString();
+	}
+
 	
 	public Text getPS() {
 		return ps;
@@ -340,6 +355,15 @@ class AFList {
 	public String toString() {
 		StringBuffer res = new StringBuffer("List[").append(method).append(", sz=").append(afs.size()).append("]: ");
 		res.append(Station.frequencyToString(transmitterFrequency)).append(" -> ");
+		for(int af : afs) {
+			res.append(Station.frequencyToString(af)).append("  ");
+		}
+		return res.toString();
+	}
+	
+	public String toHTML() {
+		StringBuffer res = new StringBuffer("<b>AF list, method ").append(method).append(", size ").append(afs.size()).append(":</b> ");
+		res.append(Station.frequencyToString(transmitterFrequency)).append(" → ");
 		for(int af : afs) {
 			res.append(Station.frequencyToString(af)).append("  ");
 		}

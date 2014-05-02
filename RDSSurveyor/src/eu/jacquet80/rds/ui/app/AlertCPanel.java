@@ -50,6 +50,7 @@ import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
 import eu.jacquet80.rds.app.oda.AlertC.Message;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
+import eu.jacquet80.rds.ui.MainWindow;
 import eu.jacquet80.rds.ui.Util;
 
 @SuppressWarnings("serial")
@@ -94,7 +95,7 @@ public class AlertCPanel extends AppPanel {
 		
 		for(JLabel f : fields) {
 			f.setHorizontalAlignment(SwingConstants.CENTER);
-			f.setFont(new Font("monospaced", Font.PLAIN, 20));
+			f.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, 20));
 		}
 		
 		JPanel pnlInfo = new JPanel(new FlowLayout());

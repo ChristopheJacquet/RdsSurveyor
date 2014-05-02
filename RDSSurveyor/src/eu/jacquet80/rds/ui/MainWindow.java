@@ -31,8 +31,10 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -82,18 +85,18 @@ public class MainWindow extends JFrame {
 			txtPI = new JTextArea(1, 4),
 			txtPTY = new JTextArea(1, 20),
 			txtPTYN = new JTextArea(1, 8),
-			txtDPTY = new JTextArea(1, 7),
 			txtTraffic = new JTextArea(1, 5),
 			txtCountry = new JTextArea(1, 20),
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 40),
-			txtAF = new JTextArea(3, 64),
 			txtDynPS = new JTextArea(1, 80),
 			//txtRT = new JTextArea(1, 64),
 			txtCompressed = new JTextArea(1, 5),
 			txtStereo = new JTextArea(1, 5),
 			txtHead = new JTextArea(1, 5),
 			txtPIN = new JTextArea(1, 12);
+	
+	private final JEditorPane txtAF = new JEditorPane();
 	
 	private final TrafficModel trafficModel = new TrafficModel();
 	private final JList lstTraffic = new JList(trafficModel);
@@ -111,7 +114,7 @@ public class MainWindow extends JFrame {
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
 			
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtDPTY, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtCompressed, txtStereo, txtHead};
+	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtCompressed, txtStereo, txtHead};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -238,7 +241,6 @@ public class MainWindow extends JFrame {
 				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics"),
 				lblDynPS = new JLabel("Dynamic PS"),
-				lblDPTY = new JLabel("PTY kind"),
 				lblCompressed = new JLabel("Compressed"),
 				lblHead = new JLabel("Artificial head"),
 				lblStereo = new JLabel("Sound"),
@@ -258,20 +260,10 @@ public class MainWindow extends JFrame {
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblPTY, lblDPTY, lblPTYN, lblTraffic},
-				{txtPTY, txtDPTY, txtPTYN, txtTraffic},
+				{lblTime, lblPTY, lblPTYN, lblTraffic},
+				{txtTime, txtPTY, txtPTYN, txtTraffic},
 		}));
-		
-		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblCountry, lblLang, lblStereo, lblCompressed, lblHead},
-				{txtCountry, txtLang, txtStereo, txtCompressed, txtHead},
-		}));
-		
-		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblTime, lblPIN},
-				{txtTime, txtPIN},
-		}));
-		
+				
 		mainPanel.add(createArrangedPanel(new Component[][] {
 				{lblRT},
 				{txtRT},
@@ -286,14 +278,42 @@ public class MainWindow extends JFrame {
 		final JPanel pnlEON = new JPanel(new BorderLayout());
 		pnlEON.add(new JScrollPane(tblEON = new JTable(eonTableModel)), BorderLayout.CENTER);
 		
-		final JPanel pnlAF = new JPanel(new GridLayout(1, 2, 6, 6));
-		pnlAF.add(new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
-		pnlAF.add(new JScrollPane(lstTraffic));
+		final JPanel pnlAF = new JPanel();
+		BoxLayout boxLayoutAF = new BoxLayout(pnlAF, BoxLayout.PAGE_AXIS);
+		pnlAF.setLayout(boxLayoutAF);
+		
+		JPanel pnlTop = createArrangedPanel(new Component[][] {
+				{lblCountry, lblLang, lblStereo, lblCompressed, lblHead, lblPIN},
+				{txtCountry, txtLang, txtStereo, txtCompressed, txtHead, txtPIN},
+		});
+		pnlTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+		pnlAF.add(pnlTop);
+		
+		JScrollPane scrAF = new JScrollPane(txtAF, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+		JScrollPane scrTraffic = new JScrollPane(lstTraffic);
+		
+
+		JPanel pnlAFLow = new JPanel(new GridLayout(1, 2, 6, 6));
+		
+		pnlAFLow.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+		
+		JPanel pnlLeft = new JPanel(new BorderLayout());
+		pnlLeft.add(new JLabel("AF"), BorderLayout.NORTH);
+		pnlLeft.add(scrAF, BorderLayout.CENTER);
+		
+		JPanel pnlRight = new JPanel(new BorderLayout());
+		pnlRight.add(new JLabel("Traffic events"), BorderLayout.NORTH);
+		pnlRight.add(scrTraffic, BorderLayout.CENTER);
+		
+		pnlAFLow.add(pnlLeft);
+		pnlAFLow.add(pnlRight);
+		pnlAF.add(pnlAFLow);
+
 		
 		globalPanel.add(tabbedPane, BorderLayout.CENTER);
 		
 		for(JTextArea txt : smallTxt) {
-			txt.setFont(new Font("monospaced", Font.PLAIN, txt.getFont().getSize()));
+			txt.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, txt.getFont().getSize()));
 			txt.setEditable(false);
 			txt.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createLineBorder(BORDER_COLOR, 1),
@@ -301,7 +321,18 @@ public class MainWindow extends JFrame {
 		}
 		
 		for(JTextArea txt : bigTxt) {
-			txt.setFont(new Font("monospaced", Font.PLAIN, 20));
+			txt.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, 20));
+			
+			/*
+			Dimension d = txt.getMaximumSize();
+			d.height = 25;
+			txt.setMaximumSize(d);
+			d = txt.getPreferredSize();
+			d.height = 25;
+			txt.setPreferredSize(d);
+			txt.setMinimumSize(new Dimension(10, d.height));
+			*/
+			
 			txt.setEditable(false);
 			txt.setBorder(BorderFactory.createCompoundBorder(
 					BorderFactory.createLineBorder(BORDER_COLOR, 1),
@@ -316,17 +347,18 @@ public class MainWindow extends JFrame {
 				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.BLACK, 1)));
 		
-		txtAF.setLineWrap(true);
-		txtAF.setWrapStyleWord(true);
+		txtAF.setContentType("text/html");
+		txtAF.setEditable(false);
+		final String afFont = txtAF.getFont().getFamily();
 		
-		txtRT.setFont(new Font("monospaced", Font.PLAIN, txtRT.getFont().getSize()));
+		txtRT.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, txtRT.getFont().getSize()));
 		txtRT.setBackground(Color.WHITE);
 		txtRT.setOpaque(true);
 		txtRT.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.WHITE, 2)));
 		
-		setPreferredSize(new Dimension(1000, 800));
+		setPreferredSize(new Dimension(1000, 700));
 		
 		// playlist auxiliary window
 		this.playlistWindow = new PlaylistWindow(this);
@@ -361,9 +393,9 @@ public class MainWindow extends JFrame {
 					SwingUtilities.invokeAndWait(new Runnable() {
 						public void run() {
 							tabbedPane.removeAll();
+							tabbedPane.addTab("Base", pnlAF);
 							tabbedPane.addTab("EON", pnlEON);
 							tabbedPane.addTab("RT", pnlRT);
-							tabbedPane.addTab("AF & Traffic", pnlAF);
 							tabbedPane.addTab("ODA", pnlODA);
 							currentAppPanels.clear();
 							updateAppTabs();
@@ -466,7 +498,7 @@ public class MainWindow extends JFrame {
 
 									txtTime.setText(station.getDateTime());
 									txtPIN.setText(station.getPINText());
-									txtAF.setText(station.afsToString());
+									txtAF.setText(station.afsToHTML(afFont));
 									groupStats.update(station.numericGroupStats());
 
 									eonTableModel.fireTableDataChanged();
@@ -476,7 +508,7 @@ public class MainWindow extends JFrame {
 									txtStereo.setText(station.getStereo() ? "Stereo" : "Mono");
 									txtHead.setText(station.getArtificialHead() ? "Yes" : "No");
 									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
-									txtDPTY.setText(station.getDPTY() ? "Dynamic" : "Static");
+									lblPTY.setText("PTY [" + (station.getDPTY() ? "Dynamic" : "Static") + "]");
 									
 									// Traffic
 									// TODO improve me!
@@ -516,6 +548,19 @@ public class MainWindow extends JFrame {
 		}
 		
 	};
+
+	
+	public static final String MONOSPACED;
+	
+	static {
+		if(System.getProperty("os.name").startsWith("Windows")) {
+			String[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+			final String pref = "Consolas";
+			MONOSPACED = (Arrays.asList(fonts).contains(pref)) ? pref : Font.MONOSPACED;
+		} else {
+			MONOSPACED = Font.MONOSPACED;
+		}
+	}
 
 }
 

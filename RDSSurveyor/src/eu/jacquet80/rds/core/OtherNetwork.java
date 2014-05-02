@@ -95,7 +95,7 @@ public class OtherNetwork extends Station {
 		
 		String res = "Mapped: ";
 		for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
-			res += "[" + frequencyToString(e.getKey()) + " -> ";
+			res += "[" + frequencyToString(e.getKey()) + " → ";
 			for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
 				res += frequencyToString(it.next());
 				if(it.hasNext()) res += ", ";
