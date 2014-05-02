@@ -109,7 +109,7 @@ public class RDSSurveyor {
 	}
 	
 	public static void main(String[] args) throws IOException, UnavailableInputMethod {
-		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2013.");
+		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2014.");
 		
 		GroupReader reader = null;
 		boolean showGui = true;

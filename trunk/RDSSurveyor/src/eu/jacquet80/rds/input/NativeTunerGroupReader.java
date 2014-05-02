@@ -134,7 +134,8 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	public NativeTunerGroupReader(String filename) throws UnavailableInputMethod {
 		File path = new File(filename);
 		String absoluteLibPath = path.getAbsolutePath();
-		String aFilename = path.getAbsolutePath();
+		String aFilename = path.getName();
+
 		try {
 			System.load(absoluteLibPath);
 		} catch(UnsatisfiedLinkError e) {
@@ -152,7 +153,10 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 					aFilename + ": no device found");
 		}
 		
-		new SoundPlayer().start();
+		SoundPlayer p = new SoundPlayer();
+		if(audioCapable) {
+			p.start();
+		}
 	}
 	
 
@@ -183,18 +187,28 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 		"SILICON LABORATORIES INC.",
 		"www.rding.cn"
 	};
+	
+	private final static String[] okNames = {
+		"FM Radio"
+	};
 
+	
 	private class SoundPlayer extends Thread {
-		@Override
-		public void run() {
-			Mixer mixer = null;
-			TargetDataLine inLine;
-			SourceDataLine outLine;
+		private Mixer mixer = null;
+		private TargetDataLine inLine;
+		private SourceDataLine outLine;
 
+		public SoundPlayer() {
+			
 			for(Mixer.Info mixInfo : AudioSystem.getMixerInfo()) {
-				if(Arrays.asList(okVendors).contains(mixInfo.getVendor())) {
+				if(Arrays.asList(okVendors).contains(mixInfo.getVendor()) ||
+						Arrays.asList(okNames).contains(mixInfo.getName())) {
+
+					System.out.println("Trying to use audio device: '" + mixInfo.getVendor() + 
+							"', '" + mixInfo.getName() + "'");
+					
 					mixer = AudioSystem.getMixer(mixInfo);
-					break;
+					if(mixer != null) break;
 				}
 			}
 			
@@ -220,10 +234,15 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 				System.out.println("\t" + e);
 				return;
 			}
+			
+			System.out.println("Both USB stick audio and sound card audio configured successfully");
 		
 			audioCapable = true;
 			audioPlaying = true;
-				
+		}
+		
+		@Override
+		public void run() {
 			byte[] data = new byte[48000];
 			
 			inLine.start();

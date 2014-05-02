@@ -88,6 +88,8 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				
 				for(File path : new File(libDir).listFiles()) {
 					try {
+						if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
+
 						choice = new NativeTunerGroupReader(path.getAbsolutePath());
 						found = true;
 						break;
