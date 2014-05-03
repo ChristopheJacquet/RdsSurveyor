@@ -87,7 +87,7 @@ public class PlaylistWindow extends JFrame {
 							}
 
 							main.setReader(DecoderShell.instance.getLog(), reader);
-							DecoderShell.instance.process(reader);
+							DecoderShell.instance.process(reader, false);
 						}
 					}.start();
 				}

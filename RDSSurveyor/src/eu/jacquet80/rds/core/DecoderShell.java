@@ -1,12 +1,16 @@
 package eu.jacquet80.rds.core;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.Semaphore;
 
 import eu.jacquet80.rds.RDSSurveyor;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.StationChangeDetector;
+import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
 import eu.jacquet80.rds.log.EndOfStream;
@@ -55,7 +59,6 @@ public class DecoderShell {
 							evt = r.getGroup();
 							goOn = true;
 							groupDecoder.processOneGroup(evt);
-							
 						} catch(eu.jacquet80.rds.input.GroupReader.EndOfStream eos) {
 							TunedStation lastStation = groupDecoder.getTunedStation();
 							if(lastStation != null) {
@@ -98,20 +101,36 @@ public class DecoderShell {
 		return this.log;
 	}
 	
-	public synchronized void process(final GroupReader reader) {
+	public synchronized void process(final GroupReader aReader, boolean outFile) {
 		// implicitly, this is the end of the previous stream
 		// (important to have this for UI parts that may react to stream changes)
 		log.addMessage(new EndOfStream(null));
+
+		this.reader = aReader;
+		
+		// output file?
+		if(outFile) {
+			System.out.print("Using default group output file. ");
+			File outGroupFile = new File(RDSSurveyor.tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");			
+
+			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
+			try {
+				this.reader = new TeeGroupReader(this.reader, outGroupFile);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
 		
 		// add a station change detector
-		this.reader = new StationChangeDetector(reader);
-		
+		this.reader = new StationChangeDetector(this.reader);
+
 		this.groupReady.release();
 	}
 	
-	public void processAndQuit(final GroupReader reader) {
+	public void processAndQuit(final GroupReader reader, boolean outFile) {
 		this.quitAfterProcess = true;
-		process(reader);
+		process(reader, outFile);
 	}
 	
 	public GroupLevelDecoder getGroupReader() {

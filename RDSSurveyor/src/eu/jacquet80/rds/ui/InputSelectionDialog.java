@@ -32,13 +32,14 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 
 	private final JButton
 		btnAudio = new JButton("<html><b>External decoder</b><br>(through the sound card)</html>", Image.MICROPHONE),
-		btnTuner = new JButton("<html><b>Internal tuner or USB key</b></html>", Image.USBKEY),
+		btnTuner = new JButton("<html><b>Internal tuner or USB stick</b></html>", Image.USBKEY),
 		btnFile = new JButton("<html><b>File</b><br>(playback)</html>", Image.OPEN),
 		btnTCP = new JButton("<html><b>Network</b><br>(Web site or TCP)</html>", Image.NETWORK);
 	
 	private final JButton[] buttons = {btnTuner, btnFile, btnAudio, btnTCP};
 	
 	private GroupReader choice;
+	public boolean live = false;
 	private final Semaphore choiceDone = new Semaphore(0);
 	
 	public InputSelectionDialog() {
@@ -80,6 +81,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 			if(source == btnAudio) {
 				BitReader br =  new LiveAudioBitReader();
 				choice = new BitStreamSynchronizer(System.out, br);
+				live = true;
 				choiceDone.release();
 			} else if(source == btnTuner) {
 				String libDir = "lib";
@@ -91,6 +93,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 						if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
 
 						choice = new NativeTunerGroupReader(path.getAbsolutePath());
+						live = true;
 						found = true;
 						break;
 					} catch(UnavailableInputMethod exc) {
@@ -134,7 +137,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 			choiceDone.acquireUninterruptibly();
 		} while(choice == null);
 		setVisible(false);
-		
+
 		return choice;
 	}
 }

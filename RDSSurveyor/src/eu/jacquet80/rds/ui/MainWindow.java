@@ -61,6 +61,7 @@ import javax.swing.SwingUtilities;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;

@@ -67,13 +67,13 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	}
 
 	@Override
-	public synchronized int mute() {
+	public int mute() {
 		audioPlaying = false;
 		return 0;
 	}
 
 	@Override
-	public synchronized int unmute() {
+	public int unmute() {
 		audioPlaying = true;
 		resumePlaying.release();
 		return 0;
@@ -184,12 +184,13 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 
 
 	private final static String[] okVendors = {
-		"SILICON LABORATORIES INC.",
+		"SILICON",
 		"www.rding.cn"
 	};
 	
 	private final static String[] okNames = {
-		"FM Radio"
+		"FM Radio",
+		"Radio"
 	};
 
 	
@@ -201,8 +202,14 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 		public SoundPlayer() {
 			
 			for(Mixer.Info mixInfo : AudioSystem.getMixerInfo()) {
-				if(Arrays.asList(okVendors).contains(mixInfo.getVendor()) ||
-						Arrays.asList(okNames).contains(mixInfo.getName())) {
+				String vendor = mixInfo.getVendor();
+				if(vendor != null) vendor = vendor.split(" ")[0];
+				
+				String name = mixInfo.getName();
+				if(name != null) name = name.split(" ")[0];
+				
+				if(Arrays.asList(okVendors).contains(vendor) ||
+						Arrays.asList(okNames).contains(name)) {
 
 					System.out.println("Trying to use audio device: '" + mixInfo.getVendor() + 
 							"', '" + mixInfo.getName() + "'");
@@ -243,7 +250,7 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 		
 		@Override
 		public void run() {
-			byte[] data = new byte[48000];
+			byte[] data = new byte[24000];
 			
 			inLine.start();
 			outLine.start();
@@ -268,12 +275,12 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 
 
 	@Override
-	public synchronized boolean isAudioCapable() {
+	public boolean isAudioCapable() {
 		return audioCapable;
 	}
 
 	@Override
-	public synchronized boolean isPlayingAudio() {
+	public boolean isPlayingAudio() {
 		return audioPlaying;
 	}
 }
