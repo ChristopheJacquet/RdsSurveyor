@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -37,10 +38,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.app.oda.TDC;
-import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
-import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
+import eu.jacquet80.rds.core.DecoderShell;
+import eu.jacquet80.rds.core.TunedStation;
+import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
@@ -49,11 +51,9 @@ import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
-import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
-import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
@@ -76,7 +76,7 @@ public class RDSSurveyor {
 		"logs", "Logs",
 	};
 	
-	private final static String tempDir;
+	public final static String tempDir;
 	
 	static {
 		String d = System.getProperty("java.io.tmpdir");
@@ -122,7 +122,7 @@ public class RDSSurveyor {
 		File outGroupFile = null;
 		PrintStream console = System.out;
 		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
-		RDSReader nativeLiveReader = null;
+		BitStreamSynchronizer bitStreamSynchronizer = null;
 		
 		// RDS Surveyor is non-localized for the time being
 		Locale.setDefault(Locale.US);
@@ -133,6 +133,17 @@ public class RDSSurveyor {
 			System.setProperty("apple.laf.useScreenMenuBar", "true");
 		} catch(Exception e) {}
 		
+		
+		// Application icon for MacOS X
+		try {
+			Class<?> c = Class.forName("com.apple.eawt.Application");
+			Method m = c.getMethod("getApplication");
+			Object applicationInstance = m.invoke(null);
+			m = applicationInstance.getClass().getMethod("setDockIconImage", java.awt.Image.class);
+			m.invoke(applicationInstance, Image.ICON);
+		} catch(Exception e) {}
+		
+		
 		if(args.length != 0) {
 			// if arguments are provided, RDS Surveyor was launched from the
 			// command line, so analyze those arguments
@@ -140,7 +151,6 @@ public class RDSSurveyor {
 			for(int i=0; i<args.length; i++) {
 				if("-inaudio".equals(args[i])) {
 					BitReader binReader = new LiveAudioBitReader();
-					nativeLiveReader = binReader;
 					// TODO Ugly hack
 					{
 						outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
@@ -149,7 +159,8 @@ public class RDSSurveyor {
 						binReader = new TeeBitReader(binReader, outBinFile);
 					}
 					
-					reader = new BitStreamSynchronizer(console, binReader);
+					bitStreamSynchronizer = new BitStreamSynchronizer(console, binReader);
+					reader = bitStreamSynchronizer;
 					liveInput = true;
 				} else if("-inbinfile".equals(args[i])) {
 					reader = new BitStreamSynchronizer(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
@@ -246,6 +257,7 @@ public class RDSSurveyor {
 			console = null;
 			InputSelectionDialog dialog = new InputSelectionDialog();
 			reader = dialog.makeChoice();
+			liveGroupInput = dialog.live;
 		}
 
 		if(reader == null) {
@@ -270,28 +282,15 @@ public class RDSSurveyor {
 		// if there is no output file, create one in the temp directory
 		if(liveInput && outBinFile == null) {
 			System.out.print("Using default output file. ");
-			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
+			outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".binrds");
 		}
 		// TODO: guess above code is dead
 		
-		if(liveGroupInput && outGroupFile == null) {
-			System.out.print("Using default group output file. ");
-			outGroupFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".l2");			
-		}
-		
-		
-		final GroupReader actualReader = reader;
-		
-		// use the output hex file if defined
-		if(outGroupFile != null) {
-			System.out.println("Hex group output file is " + outGroupFile.getAbsoluteFile());
-			reader = new TeeGroupReader((GroupReader)reader, outGroupFile);
-		}
 		
 		
 		// force inversion if necessary
-		if(nativeLiveReader != null && nativeLiveReader instanceof BitStreamSynchronizer && inversion != BitInversion.AUTO) {
-			((BitStreamSynchronizer) nativeLiveReader).forceInversion(inversion);
+		if(bitStreamSynchronizer != null && inversion != BitInversion.AUTO) {
+			bitStreamSynchronizer.forceInversion(inversion);
 		}
 		
 
@@ -301,16 +300,16 @@ public class RDSSurveyor {
 		}
 
 		if(showGui) {
-			DecoderShell.instance.process(reader);
+			DecoderShell.instance.process(reader, liveGroupInput);
 		} else {
-			DecoderShell.instance.processAndQuit(reader);
+			DecoderShell.instance.processAndQuit(reader, liveGroupInput);
 		}
 		
 		
 		// Now, set up special modes
 		if(scan) {
-			if(actualReader instanceof TunerGroupReader) {
-				final TunerGroupReader tgr = (TunerGroupReader) actualReader;
+			if(reader instanceof TunerGroupReader) {
+				final TunerGroupReader tgr = (TunerGroupReader) reader;
 				new Thread() {
 					public void run() {
 						while(true) {
@@ -336,8 +335,8 @@ public class RDSSurveyor {
 				System.exit(1);
 			}
 		} else if(overview) {
-			if(actualReader instanceof TunerGroupReader) {
-				final TunerGroupReader tgr = (TunerGroupReader) actualReader;
+			if(reader instanceof TunerGroupReader) {
+				final TunerGroupReader tgr = (TunerGroupReader) reader;
 				DecoderShell.instance.setConsole(nullConsole);
 				new Overviewer(tgr, fConsole).start();
 			} else {

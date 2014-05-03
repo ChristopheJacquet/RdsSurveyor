@@ -1,5 +1,7 @@
 package eu.jacquet80.rds.img;
 
+import java.awt.Toolkit;
+
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
@@ -24,4 +26,5 @@ public class Image {
 		return new ImageIcon(Image.class.getResource(name));
 	}
 	
+	public static java.awt.Image ICON = Toolkit.getDefaultToolkit().getImage(Image.class.getResource("rds.png"));
 }
