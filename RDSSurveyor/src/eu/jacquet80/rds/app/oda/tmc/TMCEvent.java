@@ -7,11 +7,23 @@ public class TMCEvent {
 	public String textQ;
 	public EventNature nature; // N (blank, F, S)
 	public int quantifierType; // Q
-	// T duration type (TODO)
+	public EventDurationType durationType; // T duration type (D=Dynamic, L=Longer lasting)
 	public boolean bidirectional; // D directionality (1=unidirectional, 2=bidirectional)
 	public EventUrgency urgency; // U (blank, U, X)
 	public int updateClass;  // C
 	// R phrasal code (NOT TO BE IMPLEMENTED HERE)
+	
+	public static enum EventDurationType {
+		DYNAMIC, LONGER_LASTING;
+		
+		static EventDurationType forCode(String s) {
+			if ("L".equals(s)) {
+				return LONGER_LASTING;
+			} else {
+				return DYNAMIC;
+			}
+		}
+	}
 	
 	public static enum EventNature {
 		INFO, FORECAST, SILENT;
@@ -84,8 +96,7 @@ public class TMCEvent {
 			this.quantifierType = Integer.parseInt(comp[6]);
 		}
 		
-		// index 7: T (TODO)
-		
+		this.durationType = EventDurationType.forCode(comp[7]);
 		this.bidirectional = "2".equals(comp[8]);
 		this.urgency = EventUrgency.forCode(comp[9]);
 		this.updateClass = Integer.parseInt(comp[10]);

@@ -38,6 +38,8 @@ import java.util.Set;
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
+import eu.jacquet80.rds.app.oda.tmc.TMCLocation;
+import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
@@ -54,6 +56,7 @@ public class AlertC extends ODA {
 	private String[] providerName = {"????", "????"};
 	
 	// basic parameters
+	private int cc = -1;			// country code (CC) from PID
 	private int ltn = -1;			// location table number
 	private int afi = -1;			// AF indicator
 	private int mgs = -1;			// message geographical scope
@@ -80,6 +83,10 @@ public class AlertC extends ODA {
 		
 		// in all cases, we need all blocks to proceed
 		if(!blocksOk[2] || !blocksOk[3]) return;
+		
+		// get CC so that we can decode locations
+		if (blocksOk[0])
+			cc = blocks[0] >> 12;
 		
 		if(type == 3 && version == 0) {
 			int var = (blocks[2]>>14) & 0x3;
@@ -128,7 +135,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -156,7 +163,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn);
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -413,7 +420,14 @@ public class AlertC extends ODA {
 		private final int direction;
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
+		/** The country code from RDS PI. */
+		private final int cc;
+		/** The Location Table Number (LTN). */
+		private final int ltn;
+		/** The raw location code. */
 		private final int location;
+		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
+		private final TMCLocation locationInfo;
 		private boolean reversedDirectionality = false;
 		private boolean bidirectional = true;
 
@@ -461,15 +475,18 @@ public class AlertC extends ODA {
 			}
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location) {
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn) {
 			this.direction = direction;
 			this.extent = extent;
+			this.cc = cc;
+			this.ltn = ltn;
 			this.location = location;
+			this.locationInfo = TMC.getLocation(String.format("%X", cc), ltn, location);
 			addInformationBlock(eventCode);
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location);
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn);
 			this.diversion = diversion;
 			this.duration = duration;
 		}
@@ -636,7 +653,9 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("Location: ").append(location);
+			StringBuilder res = new StringBuilder("CC: ").append(String.format("%X", cc));
+			res.append(", LTN: ").append(ltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
@@ -647,6 +666,26 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
 			}
+			if (locationInfo != null) {
+				res.append("-------------\n").append(locationInfo).append("\n");
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo) {
+					res.append("-------------\nExtent:\n").append(secondary);
+					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
+						res.append("\n");
+						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+						res.append("Link: http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord
+								+ "\n");
+					}
+				}
+			}
 			
 			return res.toString();
 		}
@@ -655,7 +694,9 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("<html>Location: ").append(location);
+			StringBuilder res = new StringBuilder("<html>CC: ").append(String.format("%X", cc));
+			res.append(", LTN: ").append(ltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
@@ -665,6 +706,35 @@ public class AlertC extends ODA {
 			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
+			}
+			if (locationInfo != null) {
+				res.append("<hr>").append(locationInfo.html());
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo) {
+					res.append("<hr>Extent:<br>").append(secondary.html());
+					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
+						res.append("<br>");
+						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+						res.append("<a href=\"http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord 
+								+ "\">");
+						res.append("http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord);
+						res.append("</a>");
+					}
+				}
 			}
 			res.append("</html>");
 			

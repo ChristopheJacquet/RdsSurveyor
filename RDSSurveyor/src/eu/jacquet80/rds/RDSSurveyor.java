@@ -38,6 +38,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.app.oda.TDC;
+import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.core.DecoderShell;
@@ -230,6 +231,10 @@ public class RDSSurveyor {
 						System.out.println("Malformed -force option");
 						System.exit(1);
 					}
+				} else if("-tmc".equals(args[i])) {
+					System.out.println("Processing TMC location tables...");
+					TMC.readLocationTables(new File(getParam("tmc", args, ++i)));
+					System.out.println("Done processing TMC location tables.");
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -250,6 +255,7 @@ public class RDSSurveyor {
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
+					System.out.println("  -tmc <path>              Use TMC location tables found at the given path (or subdirs)");
 					System.exit(1);
 				}
 			}
