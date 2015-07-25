@@ -2,7 +2,7 @@ Realtek RTL2832U userspace driver
 =================================
 
 Copyright (c) 2015 by Michael von Glasow
-Realeased under the GNU GPL v2
+Released under the GNU GPL v2
 
 It compiles on MacOS X, Linux and Windows. Only Linux is tested at this point.
 
