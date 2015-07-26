@@ -9,13 +9,10 @@ public class TMCPoint extends TMCLocation {
 	/** The junction number, typically used for motorway junctions.  */
 	public String junctionNumber;
 	
-	/** The location code of the administrative area in which the point is located. */
-	public int polLcd = -1;
-	// TODO object reference
-	
 	/** The location code of the other (non-administrative) area in which the point is located. */
 	public int othLcd = -1;
-	// TODO object reference
+	/** Other (non-administrative) area in which the point is located. */
+	public TMCArea othArea;
 	
 	/** The location code of the corresponding segment. */
 	public int segLcd = -1;
@@ -94,10 +91,14 @@ public class TMCPoint extends TMCLocation {
 			this.n2id = Integer.parseInt(comp[fields.get("N2ID")]);
 			this.name2 = TMC.getName(this.cid, this.n2id);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")])))
+		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
 			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
-		if ((fields.containsKey("OTH_LCD")) && (comp.length > fields.get("OTH_LCD")) && (!"".equals(comp[fields.get("OTH_LCD")])))
+			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
+		}
+		if ((fields.containsKey("OTH_LCD")) && (comp.length > fields.get("OTH_LCD")) && (!"".equals(comp[fields.get("OTH_LCD")]))) {
 			this.othLcd = Integer.parseInt(comp[fields.get("OTH_LCD")]);
+			this.othArea = TMC.getArea(this.cid, this.tabcd, this.othLcd);
+		}
 		if ((fields.containsKey("ROA_LCD")) && (comp.length > fields.get("ROA_LCD")) && (!"".equals(comp[fields.get("ROA_LCD")]))) {
 			this.roaLcd = Integer.parseInt(comp[fields.get("ROA_LCD")]);
 			this.road = TMC.getRoad(this.cid, this.tabcd, this.roaLcd);
@@ -159,12 +160,14 @@ public class TMCPoint extends TMCLocation {
 	@Override
 	public String toString() {
 		StringBuilder res = new StringBuilder(super.toString());
+		if (this.othArea != null)
+			res.append("\nOther area: " + this.othArea.toString() + "\n\n");
 		if (!"".equals(this.junctionNumber))
 			res.append("Junction number: " + this.junctionNumber + "\n");
 		if (this.segment != null)
-			res.append("\nSegment:\n" + this.segment.toString() + "\n\n");
+			res.append("\nSegment: " + this.segment.toString() + "\n\n");
 		if (this.road != null)
-			res.append("\nRoad:\n" + this.road.toString() + "\n\n");
+			res.append("\nRoad: " + this.road.toString() + "\n\n");
 		res.append("Lon: " + this.xCoord + ", Lat: " + this.yCoord + "\n");
 		res.append("Link: http://www.openstreetmap.org/?mlat=" + yCoord + "&mlon=" + xCoord + "#map=9/" + yCoord + "/" + xCoord + "&layers=Q");
 		
@@ -174,13 +177,15 @@ public class TMCPoint extends TMCLocation {
 	@Override
 	public String html() {
 		StringBuilder res = new StringBuilder(super.html());
+		if (this.othArea != null)
+			res.append("<blockquote>Other area: " + this.othArea.html() + "</blockquote>");
 		if (!"".equals(this.junctionNumber))
 			res.append("Junction number: " + this.junctionNumber + "<br>");
 		res.append("Urban: " + (this.urban ? "Yes" : "No") + "<br>");
 		if (this.segment != null)
-			res.append("<blockquote>Segment:<br>" + this.segment.html() + "</blockquote>");
+			res.append("<blockquote>Segment: " + this.segment.html() + "</blockquote>");
 		if (this.road != null)
-			res.append("<blockquote>Road:<br>" + this.road.html() + "</blockquote>");
+			res.append("<blockquote>Road: " + this.road.html() + "</blockquote>");
 		res.append("Lon: " + this.xCoord + ", Lat: " + this.yCoord + "<br>");
 		res.append("<a href=\"http://www.openstreetmap.org/?mlat=" + yCoord + "&mlon=" + xCoord + "#map=9/" + yCoord + "/" + xCoord + "&layers=Q\">");
 		res.append("http://www.openstreetmap.org/?mlat=" + yCoord + "&mlon=" + xCoord + "#map=9/" + yCoord + "/" + xCoord + "&layers=Q");

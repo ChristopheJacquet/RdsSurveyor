@@ -9,10 +9,6 @@ public class Road extends TMCLocation {
 	/** The road number, e.g. M5, A4, 128, B49n, ST1027. */
 	public String roadNumber;
 	
-	/** The location code of the administrative area in which the road is located. */
-	public int polLcd = -1;
-	//TODO object reference
-	
 	/** The road network level. */
 	public int pesLev;
 	
@@ -38,8 +34,10 @@ public class Road extends TMCLocation {
 			this.n2id = Integer.parseInt(comp[fields.get("N2ID")]);
 			this.name2 = TMC.getName(this.cid, this.n2id);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")])))
+		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
 			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
+			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
+		}
 		if ((fields.containsKey("PES_LEV")) && (comp.length > fields.get("PES_LEV")) && (!"".equals(comp[fields.get("PES_LEV")])))
 			this.pesLev = Integer.parseInt(comp[fields.get("PES_LEV")]);
 	}

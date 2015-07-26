@@ -23,14 +23,19 @@ public abstract class TMCLocation {
 	public int rnid = -1;
 	/** The road name. */
 	public TMCName roadName;
-	/** The name ID (NID) of the first name. */
+	/** The name ID (NID) of the first (or only) name. */
 	public int n1id = -1;
-	/** The first name. */
+	/** The first (or only) name. */
 	public TMCName name1;
 	/** The name ID (NID) of the second name. */
 	public int n2id = -1;
 	/** The second name. */
 	public TMCName name2;
+	/** The location code of the enclosing administrative area. */
+	public int polLcd = -1;
+	/** The enclosing administrative area. */
+	public TMCArea area;
+	
 	
 	public static enum LocationClass {
 		AREA, LINE, POINT;
@@ -101,6 +106,8 @@ public abstract class TMCLocation {
 		}
 		if ((this.n1id >= 0) || (this.n2id >= 0))
 			res.append("\n");
+		if (this.area != null)
+			res.append("\nAdministrative area: " + this.area.toString() + "\n\n");
 		
 		return res.toString();			
 	}
@@ -136,6 +143,8 @@ public abstract class TMCLocation {
 		}
 		if ((this.n1id >= 0) || (this.n2id >= 0))
 			res.append("<br>");
+		if (this.area != null)
+			res.append("<blockquote>Administrative area: " + this.area.html() + "</blockquote>");
 		
 		return res.toString();			
 	}

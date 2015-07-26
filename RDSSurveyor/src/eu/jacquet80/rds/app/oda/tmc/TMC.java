@@ -129,6 +129,12 @@ public class TMC {
 		return LOCATIONS.get(country.cid + ";" + tabcd + ";" + lcd);
 	}
 	
+	private static Map<String, TMCArea> AREAS = new HashMap<String, TMCArea>();
+
+	public static TMCArea getArea(int cid, int tabcd, int lcd) {
+		return AREAS.get(cid + ";" + tabcd + ";" + lcd);
+	}
+	
 	private static Map<String, Road> ROADS = new HashMap<String, Road>();
 
 	public static Road getRoad(int cid, int tabcd, int lcd) {
@@ -158,7 +164,7 @@ public class TMC {
 		File file;
 		Map<String, Integer> fields = new HashMap<String, Integer>();
 
-		// COUNTRIES.DAT;
+		// 1 - COUNTRIES.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "COUNTRIES.DAT");
 		if (file.exists()) {
 			try {
@@ -177,7 +183,7 @@ public class TMC {
 			}
 		}
 
-		// LOCATIONDATASETS.DAT;
+		// 2 - LOCATIONDATASETS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
 		if (file.exists()) {
 			try {
@@ -199,8 +205,15 @@ public class TMC {
 				System.exit(1);
 			}
 		}
+		
+		// 3 - LOCATIONCODES.DAT; skipped for now
+		// 4 - CLASSES.DAT; skipped for now
+		// 5 - TYPES.DAT; skipped for now
+		// 6 - SUBTYPES.DAT; skipped for now
+		// 7 - LANGUAGES.DAT; skipped for now
+		// 8 - EUROROADNO-DAT; skipped for now;
 
-		// NAMES.DAT;
+		// 9 - NAMES.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "NAMES.DAT");
 		if (file.exists()) {
 			try {
@@ -220,10 +233,48 @@ public class TMC {
 				System.exit(1);
 			}
 		}
+		
+		// 10 - NAMETRANSLATIONS.DAT; skipped for now
+		// 11 - SUBTYPETRANSLATIONS.DAT; skipped for now
+		// 12 - ERNO_BELONGS_TO_CO.DAT; skipped for now
 
-		// TODO ADMINISTRATIVEAREA.DAT, OTHERAREAS.DAT
+		// 13 - ADMINISTRATIVEAREA.DAT;
+		file = new File(path.getAbsolutePath() + File.separator + "ADMINISTRATIVEAREA.DAT");
+		if (file.exists()) {
+			try {
+				BufferedReader br = openLTFile(file, fields);
+				String line;
+				while((line = br.readLine()) != null)
+					if (line.length() > 0) {
+						TMCArea area = new TMCArea(line, fields);
+						AREAS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+						LOCATIONS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+					}
+			} catch (IOException e) {
+				e.printStackTrace(System.err);
+				System.exit(1);
+			}
+		}
 
-		// ROADS.DAT;
+		// 14 - OTHERAREAS.DAT;
+		file = new File(path.getAbsolutePath() + File.separator + "OTHERAREAS.DAT");
+		if (file.exists()) {
+			try {
+				BufferedReader br = openLTFile(file, fields);
+				String line;
+				while((line = br.readLine()) != null)
+					if (line.length() > 0) {
+						TMCArea area = new TMCArea(line, fields);
+						AREAS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+						LOCATIONS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+					}
+			} catch (IOException e) {
+				e.printStackTrace(System.err);
+				System.exit(1);
+			}
+		}
+
+		// 15 - ROADS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "ROADS.DAT");
 		if (file.exists()) {
 			try {
@@ -240,8 +291,10 @@ public class TMC {
 				System.exit(1);
 			}
 		}
+		
+		// 16 - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
 
-		// SEGMENTS.DAT;
+		// 17 - SEGMENTS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "SEGMENTS.DAT");
 		if (file.exists()) {
 			try {
@@ -259,7 +312,7 @@ public class TMC {
 			}
 		}
 
-		// SOFFSETS.DAT
+		// 18 - SOFFSETS.DAT
 		file = new File(path.getAbsolutePath() + File.separator + "SOFFSETS.DAT");
 		if (file.exists()) {
 			try {
@@ -277,8 +330,10 @@ public class TMC {
 				System.exit(1);
 			}
 		}
+		
+		// 19 - SEG_HAS_ERNO.DAT; skipped for now
 
-		// POINTS.DAT;
+		// 20 - POINTS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "POINTS.DAT");
 		if (file.exists()) {
 			try {
@@ -296,7 +351,7 @@ public class TMC {
 			}
 		}
 		
-		// POFFSETS.DAT
+		// 21 - POFFSETS.DAT
 		file = new File(path.getAbsolutePath() + File.separator + "POFFSETS.DAT");
 		if (file.exists()) {
 			try {
@@ -314,5 +369,7 @@ public class TMC {
 				System.exit(1);
 			}
 		}
+		
+		// 22 - INTERSECTIONS.DAT; skipped for now
 	}
 }

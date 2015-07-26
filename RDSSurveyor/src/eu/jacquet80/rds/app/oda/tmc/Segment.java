@@ -19,10 +19,6 @@ public class Segment extends TMCLocation {
 	/** Order 1 segment (type L3.x). */
 	public Segment segment;
 	
-	/** The location code of the administrative area in which the segment is located. */
-	public int polLcd = -1;
-	// TODO object reference
-
 	/** Location code of the next location in negative direction. */
 	public int negOffLcd = -1;
 	/** The next location in negative direction. */
@@ -63,8 +59,10 @@ public class Segment extends TMCLocation {
 			this.segLcd = Integer.parseInt(comp[fields.get("SEG_LCD")]);
 			this.segment = TMC.getSegment(this.cid, this.tabcd, this.segLcd);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")])))
+		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
 			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
+			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
+		}
 	}
 	
 	/**
@@ -103,9 +101,9 @@ public class Segment extends TMCLocation {
 		if (!"".equals(this.roadNumber))
 			res.append("Road number: " + this.roadNumber + "\n");
 		if (this.segment != null)
-			res.append("\nSegment:<br>" + this.segment.toString() + "\n\n");
+			res.append("\nSegment: " + this.segment.toString() + "\n\n");
 		if (this.road != null)
-			res.append("\nRoad:<br>" + this.road.toString() + "\n\n");
+			res.append("\nRoad: " + this.road.toString() + "\n\n");
 		
 		return res.toString();
 	}
@@ -116,9 +114,9 @@ public class Segment extends TMCLocation {
 		if (!"".equals(this.roadNumber))
 			res.append("Road number: " + this.roadNumber + "<br>");
 		if (this.segment != null)
-			res.append("<blockquote>Segment:<br>" + this.segment.html() + "</blockquote>");
+			res.append("<blockquote>Segment: " + this.segment.html() + "</blockquote>");
 		if (this.road != null)
-			res.append("<blockquote>Road:<br>" + this.road.html() + "</blockquote>");
+			res.append("<blockquote>Road: " + this.road.html() + "</blockquote>");
 		
 		return res.toString();
 	}
