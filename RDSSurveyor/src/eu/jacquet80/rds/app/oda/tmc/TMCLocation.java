@@ -61,6 +61,115 @@ public abstract class TMCLocation {
 		}
 	}
 	
+	public boolean equals(TMCLocation obj) {
+		if (obj == null)
+			return false;
+		return ((this.cid == obj.cid)
+				&& (this.tabcd == obj.tabcd)
+				&& (this.lcd == obj.lcd));
+	}
+	
+	/**
+	 * @brief Returns a string specifying the exact location in a road, in a user-friendly form.
+	 * 
+	 * The result of this method is intended to be used as a refinement to the results of
+	 * {@link #getRoadNumber()} and/or {@link #getDetailedDisplayName(TMCLocation, String, String)}.
+	 * A typical use case is to add junction names to the former, as in "A9 between Saronno and Turate".
+	 * 
+	 * How the locations are formatted is governed by two format strings, {@code format1} and {@code format2}.
+	 * {@code format1} is used if a single location is present, i.e. {@code secondary} is {@code null} or matches
+	 * the object for which this method is called. Otherwise {@format2} is used. This allows for the strings
+	 * to be localized by simply passing the appropriate format strings to this function.
+	 * 
+	 * Typical examples for format strings are:<br/>
+	 * {@code format1 = "at %s"}<br/>
+	 * {@code format2 = "between %s and %s"}<br/>
+	 * 
+	 * Descendant classes can override this method, changing its behavior. Where this information has no
+	 * meaning (e.g. for areas), this method should return NULL.
+	 * 
+	 * @param secondary The secondary location, if any.
+	 * @param format1 The format string to use if a single location is present. This string must contain
+	 * the {@code %s} placeholder exactly once. If {@code null}, {@code "%s"} will be used instead.
+	 * @param format2 The format string to use if two locations are present. This string must contain
+	 * the {@code %s} placeholder exactly twice. If {@code null}, {@code "%s – %s"} will be used instead.
+	 * @return
+	 */
+	public String getDetailedDisplayName(TMCLocation secondary, String format1, String format2) {
+		return null;
+	}
+	
+	/**
+	 * @brief Returns a name for the location which can be displayed to the user.
+	 * 
+	 * The display name, together with the road number (if any), identifies the location of the event.
+	 * A display name can take one of the following forms:
+	 * <ul>
+	 * <li>{@code name1 - name2 (roadName)} (for roads with endpoints and a name)</li>
+	 * <li>{@code name1 - name2} (for roads with endpoints but no road name)</li>
+	 * <li>{@code roadName} (for roads with only a road name, e.g. ring roads)</li>
+	 * <li>{@code areaName, roadName} (for roads with no road number, e.g. urban roads)</li>
+	 * </ul>
+	 * 
+	 * Where endpoint names {@code name1} and {@code name2} are used, they are reordered to match
+	 * the travel direction of affected traffic (is opposite to the direction of queue growth).
+	 * 
+	 * @param secondary The secondary location. If supplied, this method will try to return the names
+	 * for the lowest-order segment or road which spans both locations.
+	 * @param direction The direction of queue growth (0 for positive), used to order names correctly.
+	 * @return A user-friendly string describing the location of the event.
+	 */
+	public String getDisplayName(TMCLocation secondary, int direction) {
+		if ((secondary == null) || (this.equals(secondary))) {
+			String n1n2 = null; // endpoint names, ordered
+			if ((name1 != null) && (name2 != null)) {
+				if (direction != 0)
+					n1n2 = String.format("%s – %s", name1.name, name2.name);
+				else
+					n1n2 = String.format("%s – %s", name2.name, name1.name);
+			}
+			
+			String lname = null; // location name (roadName or name1)
+			if (roadName != null)
+				lname = roadName.name;
+			else if ((name1 != null) && (name2 == null))
+				lname = name1.name;
+			
+			String aname = null; // higher-order administrative area name
+			if ((area != null) && (area.name1 != null))
+				aname = area.name1.name; // FIXME: when area is a town district, we want the town (A10.x or higher), not the district
+			
+			if ((n1n2 != null) && (lname != null))
+				return String.format("%s (%s)", n1n2, lname);
+			else if (n1n2 != null)
+				return n1n2;
+			else if (lname != null) {
+				if ((category == LocationClass.AREA) || (getRoadNumber() != null) || (aname == null)) // FIXME: add town also when road is in A9.x or lower order area
+					return lname;
+				else
+					return String.format("%s, %s", lname, aname);
+			}
+		}
+		TMCLocation loc = this.getEnclosingLocation(secondary);
+		if (loc == null)
+			return null;
+		return loc.getDisplayName(null, direction);
+	}
+	
+	/**
+	 * @brief Returns the lowest-order segment or road which spans both locations.
+	 * 
+	 * @param secondary The secondary location. If {@code null} is supplied, this method returns
+	 * the instance for which it was called.
+	 * @return The lowest-order enclosing location, or {@code null} if none was found.
+	 */
+	public TMCLocation getEnclosingLocation(TMCLocation secondary) {
+		if ((secondary == null) || (this.equals(secondary)))
+			return this;
+		else
+			return null;
+	}
+	
 	/**
 	 * @brief Returns the location at the given offset in the given direction from the current one.
 	 *
@@ -72,6 +181,15 @@ public abstract class TMCLocation {
 	 */
 	public TMCLocation getOffset(int extent, int direction) {
 		return this;
+	}
+	
+	/**
+	 * @brief Returns the road number for the location, if any.
+	 * 
+	 * @return The road number, or {@code null} if the location does not have a corresponding road number.
+	 */
+	public String getRoadNumber() {
+		return null;
 	}
 	
 	@Override

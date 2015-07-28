@@ -52,6 +52,41 @@ public class Road extends TMCLocation {
 	}
 	
 	@Override
+	public TMCLocation getEnclosingLocation(TMCLocation secondary) {
+		TMCLocation ret = super.getEnclosingLocation(secondary);
+		if (ret != null)
+			return ret;
+		if (secondary instanceof TMCPoint) {
+			TMCPoint point = (TMCPoint) secondary;
+			if (point.road != null) {
+				ret = this.getEnclosingLocation(point.road);
+				if (ret != null)
+					return ret;
+			}
+			if (point.segment != null)
+				ret = this.getEnclosingLocation(point.segment);
+		} else if (secondary instanceof Segment) {
+			Segment segment = (Segment) secondary;
+			if (segment.road != null) {
+				ret = this.getEnclosingLocation(segment.road);
+				if (ret != null)
+					return ret;
+			}
+			if (segment.segment != null)
+				ret = this.getEnclosingLocation(segment.segment);
+		}
+		return ret;
+	}
+	
+	@Override
+	public String getRoadNumber() {
+		if (!"".equals(this.roadNumber))
+			return this.roadNumber;
+		else
+			return null;
+	}
+
+	@Override
 	public String html() {
 		StringBuilder res = new StringBuilder(super.html());
 		if (!"".equals(this.roadNumber))

@@ -65,6 +65,46 @@ public class Segment extends TMCLocation {
 		}
 	}
 	
+	@Override
+	public TMCLocation getEnclosingLocation(TMCLocation secondary) {
+		TMCLocation ret = super.getEnclosingLocation(secondary);
+		if (ret != null)
+			return ret;
+		
+		// try to match against parent of secondary location
+		if (secondary instanceof TMCPoint) {
+			TMCPoint point = (TMCPoint) secondary;
+			if (point.road != null) {
+				ret = this.getEnclosingLocation(point.road);
+				if (ret != null)
+					return ret;
+			}
+			if (point.segment != null)
+				ret = this.getEnclosingLocation(point.segment);
+		} else if (secondary instanceof Segment) {
+			Segment segment = (Segment) secondary;
+			if (segment.road != null) {
+				ret = this.getEnclosingLocation(segment.road);
+				if (ret != null)
+					return ret;
+			}
+			if (segment.segment != null)
+				ret = this.getEnclosingLocation(segment.segment);
+		}
+		if (ret != null)
+			return ret;
+		
+		// secondary location has no matching parent, try matching own parents
+		if (segment != null) {
+			ret = segment.getEnclosingLocation(secondary);
+			if (ret != null)
+				return ret;
+		}
+		if (road != null)
+			ret = road.getEnclosingLocation(secondary);
+		return ret;
+	}
+	
 	/**
 	 * @brief Returns the location at the given offset in the given direction from the current one.
 	 * 
@@ -88,6 +128,18 @@ public class Segment extends TMCLocation {
 		return ret;
 	}
 	
+	@Override
+	public String getRoadNumber() {
+		String ret = null;
+		if (this.road != null)
+			ret = this.road.getRoadNumber();
+		if ((ret == null) && (this.segment != null))
+			ret = this.segment.getRoadNumber();
+		if ((ret == null) && (!"".equals(this.roadNumber)))
+			ret = this.roadNumber;
+		return ret;
+	}
+
 	public void setOffset(TMCOffset offset) {
 		this.negOffLcd = offset.negOffLcd;
 		this.negOffset = TMC.getSegment(this.cid, this.tabcd, this.negOffLcd);

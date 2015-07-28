@@ -127,6 +127,51 @@ public class TMCPoint extends TMCLocation {
 		this.urban = Integer.parseInt(comp[fields.get("URBAN")]) == 0 ? false : true;
 	}
 	
+	@Override
+	public String getDetailedDisplayName(TMCLocation secondary, String format1, String format2) {
+		String fmt1 = format1;
+		String fmt2 = format2;
+		TMCPoint sec = null;
+		if ((!this.equals(secondary)) && (secondary instanceof TMCPoint))
+			sec = (TMCPoint) secondary;
+		if ((fmt1 == null) || (fmt1.isEmpty()))
+			fmt1 = "%s";
+		if ((fmt2 == null) || (fmt2.isEmpty()))
+			fmt1 = "%s – %s";
+		if (sec != null)
+			return String.format(fmt2, sec.getJunctionDisplayName(), this.getJunctionDisplayName());
+		else
+			return String.format(fmt1, this.getJunctionDisplayName());
+	}
+
+	@Override
+	public String getDisplayName(TMCLocation secondary, int direction) {
+		if ((secondary == null) || (this.equals(secondary))) {
+			if (segment != null)
+				return segment.getDisplayName(null, direction);
+			else if (road != null)
+				return road.getDisplayName(null, direction);
+			else
+				return null;
+		} else
+			return super.getDisplayName(secondary, direction);
+	}
+	
+	@Override
+	public TMCLocation getEnclosingLocation(TMCLocation secondary) {
+		TMCLocation ret = super.getEnclosingLocation(secondary);
+		if (ret != null)
+			return ret;
+		if (segment != null) {
+			ret = segment.getEnclosingLocation(secondary);
+			if (ret != null)
+				return ret;
+		}
+		if (road != null)
+			ret = road.getEnclosingLocation(secondary);
+		return ret;
+	}
+	
 	/**
 	 * @brief Returns the location at the given offset in the given direction from the current one.
 	 * 
@@ -150,6 +195,41 @@ public class TMCPoint extends TMCLocation {
 		return ret;
 	}
 	
+	/**
+	 * @brief Returns a label for the junction.
+	 * 
+	 * The label contains the name of the junction and its number, if any. It may take the following forms,
+	 * depending on which members hold non-empty values:
+	 * <ul>
+	 * <li>name (number)</li>
+	 * <li>name</li>
+	 * <li>number</li>
+	 * </ul>
+	 * @return A formatted junction label.
+	 */
+	public String getJunctionDisplayName() {
+		if ((name1 != null) && (!name1.name.isEmpty()))
+			if ((junctionNumber != null) && (!junctionNumber.isEmpty()))
+				return String.format("%s (%s)", name1.name, junctionNumber);
+			else
+				return name1.name;
+		else
+			if (junctionNumber.isEmpty())
+				return null;
+			else
+				return junctionNumber;
+	}
+	
+	@Override
+	public String getRoadNumber() {
+		String ret = null;
+		if (this.road != null)
+			ret = this.road.getRoadNumber();
+		if ((ret == null) && (this.segment != null))
+			ret = this.segment.getRoadNumber();
+		return ret;
+	}
+
 	public void setOffset(TMCOffset offset) {
 		this.negOffLcd = offset.negOffLcd;
 		this.negOffset = TMC.getPoint(this.cid, this.tabcd, this.negOffLcd);

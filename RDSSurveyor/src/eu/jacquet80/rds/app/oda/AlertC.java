@@ -418,6 +418,7 @@ public class AlertC extends ODA {
 	public static class Message {
 		// basic information
 		private final int direction;
+		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The country code from RDS PI. */
@@ -429,6 +430,7 @@ public class AlertC extends ODA {
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
 		private final TMCLocation locationInfo;
 		private boolean reversedDirectionality = false;
+		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 
 		
@@ -653,7 +655,31 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("CC: ").append(String.format("%X", cc));
+			StringBuilder res = new StringBuilder("");
+			if (locationInfo != null) {
+				String tmp = locationInfo.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				String name = locationInfo.getDisplayName(secondary, this.direction);
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("\n");
+			}
+			res.append("CC: ").append(String.format("%X", cc));
 			res.append(", LTN: ").append(ltn);
 			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
@@ -694,7 +720,31 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("<html>CC: ").append(String.format("%X", cc));
+			StringBuilder res = new StringBuilder("<html>");
+			if (locationInfo != null) {
+				String tmp = locationInfo.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				String name = locationInfo.getDisplayName(secondary, this.direction);
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("<br/>");
+			}
+			res.append("CC: ").append(String.format("%X", cc));
 			res.append(", LTN: ").append(ltn);
 			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
