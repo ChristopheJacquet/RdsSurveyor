@@ -144,7 +144,9 @@ public abstract class TMCLocation {
 			else if (n1n2 != null)
 				return n1n2;
 			else if (lname != null) {
-				if ((category == LocationClass.AREA) || (getRoadNumber() != null) || (aname == null)) // FIXME: add town also when road is in A9.x or lower order area
+				if ((category == LocationClass.AREA)
+						|| (aname == null)
+						|| ((area.tcd > 9) && (getRoadNumber() != null)))
 					return lname;
 				else
 					return String.format("%s, %s", lname, aname);
