@@ -136,8 +136,13 @@ public abstract class TMCLocation {
 				lname = name1.name;
 			
 			String aname = null; // higher-order administrative area name
-			if ((area != null) && (area.name1 != null))
-				aname = area.name1.name; // FIXME: when area is a town district, we want the town (A10.x or higher), not the district
+			TMCArea a = area;
+			if ((a != null) && (a.name1 != null)) {
+				// when enclosing area is a town district, we want the town (A10.x or higher), not the district
+				while ((a.tcd > 10) && (a.area != null))
+					a = a.area;
+				aname = a.name1.name;
+			}
 			
 			if ((n1n2 != null) && (lname != null))
 				return String.format("%s (%s)", n1n2, lname);
