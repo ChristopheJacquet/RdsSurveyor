@@ -37,6 +37,9 @@ import java.util.Set;
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventDurationType;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventNature;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
 import eu.jacquet80.rds.app.oda.tmc.TMCLocation;
 import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
 import eu.jacquet80.rds.core.OtherNetwork;
@@ -435,19 +438,34 @@ public class AlertC extends ODA {
 		private final int location;
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
 		private final TMCLocation locationInfo;
+		/** Whether the default directionality of the message should be reversed. */
 		private boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 
+		private boolean reversedDurationType = false;
 		
-		private int duration = -1;		// 0- duration 
+		private int duration = 0;		// 0- duration (0 if not set)
 		private int startTime = -1;		// 7- start time
 		private int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
 
-		// urgency: that of 1st event?   // 1.0, 1.1
-		// directionality: that of 1st event?    // 1.2
-		private boolean dynamic = true;      // TODO default   // 1.3
+		/** Number of levels by which to increase or decrease default urgency. */
+		private int increasedUrgency = 0;
+		/** The urgency of the message. */
+		private EventUrgency urgency;
+		
+		/*
+		 * The TMC event which was followed by the duration.
+		 * 
+		 * Duration and expiration of a message is represented by a duration code. How this code
+		 * maps to actual times is governed by the event nature and duration type. The latter two
+		 * values are specific to an event and may differ between multiple events of a multi-event
+		 * message. In this case, the nature and duration type of the last event received before the
+		 * duration field apply (the last event may be the first group event).
+		 */
+		private AlertC.Event eventForDuration = null;
+		
 		private boolean spoken = false;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
 		
@@ -483,6 +501,21 @@ public class AlertC extends ODA {
 			}
 		}
 		
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for multi-group messages, which have no fixed fields for
+		 * diversion and duration. Instead, default values (duration 0, no diversion) are assumed
+		 * unless one of the optional fields in the subsequent messages of the group sets a
+		 * different value.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 */
 		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn) {
 			this.direction = direction;
 			this.extent = extent;
@@ -493,26 +526,42 @@ public class AlertC extends ODA {
 			addInformationBlock(eventCode);
 		}
 		
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for single-group messages, which have fields for diversion and duration.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 * @param diversion
+		 * @param duration
+		 */
 		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, boolean diversion, int duration) {
 			this(direction, extent, eventCode, location, cc, ltn);
 			this.diversion = diversion;
 			this.duration = duration;
+			this.eventForDuration = this.currentInformationBlock.currentEvent;
 		}
 		
 		public void addField(int label, int value) {
 			switch(label) {
 			// duration
-			case 0: duration = value;
-			break;
+			case 0:
+				duration = value;
+				this.eventForDuration = this.currentInformationBlock.currentEvent;
+				break;
 			
 			// control code
 			case 1:
-				Event evt = this.informationBlocks.get(0).events.get(0);
 				switch(value) {
-				case 0: evt.urgency = evt.urgency.next(); break;
-				case 1: evt.urgency = evt.urgency.prev(); break;
+				case 0: increasedUrgency++; break;
+				case 1: increasedUrgency--; break;
 				case 2: reversedDirectionality = true; break;
-				case 3: dynamic = !dynamic; break;
+				case 3: reversedDurationType = true; break;
 				case 4: spoken = !spoken; break;
 				case 5: diversion = true; break;
 				case 6: extent += 8; break;			// extent == number of steps
@@ -585,10 +634,34 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				for(Event e : ib.events) {
 					this.bidirectional &= e.tmcEvent.bidirectional;
+					if (urgency == null)
+						urgency = e.urgency;
+					else
+						urgency = EventUrgency.max(urgency, e.urgency);
 				}
 			}
 			
 			if(reversedDirectionality) this.bidirectional = !this.bidirectional;
+			
+			if (increasedUrgency > 0)
+				for (int i = 0; i < increasedUrgency; i++)
+					urgency.next();
+			else if (increasedUrgency < 0)
+				for (int i = 0; i > increasedUrgency; i--)
+					urgency.prev();
+			
+			/*
+			 * TODO: what if we have a multi-event message with different duration types and no
+			 * duration set explicitly? As per the spec, duration would be assumed to be 0, which
+			 * means the event is expected to last for an unspecified time. Even then, persistence
+			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
+			 * we use? (Nature is not relevant for persistence.)
+			 */
+			if (eventForDuration == null)
+				eventForDuration = this.informationBlocks.get(0).events.get(0);
+			
+			if (reversedDurationType)
+				eventForDuration.invertDurationType(); 
 			
 			this.complete = true;
 		}
@@ -691,6 +764,11 @@ public class AlertC extends ODA {
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append('\n');
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
@@ -756,6 +834,11 @@ public class AlertC extends ODA {
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append("<br/>");
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
@@ -1135,7 +1218,9 @@ public class AlertC extends ODA {
 	
 	public static class Event {
 		private TMCEvent tmcEvent;
-		private TMCEvent.EventUrgency urgency;
+		private EventUrgency urgency;
+		private EventNature nature;
+		private EventDurationType durationType;
 		private int sourceLocation = -1;
 
 		private int quantifier = -1;
@@ -1149,6 +1234,8 @@ public class AlertC extends ODA {
 			}
 			
 			this.urgency = this.tmcEvent.urgency;
+			this.nature = this.tmcEvent.nature;
+			this.durationType = this.tmcEvent.durationType;
 		}
 		
 
@@ -1162,6 +1249,8 @@ public class AlertC extends ODA {
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
 			if(this.suppInfo.size() > 0) res.append("\nSupplementary information: ").append(this.suppInfo);
@@ -1177,6 +1266,8 @@ public class AlertC extends ODA {
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.suppInfo.size() > 0) {
 				res.append("<font color='#555555'><br>Supplementary information: <br>");
@@ -1188,5 +1279,11 @@ public class AlertC extends ODA {
 			return res.toString();
 		}
 		
+		private void invertDurationType() {
+			if (this.durationType == EventDurationType.DYNAMIC)
+				this.durationType = EventDurationType.LONGER_LASTING;
+			else
+				this.durationType = EventDurationType.DYNAMIC;
+		}
 	}
 }

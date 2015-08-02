@@ -23,6 +23,15 @@ public class TMCEvent {
 				return DYNAMIC;
 			}
 		}
+
+		@Override
+		public String toString() {
+			switch(this) {
+			case LONGER_LASTING: return "Longer Lasting";
+			case DYNAMIC: return "Dynamic";
+			default: return "ERR";
+			}
+		}
 	}
 	
 	public static enum EventNature {
@@ -35,6 +44,16 @@ public class TMCEvent {
 				return SILENT;
 			} else {
 				return INFO;
+			}
+		}
+
+		@Override
+		public String toString() {
+			switch(this) {
+			case FORECAST: return "Forecast";
+			case SILENT: return "Silent";
+			case INFO: return "Info";
+			default: return "ERR";
 			}
 		}
 	}
@@ -50,6 +69,28 @@ public class TMCEvent {
 			} else {
 				return NORMAL;
 			}
+		}
+		
+		public static final EventUrgency max(EventUrgency a, EventUrgency b) {
+			if (a == XURGENT) {
+				if ((b == XURGENT) || (b == URGENT) || (b == NORMAL))
+					return a;
+				else
+					return null;
+			} else if (a == URGENT) {
+				if (b == XURGENT)
+					return b;
+				else if ((b == URGENT) || (b == NORMAL))
+					return a;
+				else
+					return null;
+			} else if (a == NORMAL) {
+				if ((b == XURGENT) || (b == URGENT) || (b == NORMAL))
+					return b;
+				else
+					return null;
+			} else
+				return null;
 		}
 		
 		public final EventUrgency prev() {
