@@ -414,6 +414,13 @@ public class AlertC extends ODA {
 		}
 	}
 	
+	/**
+	 * @brief Represents a TMC message.
+	 * 
+	 * A TMC message is a single report about an event at a particular location. It contains one or
+	 * more event codes (description of "what"), a primary location and an optional secondary location
+	 * (description of "where").
+	 */
 	public static class Message {
 		// basic information
 		private final int direction;
@@ -656,11 +663,10 @@ public class AlertC extends ODA {
 			}
 			StringBuilder res = new StringBuilder("");
 			if (locationInfo != null) {
-				String tmp = locationInfo.getRoadNumber();
+				String tmp = this.getRoadNumber();
 				if (tmp != null)
 					res.append(tmp);
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				String name = locationInfo.getDisplayName(secondary, this.direction);
+				String name = this.getDisplayName();
 				if (name != null) {
 					if (tmp != null)
 						res.append(" ");
@@ -668,6 +674,7 @@ public class AlertC extends ODA {
 						tmp = name;
 					res.append(name);
 				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
 				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
 				if (name != null) {
 					if (tmp != null)
@@ -721,11 +728,10 @@ public class AlertC extends ODA {
 			}
 			StringBuilder res = new StringBuilder("<html>");
 			if (locationInfo != null) {
-				String tmp = locationInfo.getRoadNumber();
+				String tmp = this.getRoadNumber();
 				if (tmp != null)
 					res.append(tmp);
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				String name = locationInfo.getDisplayName(secondary, this.direction);
+				String name = this.getDisplayName();
 				if (name != null) {
 					if (tmp != null)
 						res.append(" ");
@@ -733,6 +739,7 @@ public class AlertC extends ODA {
 						tmp = name;
 					res.append(name);
 				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
 				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
 				if (name != null) {
 					if (tmp != null)
@@ -788,6 +795,114 @@ public class AlertC extends ODA {
 			res.append("</html>");
 			
 			return res.toString();			
+		}
+		
+		/**
+		 * @brief Returns a name for the location which can be displayed to the user.
+		 * 
+		 * The display name, together with the road number (if any), identifies the location of the event.
+		 * For formatting of the display name, see
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCLocation#getDisplayName(TMCLocation, int)}.
+		 * 
+		 * @return A user-friendly string describing the location of the event, or {@code null} if
+		 * the location of the message could not be resolved.
+		 */
+		public String getDisplayName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			return locationInfo.getDisplayName(secondary, this.direction);
+		}
+		
+		/**
+		 * @brief Returns the junction number of the primary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the primary location is not a
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no junction number or could not be
+		 * resolved.
+		 */
+		public String getPrimaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) locationInfo;
+			if (!loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the primary location, if any.
+		 * 
+		 * @return The name of the primary location, or {@code null} if the primary location is not
+		 * a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no name or could not be resolved.
+		 */
+		public String getPrimaryName() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			if ((locationInfo.name1.name == null) || (locationInfo.name1.name.isEmpty()))
+				return null;
+			else
+				return locationInfo.name1.name;
+		}
+		
+		/**
+		 * @brief Returns the road number for the message, if any.
+		 * 
+		 * @return The road number, or {@code null} if the message does not have a corresponding road number,
+		 * or if the location of the message could not be resolved.
+		 */
+		public String getRoadNumber() {
+			if (locationInfo == null)
+				return null;
+			return locationInfo.getRoadNumber();
+		}
+		
+		/**
+		 * @brief Returns the junction number of the secondary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the message has no secondary location,
+		 * the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no
+		 * junction number or could not be resolved.
+		 */
+		public String getSecondaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) secondary;
+			if (!loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the secondary location, if any.
+		 * 
+		 * @return The name of the secondary location, or {@code null} if the message has no secondary
+		 * location, the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint},
+		 * has no name or could not be resolved.
+		 */
+		public String getSecondaryName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			if ((secondary.name1.name == null) || (secondary.name1.name.isEmpty()))
+				return null;
+			else
+				return secondary.name1.name;
 		}
 		
 		public int getLocation() {
