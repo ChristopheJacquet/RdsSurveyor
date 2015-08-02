@@ -2,8 +2,6 @@ package eu.jacquet80.rds.app.oda.tmc;
 
 import java.util.Map;
 
-import eu.jacquet80.rds.app.oda.tmc.TMCLocation.LocationClass;
-
 /** Describes a TMC AREA location. */
 public class TMCArea extends TMCLocation {
 
