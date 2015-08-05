@@ -782,6 +782,7 @@ public class AlertC extends ODA {
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
 			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
 			res.append('\n');
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
@@ -854,6 +855,7 @@ public class AlertC extends ODA {
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
 			res.append("<br/>");
 			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
@@ -907,6 +909,72 @@ public class AlertC extends ODA {
 				return null;
 			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
 			return locationInfo.getDisplayName(secondary, this.direction);
+		}
+		
+		/**
+		 * @brief Returns the time until which receivers should store the message.
+		 * 
+		 * Persistence is determined by three factors: the date and time at which the message was
+		 * last received, its duration type.
+		 * 
+		 * @return The date and time at which the message expires.
+		 */
+		public Date getPersistence() {
+			/* 15 min, 30 min, 1 h, 2 h, 3 h, 4 h and 24 h in milliseconds, respectively */
+			long MS_15_MIN  = 900000;
+			long MS_30_MIN = 1800000;
+			long MS_1_H    = 3600000;
+			long MS_2_H    = 7200000;
+			long MS_3_H   = 10800000;
+			long MS_4_H   = 14400000;
+			long MS_24_H =  86400000;
+			
+			// FIXME: midnight (end of current day) in current timezone
+			Date midnight = new Date(date.getTime() + MS_24_H);
+			
+			switch (duration) {
+			case 0:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_1_H);
+			case 1:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_2_H);
+			case 2:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_30_MIN);
+				else
+					return new Date(midnight.getTime());
+			case 3:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_1_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 4:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_2_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 5:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_3_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 6:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_4_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 7:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(midnight.getTime());
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			}
+			return null;
 		}
 		
 		/**
