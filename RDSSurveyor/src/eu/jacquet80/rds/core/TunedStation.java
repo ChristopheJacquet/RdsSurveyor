@@ -205,9 +205,11 @@ public class TunedStation extends Station {
 	}
 	
 	public void setDate(Date date, String datetime, RDSTime streamTime) {
+		/* leave streamTimeForDate unchanged unless date has just changed */
+		if (!date.equals(this.date))
+			this.streamTimeForDate = streamTime;
 		this.date = date;
 		this.datetime = datetime;
-		this.streamTimeForDate = streamTime;
 	}
 	
 	public String getDateTime() {
@@ -279,6 +281,12 @@ public class TunedStation extends Station {
 		return language;
 	}
 	
+	/**
+	 * @brief Returns a {@code Date} which corresponds to the given RDS time.
+	 * 
+	 * @param time The RDS time
+	 * @return The exact time which corresponds to {@code time}
+	 */
 	public Date getRealTimeForStreamTime(RDSTime time) {
 		if(time == null) return null;
 		return time.getRealTime(streamTimeForDate, date);
