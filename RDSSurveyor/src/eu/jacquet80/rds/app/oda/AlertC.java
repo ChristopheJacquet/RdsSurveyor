@@ -27,6 +27,7 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -128,11 +129,9 @@ public class AlertC extends ODA {
 			console.print("T=" + x4 + " ");
 			
 			if(x4 == 0) {
-				RealTime realTime;
-				if (time instanceof RealTime)
-					realTime = (RealTime) time;
-				else // FIXME: use RDS time if available
-					realTime = new RealTime();
+				Date date = station.getRealTimeForStreamTime(time);
+				if (date == null)
+					date = new Date();
 				int single_group = (blocks[1] & 0x8)>>3;
 				if(single_group == 1) {
 					console.print("single-group: ");
@@ -143,7 +142,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, cc, ltn, realTime, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, date, div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -171,7 +170,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location, cc, ltn, realTime);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, date);
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -437,7 +436,7 @@ public class AlertC extends ODA {
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The time at which the message was received. */
-		private RDSTime time = null;
+		private Date date = null;
 		/** The country code from RDS PI. */
 		private final int cc;
 		/** The Location Table Number (LTN). */
@@ -524,10 +523,10 @@ public class AlertC extends ODA {
 		 * @param cc
 		 * @param ltn
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, RDSTime time) {
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date) {
 			this.direction = direction;
 			this.extent = extent;
-			this.time = time;
+			this.date = date;
 			this.cc = cc;
 			this.ltn = ltn;
 			this.location = location;
@@ -549,8 +548,8 @@ public class AlertC extends ODA {
 		 * @param diversion
 		 * @param duration
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, RDSTime time, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location, cc, ltn, time);
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, date);
 			this.diversion = diversion;
 			this.duration = duration;
 			this.eventForDuration = this.currentInformationBlock.currentEvent;
@@ -782,7 +781,7 @@ public class AlertC extends ODA {
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
-			res.append("received=").append(time.toLongString());
+			res.append("received=").append(date);
 			res.append('\n');
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
@@ -854,7 +853,7 @@ public class AlertC extends ODA {
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
 			res.append("<br/>");
-			res.append("received=").append(time.toLongString());
+			res.append("received=").append(date);
 			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
