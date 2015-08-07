@@ -27,12 +27,16 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
@@ -127,6 +131,9 @@ public class AlertC extends ODA {
 			console.print("T=" + x4 + " ");
 			
 			if(x4 == 0) {
+				Date date = station.getRealTimeForStreamTime(time);
+				if (date == null)
+					date = new Date();
 				int single_group = (blocks[1] & 0x8)>>3;
 				if(single_group == 1) {
 					console.print("single-group: ");
@@ -137,7 +144,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, cc, ltn, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone(), div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -165,7 +172,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location, cc, ltn);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone());
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -430,6 +437,10 @@ public class AlertC extends ODA {
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
+		/** The time at which the message was received. */
+		private Date date = null;
+		/** The time zone to be used for persistence times based on "midnight". */
+		private TimeZone timeZone;
 		/** The country code from RDS PI. */
 		private final int cc;
 		/** The Location Table Number (LTN). */
@@ -516,9 +527,11 @@ public class AlertC extends ODA {
 		 * @param cc
 		 * @param ltn
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn) {
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz) {
 			this.direction = direction;
 			this.extent = extent;
+			this.date = date;
+			this.timeZone = tz;
 			this.cc = cc;
 			this.ltn = ltn;
 			this.location = location;
@@ -540,8 +553,8 @@ public class AlertC extends ODA {
 		 * @param diversion
 		 * @param duration
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location, cc, ltn);
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, date, tz);
 			this.diversion = diversion;
 			this.duration = duration;
 			this.eventForDuration = this.currentInformationBlock.currentEvent;
@@ -667,7 +680,7 @@ public class AlertC extends ODA {
 		}
 		
 		public boolean overrides(Message m) {
-			return
+			return // FIXME: check cc and ltn
 				(location == m.location || location == 65535) &&
 				(direction == m.direction) &&
 				hasAnEventFromTheSameUpdateClassAs(m) &&
@@ -773,6 +786,9 @@ public class AlertC extends ODA {
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
+			res.append('\n');
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
 			}
@@ -842,6 +858,9 @@ public class AlertC extends ODA {
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			res.append("<br/>");
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
@@ -895,6 +914,79 @@ public class AlertC extends ODA {
 				return null;
 			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
 			return locationInfo.getDisplayName(secondary, this.direction);
+		}
+		
+		/**
+		 * @brief Returns the time until which receivers should store the message.
+		 * 
+		 * Persistence is determined by three factors: the date and time at which the message was
+		 * last received, its duration type.
+		 * 
+		 * @return The date and time at which the message expires.
+		 */
+		public Date getPersistence() {
+			/* 15 min, 30 min, 1 h, 2 h, 3 h, 4 h and 24 h in milliseconds, respectively */
+			long MS_15_MIN  = 900000;
+			long MS_30_MIN = 1800000;
+			long MS_1_H    = 3600000;
+			long MS_2_H    = 7200000;
+			long MS_3_H   = 10800000;
+			long MS_4_H   = 14400000;
+			long MS_24_H =  86400000;
+			
+			/* Calculate midnight (end of current day) in current time zone */
+			Calendar cal = new GregorianCalendar(this.timeZone);
+			cal.setTime(this.date);
+			cal.setLenient(true);
+			cal.set(Calendar.HOUR_OF_DAY, 24);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			Date midnight = cal.getTime();
+			
+			switch (duration) {
+			case 0:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_1_H);
+			case 1:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_2_H);
+			case 2:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_30_MIN);
+				else
+					return new Date(midnight.getTime());
+			case 3:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_1_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 4:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_2_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 5:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_3_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 6:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_4_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 7:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(midnight.getTime());
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			}
+			return null;
 		}
 		
 		/**
