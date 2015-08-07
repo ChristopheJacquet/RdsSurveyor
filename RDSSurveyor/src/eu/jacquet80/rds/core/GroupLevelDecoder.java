@@ -402,9 +402,18 @@ public class GroupLevelDecoder {
 			int year = 1900 + yp + k;
 			int month = mp - 1 - k * 12;
 			
-			Calendar cal = new GregorianCalendar(year, month-1, day, hour, minute);
-			cal.add(Calendar.MINUTE, sign * offset * 30);
-			cal.setTimeZone(new SimpleTimeZone(sign * offset * 30 * 60 * 1000, ""));
+			/* Time is in UTC, hence set the initial time zone to UTC (offset 0), set date values
+			 * and call getDate() once to force internal calculation with date values interpreted
+			 * as UTC. Then set the actual time zone and obtain time via getDate().
+			 * Without the first call to getDate(), the internal calculation would not happen until
+			 * the time zone is changed, resulting in incorrect interpretation of date/time values.
+			 */
+			SimpleTimeZone tz = new SimpleTimeZone(sign * offset * 30 * 60 * 1000, "");
+			Calendar cal = new GregorianCalendar(new SimpleTimeZone(0, ""));
+			cal.clear();
+			cal.set(year, month-1, day, hour, minute);
+			cal.getTime();
+			cal.setTimeZone(tz);
 			Date date = cal.getTime();
 			
 			String datetime = String.format("%02d:%02d%c%dmin %04d-%02d-%02d", 
