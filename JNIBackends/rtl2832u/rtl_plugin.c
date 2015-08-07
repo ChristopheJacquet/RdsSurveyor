@@ -770,9 +770,7 @@ static void *dongle_thread_fn(void *arg)
 	struct dongle_state *s = arg;
 	int ret = -255;
 	pthread_t tid = pthread_self();
-	fprintf(stderr, "\nDongle thread 0x%x starting\n", tid);
 	ret = rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
-	fprintf(stderr, "\nrtlsdr_read_async returned, dongle thread 0x%x exiting with code %d\n", tid, ret);
 	return 0;
 }
 
@@ -904,19 +902,14 @@ static void *controller_thread_fn(void *arg)
 		verbose_offset_tuning(dongle.dev);}
 
 	/* Set the frequency */
-	fprintf(stderr, "Trying to set frequency to %d Hz\n", freq);
 	verbose_set_frequency(dongle.dev, dongle.freq);
 	(*(s->env))->CallVoidMethod(s->env, s->self, s->onFrequencyChanged, (jint)(freq / 1.0e+3));
-	fprintf(stderr, "Oversampling input by: %ix.\n", demod.downsample);
-	fprintf(stderr, "Oversampling output by: %ix.\n", demod.post_downsample);
-	fprintf(stderr, "Buffer size: %0.2fms\n",
-		1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
 
 	/* Set the sample rate */
 	verbose_set_sample_rate(dongle.dev, dongle.rate);
-	fprintf(stderr, "Output at %u Hz.\n", demod.rate_in/demod.post_downsample);
 
 	/* Start the dongle thread */
+	usleep(100000);
 	pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void *)(&dongle));
 
 	while (!do_exit) {
@@ -930,7 +923,6 @@ static void *controller_thread_fn(void *arg)
 			/* hacky hopping */
 			freq = s->freq;
 			optimal_settings(freq, demod.rate_in);
-			fprintf(stderr, "\nChanging frequency to %d Hz (optimized to %d).\n", freq, dongle.freq);
 			rtlsdr_cancel_async(dongle.dev);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			/* Start a new dongle thread */
@@ -967,7 +959,6 @@ static void *controller_thread_fn(void *arg)
 				 * This may be due to a race condition (lack of synchronization). As a workaround,
 				 * we're doing two passes and discarding the result from the first one.
 				 */
-				fprintf(stderr, "\nSeek: trying to get a burst of samples\n");
 				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
 					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
 				rtlsdr_callback(samples, samplesRead, &dongle);
@@ -979,13 +970,11 @@ static void *controller_thread_fn(void *arg)
 				pthread_rwlock_rdlock(&demod.rw);
 				rssi = dongle.demod_target->rssi;
 				pthread_rwlock_unlock(&demod.rw);
-				fprintf(stderr, "\nSeek: %d Hz, %.2f dBm (%d samples read)\n", freq, rssi, samplesRead);
 
 				pthread_rwlock_wrlock(&s->rw);
 				if (rssi < RSSI_MIN) { // or RSSI_MIN_DX, depending on desired scan sensitivity
 					nearStart = 0;
 				} else if (!nearStart && (rssi >= maxRssi)) {
-					fprintf(stderr, "\nSeek: found station at %d Hz, %.2f dBm, continuing\n", freq, rssi);
 					/* store frequency and RSSI and see if the next frequency has a stronger signal */
 					maxRssi = rssi;
 					maxFreq = freq;
@@ -995,14 +984,12 @@ static void *controller_thread_fn(void *arg)
 					freq = maxFreq;
 					s->freq = freq;
 					optimal_settings(freq, demod.rate_in);
-					fprintf(stderr, "\nSeek: station at %d Hz is strongest, tuning (optimized to %d).\n", freq, dongle.freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				} else if (freq == s->freq) {
 					/* We're back at the original frequency and didn't find any stations */
 					// TODO: should we run another round with RSSI_MIN_DX (DX mode)?
 					optimal_settings(freq, demod.rate_in);
-					fprintf(stderr, "\nSeek: no stations found, reverting to %d Hz.\n", freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				}
