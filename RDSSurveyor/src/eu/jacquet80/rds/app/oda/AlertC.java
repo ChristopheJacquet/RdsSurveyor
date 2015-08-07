@@ -27,13 +27,16 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
@@ -46,7 +49,6 @@ import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
-import eu.jacquet80.rds.log.RealTime;
 
 public class AlertC extends ODA {
 	public static final int AID = 0xCD46;
@@ -142,7 +144,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, cc, ltn, date, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone(), div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -170,7 +172,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location, cc, ltn, date);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone());
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -437,6 +439,8 @@ public class AlertC extends ODA {
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The time at which the message was received. */
 		private Date date = null;
+		/** The time zone to be used for persistence times based on "midnight". */
+		private TimeZone timeZone;
 		/** The country code from RDS PI. */
 		private final int cc;
 		/** The Location Table Number (LTN). */
@@ -523,10 +527,11 @@ public class AlertC extends ODA {
 		 * @param cc
 		 * @param ltn
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date) {
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz) {
 			this.direction = direction;
 			this.extent = extent;
 			this.date = date;
+			this.timeZone = tz;
 			this.cc = cc;
 			this.ltn = ltn;
 			this.location = location;
@@ -548,8 +553,8 @@ public class AlertC extends ODA {
 		 * @param diversion
 		 * @param duration
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location, cc, ltn, date);
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, date, tz);
 			this.diversion = diversion;
 			this.duration = duration;
 			this.eventForDuration = this.currentInformationBlock.currentEvent;
@@ -929,8 +934,15 @@ public class AlertC extends ODA {
 			long MS_4_H   = 14400000;
 			long MS_24_H =  86400000;
 			
-			// FIXME: midnight (end of current day) in current timezone
-			Date midnight = new Date(date.getTime() + MS_24_H);
+			/* Calculate midnight (end of current day) in current time zone */
+			Calendar cal = new GregorianCalendar(this.timeZone);
+			cal.setTime(this.date);
+			cal.setLenient(true);
+			cal.set(Calendar.HOUR_OF_DAY, 24);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			Date midnight = cal.getTime();
 			
 			switch (duration) {
 			case 0:
