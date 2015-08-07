@@ -32,7 +32,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SimpleTimeZone;
 import java.util.SortedMap;
+import java.util.TimeZone;
 import java.util.TreeMap;
 
 import eu.jacquet80.rds.app.Application;
@@ -44,6 +46,7 @@ public class TunedStation extends Station {
 	private SortedMap<Integer, Station> otherNetworks;  // maps ON-PI -> OtherNetwork
 	private int[][] groupStats = new int[17][2];
 	private Date date = null;
+	private TimeZone timeZone = new SimpleTimeZone(0, "");
 	private String datetime = "";
 	private RDSTime streamTimeForDate = null;
 	private Application[] applications = new Application[32];
@@ -352,6 +355,31 @@ public class TunedStation extends Station {
 		return trafficEvents;
 	}
 	
+	/**
+	 * @brief Sets the time zone for this station.
+	 * 
+	 * Note that all internal time values are time zone agnostic and will not change when a different
+	 * time zone is set. An exception is getDateTime, which is passed as a string but is also not
+	 * altered by this method.
+	 *  
+	 * @param tz The new time zone.
+	 */
+	public void setTimeZone(TimeZone tz) {
+		this.timeZone = tz;
+	}
+	
+	/**
+	 * @brief Returns the time zone for this station.
+	 * 
+	 * The time zone can be used to display the date and time in the station's time zone, or to
+	 * calculate reference points such as "midnight" (used by some ODA applications, notably TMC).
+	 * 
+	 * @return The current time zone.
+	 */
+	public TimeZone getTimeZone() {
+		return this.timeZone;
+	}
+
 	public void addServiceStat(ServiceStat statsOfGroup) {
 		int totalBitCount = statsOfGroup.getTotalCount();
 		

@@ -419,6 +419,7 @@ public class GroupLevelDecoder {
 			String datetime = String.format("%02d:%02d%c%dmin %04d-%02d-%02d", 
 					hour, minute, sign>0 ? '+' : '-', offset*30, year, month, day);
 			console.printf("CT " + datetime);
+			workingStation.setTimeZone(tz);
 			workingStation.setDate(date, datetime, time);
 			log.addMessage(new ClockTime(time, date));
 			
