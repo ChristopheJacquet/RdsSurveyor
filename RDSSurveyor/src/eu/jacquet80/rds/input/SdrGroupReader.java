@@ -1,5 +1,6 @@
 package eu.jacquet80.rds.input;
 
+import java.awt.Color;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -7,12 +8,22 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.Line;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.TargetDataLine;
 
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.Status;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
@@ -206,7 +217,7 @@ public class SdrGroupReader extends TunerGroupReader {
 	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
 		GroupReaderEvent ret = null;
 		
-		readTuner(); // this is here for legacy reasons, the method currently does nothing
+		readTuner(); // TODO soon obsolete
 		
 		if (isFrequencyChanged()) {
 			// if frequency has just been changed, must report an event
@@ -216,6 +227,14 @@ public class SdrGroupReader extends TunerGroupReader {
 		ret = synchronizer.getGroup();
 		
 		if (ret != null) {
+			/* TODO get data and feed them into bit reader
+			int[] res = new int[4];
+			for(int i=0; i<4; i++) {
+				if(data.err[i] > 0) res[i] = -1;
+				else res[i] = data.block[i] & 0xFFFF;
+			}
+			*/
+
 			newGroups = true;
 		}
 		return ret;
@@ -319,7 +338,6 @@ public class SdrGroupReader extends TunerGroupReader {
 	}
 
 
-	/* TODO implement sound
 	private final static String[] okVendors = { // TODO fix these
 		"SILICON",
 		"www.rding.cn"
@@ -331,6 +349,7 @@ public class SdrGroupReader extends TunerGroupReader {
 	};
 
 	
+	/* TODO implement sound
 	private class SoundPlayer extends Thread {
 		private Mixer mixer = null;
 		private TargetDataLine inLine;
