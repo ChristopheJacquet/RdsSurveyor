@@ -124,6 +124,8 @@ public class RDSSurveyor {
 		PrintStream console = System.out;
 		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
 		BitStreamSynchronizer bitStreamSynchronizer = null;
+		String inLtPath = null;
+		String dbUrl = "jdbc:hsqldb:mem:.";
 		
 		// RDS Surveyor is non-localized for the time being
 		Locale.setDefault(Locale.US);
@@ -231,10 +233,10 @@ public class RDSSurveyor {
 						System.out.println("Malformed -force option");
 						System.exit(1);
 					}
-				} else if("-tmc".equals(args[i])) {
-					System.out.println("Processing TMC location tables...");
-					TMC.readLocationTables(new File(getParam("tmc", args, ++i)));
-					System.out.println("Done processing TMC location tables.");
+				} else if("-lt".equals(args[i])) {
+					inLtPath = getParam("lt", args, ++i);
+				} else if("-ltdb".equals(args[i])) {
+					dbUrl = String.format("jdbc:hsqldb:file:%s", getParam("ltdb", args, ++i));
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -255,7 +257,8 @@ public class RDSSurveyor {
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
-					System.out.println("  -tmc <path>              Use TMC location tables found at the given path (or subdirs)");
+					System.out.println("  -lt <path>               Read TMC location tables found at the given path (or subdirs)");
+					System.out.println("  -ltdb <path>             Use TMC location database at the given path");
 					System.exit(1);
 				}
 			}
@@ -270,7 +273,15 @@ public class RDSSurveyor {
 			System.out.println("No source provided, aborting. A source must be provided.");
 			System.exit(0);
 		}
-				
+		
+		TMC.setDbUrl(dbUrl);
+		
+		// Build db if needed
+		if (inLtPath != null) {
+			System.out.println("Processing TMC location tables...");
+			TMC.readLocationTables(new File(inLtPath));
+			System.out.println("Done processing TMC location tables.");
+		}
 		
 		// Create a decoder "shell"
 		final PrintStream fConsole = console == null ? nullConsole : console;
