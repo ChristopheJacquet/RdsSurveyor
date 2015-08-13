@@ -211,14 +211,34 @@ public class TMC {
 		return COUNTRIES.get("ccd=" + cc + ";tabcd=" + ltn);
 	}
 	
-	public static Country getCountry(int ecc) {
+	public static Country getCountry(int cid) {
+		return COUNTRIES.get("cid=" + cid);
+	}
+	
+	public static Country getCountry(String ecc) {
 		return COUNTRIES.get("ecc=" + ecc);
+	}
+	
+	public static void putCountry(String cc, int ltn, Country country) {
+		COUNTRIES.put("ccd=" + cc + ";tabcd=" + ltn, country);
+	}
+	
+	public static void putCountry(int cid, Country country) {
+		COUNTRIES.put("cid=" + cid, country);
+	}
+	
+	public static void putCountry(String ecc, Country country) {
+		COUNTRIES.put("ecc=" + ecc, country);
 	}
 	
 	private static Map<String, LocationDataset> LOCATION_DATASETS = new HashMap<String, LocationDataset>();
 
 	public static LocationDataset getLocationDataset(int cid, int tabcd) {
 		return LOCATION_DATASETS.get(cid + ";" + tabcd);
+	}
+	
+	public static void putLocationDataset(int cid, int tabcd, LocationDataset locationDataset) {
+		LOCATION_DATASETS.put(cid + ";" + tabcd, locationDataset);
 	}
 	
 	private static Map<String, TMCName> NAMES = new HashMap<String, TMCName>();
@@ -229,6 +249,14 @@ public class TMC {
 
 	public static TMCName getName(int cid, int lid, int nid) {
 		return NAMES.get(cid + ";" + lid + ";" + nid);
+	}
+	
+	public static void putName(int cid, int nid, TMCName name) {
+		NAMES.put(cid + ";" + nid, name);
+	}
+	
+	public static void putName(int cid, int lid, int nid, TMCName name) {
+		NAMES.put(cid + ";" + lid + ";" + nid, name);
 	}
 	
 	private static Map<String, TMCLocation> LOCATIONS = new HashMap<String, TMCLocation>();
@@ -244,16 +272,28 @@ public class TMC {
 		return LOCATIONS.get(country.cid + ";" + tabcd + ";" + lcd);
 	}
 	
+	public static void putLocation(int cid, int tabcd, int lcd, TMCLocation location) {
+		LOCATIONS.put(cid + ";" + tabcd + ";" + lcd, location);
+	}
+	
 	private static Map<String, TMCArea> AREAS = new HashMap<String, TMCArea>();
 
 	public static TMCArea getArea(int cid, int tabcd, int lcd) {
 		return AREAS.get(cid + ";" + tabcd + ";" + lcd);
 	}
 	
+	public static void putArea(int cid, int tabcd, int lcd, TMCArea area) {
+		AREAS.put(cid + ";" + tabcd + ";" + lcd, area);
+	}
+
 	private static Map<String, Road> ROADS = new HashMap<String, Road>();
 
 	public static Road getRoad(int cid, int tabcd, int lcd) {
 		return ROADS.get(cid + ";" + tabcd + ";" + lcd);
+	}
+	
+	public static void putRoad(int cid, int tabcd, int lcd, Road road) {
+		ROADS.put(cid + ";" + tabcd + ";" + lcd, road);
 	}
 	
 	private static Map<String, Segment> SEGMENTS = new HashMap<String, Segment>();
@@ -262,12 +302,20 @@ public class TMC {
 		return SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
 	}
 	
+	public static void putSegment(int cid, int tabcd, int lcd, Segment segment) {
+		SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
+	}
+	
 	private static Map<String, TMCPoint> POINTS = new HashMap<String, TMCPoint>();
 
 	public static TMCPoint getPoint(int cid, int tabcd, int lcd) {
 		return POINTS.get(cid + ";" + tabcd + ";" + lcd);
 	}
 	
+	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
+	}
+
 	public static void readLocationTables(File path) {
 		// read and execute SQL initialization script
 		for (String stmtSql: initStmts) {
@@ -303,8 +351,8 @@ public class TMC {
 					if (line.length() > 0) {
 						Country country = new Country(line, fields);
 						if (!"".equals(country.ecc))
-							COUNTRIES.put("ecc=" + country.ecc, country);
-						COUNTRIES.put("cid=" + country.cid, country);
+							putCountry(country.ecc, country);
+						putCountry(country.cid, country);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -323,12 +371,12 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						LocationDataset ds = new LocationDataset(line, fields);
-						LOCATION_DATASETS.put(ds.cid + ";" + ds.tabcd, ds);
+						putLocationDataset(ds.cid, ds.tabcd, ds);
 
 						// Add entry to COUNTRIES so the country can be found using CC + LTN
-						Country country = COUNTRIES.get("cid=" + ds.cid);
+						Country country = getCountry(ds.cid);
 						if (country != null) {
-							COUNTRIES.put("ccd=" + country.ccd + ";tabcd=" + ds.tabcd, country);
+							putCountry(country.ccd, ds.tabcd, country);
 						}
 					}
 			} catch (IOException e) {
@@ -355,11 +403,11 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						TMCName name = new TMCName(line, fields);
-						NAMES.put(name.cid + ";" + name.lid + ";" + name.nid, name);
+						putName(name.cid, name.lid, name.nid, name);
 
 						// add the first name found as the default name (which can be found without a LID)
-						if (NAMES.get(name.cid + ";" + name.nid) == null)
-							NAMES.put(name.cid + ";" + name.nid, name);
+						if (getName(name.cid, name.nid) == null)
+							putName(name.cid, name.nid, name);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -382,8 +430,8 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						TMCArea area = new TMCArea(line, fields);
-						AREAS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
-						LOCATIONS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+						putArea(area.cid, area.tabcd, area.lcd, area);
+						putLocation(area.cid, area.tabcd, area.lcd, area);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -402,8 +450,8 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						TMCArea area = new TMCArea(line, fields);
-						AREAS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
-						LOCATIONS.put(area.cid + ";" + area.tabcd + ";" + area.lcd, area);
+						putArea(area.cid, area.tabcd, area.lcd, area);
+						putLocation(area.cid, area.tabcd, area.lcd, area);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -422,8 +470,8 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						Road road = new Road(line, fields);
-						ROADS.put(road.cid + ";" + road.tabcd + ";" + road.lcd, road);
-						LOCATIONS.put(road.cid + ";" + road.tabcd + ";" + road.lcd, road);
+						putRoad(road.cid, road.tabcd, road.lcd, road);
+						putLocation(road.cid, road.tabcd, road.lcd, road);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -444,8 +492,8 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						Segment segment = new Segment(line, fields);
-						SEGMENTS.put(segment.cid + ";" + segment.tabcd + ";" + segment.lcd, segment);
-						LOCATIONS.put(segment.cid + ";" + segment.tabcd + ";" + segment.lcd, segment);
+						putSegment(segment.cid, segment.tabcd, segment.lcd, segment);
+						putLocation(segment.cid, segment.tabcd, segment.lcd, segment);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
@@ -487,8 +535,8 @@ public class TMC {
 				while((line = br.readLine()) != null)
 					if (line.length() > 0) {
 						TMCPoint point = new TMCPoint(line, fields);
-						POINTS.put(point.cid + ";" + point.tabcd + ";" + point.lcd, point);
-						LOCATIONS.put(point.cid + ";" + point.tabcd + ";" + point.lcd, point);
+						putPoint(point.cid, point.tabcd, point.lcd, point);
+						putLocation(point.cid, point.tabcd, point.lcd, point);
 					}
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
