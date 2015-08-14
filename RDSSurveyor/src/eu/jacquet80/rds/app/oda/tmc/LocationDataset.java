@@ -1,6 +1,7 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /** Describes a TMC Location Table. */
 public class LocationDataset {
@@ -14,17 +15,24 @@ public class LocationDataset {
 	/** A description of the location table version. */
 	public String versionDescription;
 	
-	LocationDataset(String line, Map<String, Integer> fields) {
-		String[] comp = TMC.colonPattern.split(line);
-		this.cid = Integer.parseInt(comp[fields.get("CID")]);
-		this.tabcd = Integer.parseInt(comp[fields.get("TABCD")]);
-		this.version = comp[fields.get("VERSION")];
-		if ((fields.containsKey("DCOMMENT") && (comp.length > fields.get("DCOMMENT"))))
-			this.dComment = comp[fields.get("DCOMMENT")];
-		if ((fields.containsKey("VERSIONDESCRIPTION") && (comp.length > fields.get("VERSIONDESCRIPTION"))))
-			this.versionDescription = comp[fields.get("VERSIONDESCRIPTION")];
-		else
+	/**
+	 * @brief Creates a new {@code LocationDataset} from a given record.
+	 * 
+	 * This constructor expects one argument, {@code rset}, which must be a result set obtained by
+	 * querying the {@code LocationDataSets} table. Prior to calling the constructor, the cursor for
+	 * {@code rset} must be set. The constructor will use the data from the record which the cursor
+	 * points to.
+	 * 
+	 * @param rset The result set
+	 * @throws SQLException
+	 */
+	LocationDataset(ResultSet rset) throws SQLException {
+		this.cid = rset.getInt("CID");
+		this.tabcd = rset.getInt("TABCD");
+		this.version = rset.getString("VERSION");
+		this.dComment = rset.getString("DCOMMENT");
+		this.versionDescription = rset.getString("VERSIONDESCRIPTION");
+		if (rset.wasNull())
 			this.versionDescription = "";
 	}
-
 }

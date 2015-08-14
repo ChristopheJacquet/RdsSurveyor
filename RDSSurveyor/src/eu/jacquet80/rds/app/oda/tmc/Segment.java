@@ -1,6 +1,7 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /** Describes a TMC SEGMENT location. */
 public class Segment extends TMCLocation {
@@ -29,40 +30,68 @@ public class Segment extends TMCLocation {
 	/** The next location in positive direction. */
 	public Segment posOffset = null;
 
-	Segment(String line, Map<String, Integer> fields) {
-		String[] comp = TMC.colonPattern.split(line);
-		this.cid = Integer.parseInt(comp[fields.get("CID")]);
-		this.tabcd = Integer.parseInt(comp[fields.get("TABCD")]);
-		this.lcd = Integer.parseInt(comp[fields.get("LCD")]);
-		this.category = LocationClass.forCode(comp[fields.get("CLASS")]);
-		this.tcd = Integer.parseInt(comp[fields.get("TCD")]);
-		this.stcd = Integer.parseInt(comp[fields.get("STCD")]);
-		if ((fields.containsKey("ROADNUMBER")) && (comp.length > fields.get("ROADNUMBER")))
-			this.roadNumber = comp[fields.get("ROADNUMBER")];
-		if ((fields.containsKey("RNID")) && (comp.length > fields.get("RNID")) && (!"".equals(comp[fields.get("RNID")]))) {
-			this.rnid = Integer.parseInt(comp[fields.get("RNID")]);
+	/**
+	 * @brief Creates a new {@code Segment} from a given record.
+	 * 
+	 * This constructor expects two arguments, {@code rset} and {@code offsets}. {@code rset} must
+	 * be a result set obtained by querying the {@code Segments} table. {@code offsets} must be a
+	 * result set obtained by querying the {@code Soffsets} table. It can be null, in which case
+	 * the segment will have no offsets in either direction and no extents can be resolved for this
+	 * segment. Prior to calling the constructor, the cursor for both result sets must be set. The
+	 * constructor will use the data from the records which the cursors point to.
+	 * 
+	 * @param rset The result set containing the segment.
+	 * @param offsets The result set containing the offset. This argument can be {@code null}.
+	 * @throws SQLException
+	 */
+	public Segment(ResultSet rset, ResultSet offsets) throws SQLException {
+		this.cid = rset.getInt("CID");
+		this.tabcd = rset.getInt("TABCD");
+		this.lcd = rset.getInt("LCD");
+		this.category = LocationClass.forCode(rset.getString("CLASS"));
+		this.tcd = rset.getInt("TCD");
+		this.stcd = rset.getInt("STCD");
+		this.roadNumber = rset.getString("ROADNUMBER");
+		int rnid = rset.getInt("RNID");
+		if (!rset.wasNull()) {
+			this.rnid = rnid;
 			this.roadName = TMC.getName(this.cid, this.rnid);
 		}
-		if ((fields.containsKey("N1ID")) && (comp.length > fields.get("N1ID")) && (!"".equals(comp[fields.get("N1ID")]))) {
-			this.n1id = Integer.parseInt(comp[fields.get("N1ID")]);
+		int n1id = rset.getInt("N1ID");
+		if (!rset.wasNull()) {
+			this.n1id = n1id;
 			this.name1 = TMC.getName(this.cid, this.n1id);
 		}
-		if ((fields.containsKey("N2ID")) && (comp.length > fields.get("N2ID")) && (!"".equals(comp[fields.get("N2ID")]))) {
-			this.n2id = Integer.parseInt(comp[fields.get("N2ID")]);
+		int n2id = rset.getInt("N2ID");
+		if (!rset.wasNull()) {
+			this.n2id = n2id;
 			this.name2 = TMC.getName(this.cid, this.n2id);
 		}
-		if ((fields.containsKey("ROA_LCD")) && (comp.length > fields.get("ROA_LCD")) && (!"".equals(comp[fields.get("ROA_LCD")]))) {
-			this.roaLcd = Integer.parseInt(comp[fields.get("ROA_LCD")]);
+		int roaLcd = rset.getInt("ROA_LCD");
+		if (!rset.wasNull()) {
+			this.roaLcd = roaLcd;
 			this.road = TMC.getRoad(this.cid, this.tabcd, this.roaLcd);
 		}
-		if ((fields.containsKey("SEG_LCD")) && (comp.length > fields.get("SEG_LCD")) && (!"".equals(comp[fields.get("SEG_LCD")]))) {
-			this.segLcd = Integer.parseInt(comp[fields.get("SEG_LCD")]);
+		int segLcd = rset.getInt("SEG_LCD");
+		if (!rset.wasNull()) {
+			this.segLcd = segLcd;
 			this.segment = TMC.getSegment(this.cid, this.tabcd, this.segLcd);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
-			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
+		int polLcd = rset.getInt("POL_LCD");
+		if (!rset.wasNull()) {
+			this.polLcd = polLcd;
 			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
 		}
+		
+		if (offsets != null)
+			try {
+				this.negOffLcd = offsets.getInt("NEG_OFF_LCD");
+				//this.negOffset = TMC.getSegment(this.cid, this.tabcd, this.negOffLcd);
+				this.posOffLcd = offsets.getInt("POS_OFF_LCD");
+				//this.posOffset = TMC.getSegment(this.cid, this.tabcd, this.posOffLcd);
+			} catch (SQLException e) {
+				// NOP
+			}
 	}
 	
 	@Override
@@ -105,6 +134,18 @@ public class Segment extends TMCLocation {
 		return ret;
 	}
 	
+	private Segment getNegOffset() {
+		if ((this.negOffset == null) && (this.negOffLcd != -1))
+			this.negOffset = TMC.getSegment(this.cid, this.tabcd, this.negOffLcd);
+		return this.negOffset;
+	}
+	
+	private Segment getPosOffset() {
+		if ((this.posOffset == null) && (this.posOffLcd != -1))
+			this.posOffset = TMC.getSegment(this.cid, this.tabcd, this.posOffLcd);
+		return this.posOffset;
+	}
+	
 	/**
 	 * @brief Returns the location at the given offset in the given direction from the current one.
 	 * 
@@ -121,10 +162,10 @@ public class Segment extends TMCLocation {
 	public Segment getOffset(int extent, int direction) {
 		Segment ret = this;
 		for (int i = 1; i <= extent; i++)
-			if ((direction == 0) && (ret.posOffset != null))
-				ret = ret.posOffset;
-			else if ((direction != 0) && (ret.negOffset != null))
-				ret = ret.negOffset;
+			if ((direction == 0) && (ret.getPosOffset() != null))
+				ret = ret.getPosOffset();
+			else if ((direction != 0) && (ret.getNegOffset() != null))
+				ret = ret.getNegOffset();
 		return ret;
 	}
 	

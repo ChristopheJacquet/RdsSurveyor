@@ -1,6 +1,7 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /** Describes a TMC location name. */
 public class TMCName {
@@ -14,15 +15,24 @@ public class TMCName {
 	public String name;
 	public String nameComment;
 	
-	TMCName(String line, Map<String, Integer> fields) {
-		String[] comp = TMC.colonPattern.split(line);
-		this.cid = Integer.parseInt(comp[fields.get("CID")]);
-		this.lid = Integer.parseInt(comp[fields.get("LID")]);
-		this.nid = Integer.parseInt(comp[fields.get("NID")]);
-		this.name = comp[fields.get("NAME")];
-		if (comp.length > fields.get("NCOMMENT"))
-			this.nameComment = comp[fields.get("NCOMMENT")];
-		else
+	/**
+	 * @brief Creates a new {@code TMCName} from a given record.
+	 * 
+	 * This constructor expects one argument, {@code rset}, which must be a result set obtained by
+	 * querying the {@code Names} table. Prior to calling the constructor, the cursor for
+	 * {@code rset} must be set. The constructor will use the data from the record which the cursor
+	 * points to.
+	 * 
+	 * @param rset The result set
+	 * @throws SQLException
+	 */
+	TMCName(ResultSet rset) throws SQLException {
+		this.cid = rset.getInt("CID");
+		this.lid = rset.getInt("LID");
+		this.nid = rset.getInt("NID");
+		this.name = rset.getString("NAME");
+		this.nameComment = rset.getString("NCOMMENT");
+		if (rset.wasNull())
 			this.nameComment = "";
 	}
 }

@@ -1,24 +1,37 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /** Describes a TMC AREA location. */
 public class TMCArea extends TMCLocation {
 
-	TMCArea(String line, Map<String, Integer> fields) {
-		String[] comp = TMC.colonPattern.split(line);
-		this.cid = Integer.parseInt(comp[fields.get("CID")]);
-		this.tabcd = Integer.parseInt(comp[fields.get("TABCD")]);
-		this.lcd = Integer.parseInt(comp[fields.get("LCD")]);
-		this.category = LocationClass.forCode(comp[fields.get("CLASS")]);
-		this.tcd = Integer.parseInt(comp[fields.get("TCD")]);
-		this.stcd = Integer.parseInt(comp[fields.get("STCD")]);
-		if ((fields.containsKey("NID")) && (comp.length > fields.get("NID")) && (!"".equals(comp[fields.get("NID")]))) {
-			this.n1id = Integer.parseInt(comp[fields.get("NID")]);
+	/**
+	 * @brief Creates a new {@code TMCArea} from a given record.
+	 * 
+	 * This constructor expects one argument, {@code rset}, which must be a result set obtained by
+	 * querying one of the {@code AdministrativeAreas} or {@code OtherAreas} tables. Prior to calling
+	 * the constructor, the cursor for {@code rset} must be set. The constructor will use the data
+	 * from the record which the cursor points to.
+	 * 
+	 * @param rset The result set
+	 * @throws SQLException
+	 */
+	TMCArea(ResultSet rset) throws SQLException {
+		this.cid = rset.getInt("CID");
+		this.tabcd = rset.getInt("TABCD");
+		this.lcd = rset.getInt("LCD");
+		this.category = LocationClass.forCode(rset.getString("CLASS"));
+		this.tcd = rset.getInt("TCD");
+		this.stcd = rset.getInt("STCD");
+		int n1id = rset.getInt("NID");
+		if (!rset.wasNull()) {
+			this.n1id = n1id;
 			this.name1 = TMC.getName(this.cid, this.n1id);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
-			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
+		int polLcd = rset.getInt("POL_LCD");
+		if (!rset.wasNull()) {
+			this.polLcd = polLcd;
 			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
 		}
 	}

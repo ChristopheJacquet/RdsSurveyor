@@ -1,6 +1,7 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /** Describes a TMC ROAD location. */
 public class Road extends TMCLocation {
@@ -12,34 +13,46 @@ public class Road extends TMCLocation {
 	/** The road network level. */
 	public int pesLev;
 	
-	Road(String line, Map<String, Integer> fields) {
-		String[] comp = TMC.colonPattern.split(line);
-		this.cid = Integer.parseInt(comp[fields.get("CID")]);
-		this.tabcd = Integer.parseInt(comp[fields.get("TABCD")]);
-		this.lcd = Integer.parseInt(comp[fields.get("LCD")]);
-		this.category = LocationClass.forCode(comp[fields.get("CLASS")]);
-		this.tcd = Integer.parseInt(comp[fields.get("TCD")]);
-		this.stcd = Integer.parseInt(comp[fields.get("STCD")]);
-		if ((fields.containsKey("ROADNUMBER")) && (comp.length > fields.get("ROADNUMBER")))
-			this.roadNumber = comp[fields.get("ROADNUMBER")];
-		if ((fields.containsKey("RNID")) && (comp.length > fields.get("RNID")) && (!"".equals(comp[fields.get("RNID")]))) {
-			this.rnid = Integer.parseInt(comp[fields.get("RNID")]);
+	/**
+	 * @brief Creates a new {@code Road} from a given record.
+	 * 
+	 * This constructor expects one argument, {@code rset}, which must be a result set obtained by
+	 * querying the {@code Roads} table. Prior to calling the constructor, the cursor for
+	 * {@code rset} must be set. The constructor will use the data from the record which the cursor
+	 * points to.
+	 * 
+	 * @param rset The result set
+	 * @throws SQLException
+	 */
+	Road(ResultSet rset) throws SQLException {
+		this.cid = rset.getInt("CID");
+		this.tabcd = rset.getInt("TABCD");
+		this.lcd = rset.getInt("LCD");
+		this.category = LocationClass.forCode(rset.getString("CLASS"));
+		this.tcd = rset.getInt("TCD");
+		this.stcd = rset.getInt("STCD");
+		this.roadNumber = rset.getString("ROADNUMBER");
+		int rnid = rset.getInt("RNID");
+		if (!rset.wasNull()) {
+			this.rnid = rnid;
 			this.roadName = TMC.getName(this.cid, this.rnid);
 		}
-		if ((fields.containsKey("N1ID")) && (comp.length > fields.get("N1ID")) && (!"".equals(comp[fields.get("N1ID")]))) {
-			this.n1id = Integer.parseInt(comp[fields.get("N1ID")]);
+		int n1id = rset.getInt("N1ID");
+		if (!rset.wasNull()) {
+			this.n1id = n1id;
 			this.name1 = TMC.getName(this.cid, this.n1id);
 		}
-		if ((fields.containsKey("N2ID")) && (comp.length > fields.get("N2ID")) && (!"".equals(comp[fields.get("N2ID")]))) {
-			this.n2id = Integer.parseInt(comp[fields.get("N2ID")]);
+		int n2id = rset.getInt("N2ID");
+		if (!rset.wasNull()) {
+			this.n2id = n2id;
 			this.name2 = TMC.getName(this.cid, this.n2id);
 		}
-		if ((fields.containsKey("POL_LCD")) && (comp.length > fields.get("POL_LCD")) && (!"".equals(comp[fields.get("POL_LCD")]))) {
-			this.polLcd = Integer.parseInt(comp[fields.get("POL_LCD")]);
+		int polLcd = rset.getInt("POL_LCD");
+		if (!rset.wasNull()) {
+			this.polLcd = polLcd;
 			this.area = TMC.getArea(this.cid, this.tabcd, this.polLcd);
 		}
-		if ((fields.containsKey("PES_LEV")) && (comp.length > fields.get("PES_LEV")) && (!"".equals(comp[fields.get("PES_LEV")])))
-			this.pesLev = Integer.parseInt(comp[fields.get("PES_LEV")]);
+		this.pesLev = rset.getInt("PES_LEV");
 	}
 	
 	@Override

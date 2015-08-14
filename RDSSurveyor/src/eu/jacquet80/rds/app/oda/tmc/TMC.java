@@ -5,21 +5,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 public class TMC {
-	// TODO index, primary key
+	// TODO index, primary key, unique/not null constraints
 	private static final String[] initStmts = {
 		// 1 - Countries - COUNTRIES.DAT;
 		"create table if not exists Countries(CID integer, ECC varchar(2), CCD varchar(1), CNAME varchar(50));",
@@ -128,15 +125,6 @@ public class TMC {
 		return comp;
 	}
 	
-	static Map<String, Integer> getFieldsOld(String line) {
-		Map<String, Integer> fields = new HashMap<String, Integer>();
-		String[] comp = getFields(line);
-		for (int i = 0; i < comp.length; i++) {
-			fields.put(comp[i], i);
-		}
-		return fields;
-	}
-
 	
 	/**
 	 * @brief Returns the current database URL.
@@ -208,15 +196,64 @@ public class TMC {
 	private static Map<String, Country> COUNTRIES = new HashMap<String, Country>();
 
 	public static Country getCountry(String cc, int ltn) {
-		return COUNTRIES.get("ccd=" + cc + ";tabcd=" + ltn);
+		Country ret = COUNTRIES.get("ccd=" + cc + ";tabcd=" + ltn);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Countries where CCD = ? and CID in (select CID from LocationDataSets where TABCD = ?);");
+				stmt.setString(1, cc);
+				stmt.setInt(2, ltn);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					Country country = new Country(rset);
+					putCountry(cc, ltn, country);
+					return country;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static Country getCountry(int cid) {
-		return COUNTRIES.get("cid=" + cid);
+		Country ret = COUNTRIES.get("cid=" + cid);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Countries where CID = ?");
+				stmt.setInt(1, cid);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					Country country = new Country(rset);
+					putCountry(cid, country);
+					return country;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static Country getCountry(String ecc) {
-		return COUNTRIES.get("ecc=" + ecc);
+		Country ret = COUNTRIES.get("ecc=" + ecc);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Countries where ECC = ?");
+				stmt.setString(1, ecc);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					Country country = new Country(rset);
+					putCountry(ecc, country);
+					return country;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putCountry(String cc, int ltn, Country country) {
@@ -234,7 +271,24 @@ public class TMC {
 	private static Map<String, LocationDataset> LOCATION_DATASETS = new HashMap<String, LocationDataset>();
 
 	public static LocationDataset getLocationDataset(int cid, int tabcd) {
-		return LOCATION_DATASETS.get(cid + ";" + tabcd);
+		LocationDataset ret = LOCATION_DATASETS.get(cid + ";" + tabcd);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from LocationDataSets where CID = ? AND TABCD = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					LocationDataset lds = new LocationDataset(rset);
+					putLocationDataset(cid, tabcd, lds);
+					return lds;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putLocationDataset(int cid, int tabcd, LocationDataset locationDataset) {
@@ -244,11 +298,46 @@ public class TMC {
 	private static Map<String, TMCName> NAMES = new HashMap<String, TMCName>();
 
 	public static TMCName getName(int cid, int nid) {
-		return NAMES.get(cid + ";" + nid);
+		TMCName ret = NAMES.get(cid + ";" + nid);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Names where CID = ? AND NID = ? ORDER BY LID");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, nid);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					TMCName name = new TMCName(rset);
+					putName(cid, nid, name);
+					return name;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 
 	public static TMCName getName(int cid, int lid, int nid) {
-		return NAMES.get(cid + ";" + lid + ";" + nid);
+		TMCName ret = NAMES.get(cid + ";" + lid + ";" + nid);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Names where CID = ? AND LID = ? AND NID = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, lid);
+				stmt.setInt(3, nid);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					TMCName name = new TMCName(rset);
+					putName(cid, lid, nid, name);
+					return name;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putName(int cid, int nid, TMCName name) {
@@ -262,14 +351,27 @@ public class TMC {
 	private static Map<String, TMCLocation> LOCATIONS = new HashMap<String, TMCLocation>();
 
 	public static TMCLocation getLocation(int cid, int tabcd, int lcd) {
-		return LOCATIONS.get(cid + ";" + tabcd + ";" + lcd);
+		TMCLocation ret = LOCATIONS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null) {
+			ret = getArea(cid, tabcd, lcd);
+			if (ret == null)
+				ret = getRoad(cid, tabcd, lcd);
+			if (ret == null)
+				ret = getSegment(cid, tabcd, lcd);
+			if (ret == null)
+				ret = getPoint(cid, tabcd, lcd);
+			if (ret != null)
+				putLocation(cid, tabcd, lcd, ret);
+		}
+		return ret;
 	}
 	
 	public static TMCLocation getLocation(String cc, int tabcd, int lcd) {
 		Country country = getCountry(cc, tabcd);
 		if (country == null)
 			return null;
-		return LOCATIONS.get(country.cid + ";" + tabcd + ";" + lcd);
+		TMCLocation ret = getLocation(country.cid, tabcd, lcd);
+		return ret;
 	}
 	
 	public static void putLocation(int cid, int tabcd, int lcd, TMCLocation location) {
@@ -279,7 +381,36 @@ public class TMC {
 	private static Map<String, TMCArea> AREAS = new HashMap<String, TMCArea>();
 
 	public static TMCArea getArea(int cid, int tabcd, int lcd) {
-		return AREAS.get(cid + ";" + tabcd + ";" + lcd);
+		TMCArea ret = AREAS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from AdministrativeAreas where CID = ? AND TABCD = ? AND LCD = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					TMCArea area = new TMCArea(rset);
+					putArea(cid, tabcd, lcd, area);
+					return area;
+				} else {
+					stmt = dbConnection.prepareStatement("select * from OtherAreas where CID = ? AND TABCD = ? AND LCD = ?");
+					stmt.setInt(1, cid);
+					stmt.setInt(2, tabcd);
+					stmt.setInt(3, lcd);
+					rset = stmt.executeQuery();
+					if (rset.next()) {
+						TMCArea area = new TMCArea(rset);
+						putArea(cid, tabcd, lcd, area);
+						return area;
+					} else
+						return null;
+				}
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putArea(int cid, int tabcd, int lcd, TMCArea area) {
@@ -289,7 +420,25 @@ public class TMC {
 	private static Map<String, Road> ROADS = new HashMap<String, Road>();
 
 	public static Road getRoad(int cid, int tabcd, int lcd) {
-		return ROADS.get(cid + ";" + tabcd + ";" + lcd);
+		Road ret = ROADS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Roads where CID = ? AND TABCD = ? AND LCD = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					Road road = new Road(rset);
+					putRoad(cid, tabcd, lcd, road);
+					return road;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putRoad(int cid, int tabcd, int lcd, Road road) {
@@ -299,7 +448,34 @@ public class TMC {
 	private static Map<String, Segment> SEGMENTS = new HashMap<String, Segment>();
 
 	public static Segment getSegment(int cid, int tabcd, int lcd) {
-		return SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
+		Segment ret = SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Segments where CID = ? AND TABCD = ? AND LCD = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					stmt = dbConnection.prepareStatement("select * from Soffsets where CID = ? AND TABCD = ? AND LCD = ?");
+					stmt.setInt(1, cid);
+					stmt.setInt(2, tabcd);
+					stmt.setInt(3, lcd);
+					ResultSet offsets = stmt.executeQuery();
+					Segment segment;
+					if (offsets.next())
+						segment = new Segment(rset, offsets);
+					else
+						segment = new Segment(rset, null);
+					putSegment(cid, tabcd, lcd, segment);
+					return segment;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putSegment(int cid, int tabcd, int lcd, Segment segment) {
@@ -309,7 +485,34 @@ public class TMC {
 	private static Map<String, TMCPoint> POINTS = new HashMap<String, TMCPoint>();
 
 	public static TMCPoint getPoint(int cid, int tabcd, int lcd) {
-		return POINTS.get(cid + ";" + tabcd + ";" + lcd);
+		TMCPoint ret = POINTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null) 
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Points where CID = ? AND TABCD = ? AND LCD = ?");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				ResultSet rset = stmt.executeQuery();
+				TMCPoint point;
+				if (rset.next()) {
+					stmt = dbConnection.prepareStatement("select * from Poffsets where CID = ? AND TABCD = ? AND LCD = ?");
+					stmt.setInt(1, cid);
+					stmt.setInt(2, tabcd);
+					stmt.setInt(3, lcd);
+					ResultSet offsets = stmt.executeQuery();
+					if (offsets.next())
+						point = new TMCPoint(rset, offsets);
+					else
+						point = new TMCPoint(rset, null);
+					putPoint(cid, tabcd, lcd, point);
+					return point;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
 	}
 	
 	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
@@ -337,53 +540,14 @@ public class TMC {
 
 	public static void readLocationTablesFromDir(File path) {
 		File file;
-		Map<String, Integer> fields = new HashMap<String, Integer>();
 		
 		// 1 - COUNTRIES.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "COUNTRIES.DAT");
-		if (file.exists()) {
-			importTable("Countries", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						Country country = new Country(line, fields);
-						if (!"".equals(country.ecc))
-							putCountry(country.ecc, country);
-						putCountry(country.cid, country);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Countries", file);
 
 		// 2 - LOCATIONDATASETS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
-		if (file.exists()) {
-			importTable("LocationDataSets", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						LocationDataset ds = new LocationDataset(line, fields);
-						putLocationDataset(ds.cid, ds.tabcd, ds);
-
-						// Add entry to COUNTRIES so the country can be found using CC + LTN
-						Country country = getCountry(ds.cid);
-						if (country != null) {
-							putCountry(country.ccd, ds.tabcd, country);
-						}
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("LocationDataSets", file);
 		
 		// 3 - LOCATIONCODES.DAT; skipped for now
 		// 4 - CLASSES.DAT; skipped for now
@@ -394,26 +558,7 @@ public class TMC {
 
 		// 9 - NAMES.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "NAMES.DAT");
-		if (file.exists()) {
-			importTable("Names", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						TMCName name = new TMCName(line, fields);
-						putName(name.cid, name.lid, name.nid, name);
-
-						// add the first name found as the default name (which can be found without a LID)
-						if (getName(name.cid, name.nid) == null)
-							putName(name.cid, name.nid, name);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Names", file);
 		
 		// 10 - NAMETRANSLATIONS.DAT; skipped for now
 		// 11 - SUBTYPETRANSLATIONS.DAT; skipped for now
@@ -421,149 +566,35 @@ public class TMC {
 
 		// 13 - ADMINISTRATIVEAREA.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "ADMINISTRATIVEAREA.DAT");
-		if (file.exists()) {
-			importTable("AdministrativeAreas", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						TMCArea area = new TMCArea(line, fields);
-						putArea(area.cid, area.tabcd, area.lcd, area);
-						putLocation(area.cid, area.tabcd, area.lcd, area);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("AdministrativeAreas", file);
 
 		// 14 - OTHERAREAS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "OTHERAREAS.DAT");
-		if (file.exists()) {
-			importTable("OtherAreas", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						TMCArea area = new TMCArea(line, fields);
-						putArea(area.cid, area.tabcd, area.lcd, area);
-						putLocation(area.cid, area.tabcd, area.lcd, area);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("OtherAreas", file);
 
 		// 15 - ROADS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "ROADS.DAT");
-		if (file.exists()) {
-			importTable("Roads", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						Road road = new Road(line, fields);
-						putRoad(road.cid, road.tabcd, road.lcd, road);
-						putLocation(road.cid, road.tabcd, road.lcd, road);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Roads", file);
 		
 		// 16 - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
 
 		// 17 - SEGMENTS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "SEGMENTS.DAT");
-		if (file.exists()) {
-			importTable("Segments", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						Segment segment = new Segment(line, fields);
-						putSegment(segment.cid, segment.tabcd, segment.lcd, segment);
-						putLocation(segment.cid, segment.tabcd, segment.lcd, segment);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Segments", file);
 
 		// 18 - SOFFSETS.DAT
 		file = new File(path.getAbsolutePath() + File.separator + "SOFFSETS.DAT");
-		if (file.exists()) {
-			importTable("Soffsets", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						TMCOffset offset = new TMCOffset(line, fields);
-						Segment segment = getSegment(offset.cid, offset.tabcd, offset.lcd);
-						if (segment != null)
-							segment.setOffset(offset);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Soffsets", file);
 		
 		// 19 - SEG_HAS_ERNO.DAT; skipped for now
 
 		// 20 - POINTS.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "POINTS.DAT");
-		if (file.exists()) {
-			importTable("Points", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-					if (line.length() > 0) {
-						TMCPoint point = new TMCPoint(line, fields);
-						putPoint(point.cid, point.tabcd, point.lcd, point);
-						putLocation(point.cid, point.tabcd, point.lcd, point);
-					}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Points", file);
 		
 		// 21 - POFFSETS.DAT
 		file = new File(path.getAbsolutePath() + File.separator + "POFFSETS.DAT");
-		if (file.exists()) {
-			importTable("Poffsets", file);
-			try {
-				BufferedReader br = openLTFile(file);
-				String line = br.readLine();
-				fields = getFieldsOld(line);
-				while((line = br.readLine()) != null)
-				if (line.length() > 0) {
-					TMCOffset offset = new TMCOffset(line, fields);
-					TMCPoint point = getPoint(offset.cid, offset.tabcd, offset.lcd);
-					if (point != null)
-						point.setOffset(offset);
-				}
-			} catch (IOException e) {
-				e.printStackTrace(System.err);
-				System.exit(1);
-			}
-		}
+		importTable("Poffsets", file);
 		
 		// 22 - INTERSECTIONS.DAT; skipped for now
 	}
