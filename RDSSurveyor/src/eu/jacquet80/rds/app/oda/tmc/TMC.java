@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class TMC {
-	// TODO index, primary key, unique/not null constraints
+	// TODO primary key, unique/not null constraints
 	private static final String[] initStmts = {
 		// 1 - Countries - COUNTRIES.DAT;
 		"create table if not exists Countries(CID integer, ECC varchar(2), CCD varchar(1), CNAME varchar(50));",
@@ -35,7 +35,7 @@ public class TMC {
 		// 5 - Types - TYPES.DAT; skipped for now
 		// 6 - Subtypes - SUBTYPES.DAT; skipped for now
 		// 7 - Languages - LANGUAGES.DAT; skipped for now
-		// 8 - EuroRoadNo - EUROROADNO-DAT; skipped for now;
+		// 8 - EuroRoadNo - EUROROADNO.DAT; skipped for now;
 		// 9 - Names - NAMES.DAT;
 		"create table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100), NCOMMENT varchar(100));",
 		"drop index if exists Names_CID_LID_NID_idx;",
@@ -88,13 +88,7 @@ public class TMC {
 	/**
 	 * @brief Opens a location table file and retrieves its fields.
 	 * 
-	 * This method opens a location table in MFF exchange format and analyzes its first line for
-	 * field names. The map passed as {@code fields} will receive an entry with the field names as
-	 * keys and their numeric indices (the first field is referred to as zero). Existing entries in
-	 * the map will be cleared. 
-	 * 
 	 * @param file The location table file to open.
-	 * @param fields The map which will receive field indices.
 	 * @return A {@code BufferedReader} from which data can be read. The next call to its
 	 * {@code read()} method will retrieve the first line of data.
 	 * @throws IOException
