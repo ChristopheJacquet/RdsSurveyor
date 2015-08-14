@@ -147,9 +147,7 @@ public class TMCPoint extends TMCLocation {
 		if (offsets != null)
 			try {
 				this.negOffLcd = offsets.getInt("NEG_OFF_LCD");
-				//this.negOffset = TMC.getPoint(this.cid, this.tabcd, this.negOffLcd);
 				this.posOffLcd = offsets.getInt("POS_OFF_LCD");
-				//this.posOffset = TMC.getPoint(this.cid, this.tabcd, this.posOffLcd);
 			} catch (SQLException e) {
 				// NOP
 			}
@@ -270,13 +268,6 @@ public class TMCPoint extends TMCLocation {
 		return ret;
 	}
 
-	public void setOffset(TMCOffset offset) {
-		this.negOffLcd = offset.negOffLcd;
-		this.negOffset = TMC.getPoint(this.cid, this.tabcd, this.negOffLcd);
-		this.posOffLcd = offset.posOffLcd;
-		this.posOffset = TMC.getPoint(this.cid, this.tabcd, this.posOffLcd);
-	}
-	
 	@Override
 	public String toString() {
 		StringBuilder res = new StringBuilder(super.toString());
