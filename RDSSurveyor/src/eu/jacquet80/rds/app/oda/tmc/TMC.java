@@ -200,6 +200,8 @@ public class TMC {
 				if (rset.next()) {
 					Country country = new Country(rset);
 					putCountry(cc, ltn, country);
+					putCountry(country.cid, country);
+					putCountry(country.ecc, country);
 					return country;
 				} else
 					return null;
@@ -220,6 +222,7 @@ public class TMC {
 				if (rset.next()) {
 					Country country = new Country(rset);
 					putCountry(cid, country);
+					putCountry(country.ecc, country);
 					return country;
 				} else
 					return null;
@@ -240,6 +243,7 @@ public class TMC {
 				if (rset.next()) {
 					Country country = new Country(rset);
 					putCountry(ecc, country);
+					putCountry(country.cid, country);
 					return country;
 				} else
 					return null;
@@ -300,8 +304,11 @@ public class TMC {
 				stmt.setInt(2, nid);
 				ResultSet rset = stmt.executeQuery();
 				if (rset.next()) {
-					TMCName name = new TMCName(rset);
+					TMCName name = getName(rset.getInt("CID"), rset.getInt("LID"), rset.getInt("NID"));
+					if (name == null)
+						name = new TMCName(rset);
 					putName(cid, nid, name);
+					putName(cid, name.lid, nid, name);
 					return name;
 				} else
 					return null;
@@ -386,6 +393,7 @@ public class TMC {
 				if (rset.next()) {
 					TMCArea area = new TMCArea(rset);
 					putArea(cid, tabcd, lcd, area);
+					putLocation(cid, tabcd, lcd, area);
 					return area;
 				} else {
 					stmt = dbConnection.prepareStatement("select * from OtherAreas where CID = ? AND TABCD = ? AND LCD = ?");
@@ -396,6 +404,7 @@ public class TMC {
 					if (rset.next()) {
 						TMCArea area = new TMCArea(rset);
 						putArea(cid, tabcd, lcd, area);
+						putLocation(cid, tabcd, lcd, area);
 						return area;
 					} else
 						return null;
@@ -425,6 +434,7 @@ public class TMC {
 				if (rset.next()) {
 					Road road = new Road(rset);
 					putRoad(cid, tabcd, lcd, road);
+					putLocation(cid, tabcd, lcd, road);
 					return road;
 				} else
 					return null;
@@ -462,6 +472,7 @@ public class TMC {
 					else
 						segment = new Segment(rset, null);
 					putSegment(cid, tabcd, lcd, segment);
+					putLocation(cid, tabcd, lcd, segment);
 					return segment;
 				} else
 					return null;
@@ -499,6 +510,7 @@ public class TMC {
 					else
 						point = new TMCPoint(rset, null);
 					putPoint(cid, tabcd, lcd, point);
+					putLocation(cid, tabcd, lcd, point);
 					return point;
 				} else
 					return null;
