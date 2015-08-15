@@ -28,6 +28,8 @@ public class TMC {
 		"create cached table if not exists LocationDataSets(CID integer, TABCD integer, DCOMMENT varchar(100), VERSION varchar(7), VERSIONDESCRIPTION varchar(100), unique(CID, TABCD));",
 		"drop index if exists LocationDataSets_CID_TABCD_idx;",
 		"create index LocationDataSets_CID_TABCD_idx on LocationDataSets (CID, TABCD);",
+		"drop trigger if exists LocationDataSets_after_delete_trigger;",
+		"create trigger LocationDataSets_after_delete_trigger after delete on LocationDataSets delete from Countries where CID not in (select CID from LocationDataSets);",
 		// 3 - Locationcodes - LOCATIONCODES.DAT; skipped for now
 		// 4 - Classes - CLASSES.DAT; skipped for now
 		// 5 - Types - TYPES.DAT; skipped for now
@@ -37,7 +39,7 @@ public class TMC {
 		// 9 - Names - NAMES.DAT;
 		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100) not null, NCOMMENT varchar(100), unique(CID, NID), foreign key(CID) references Countries(CID) on delete cascade);",
 		"drop index if exists Names_CID_NID_LID_idx;",
-		"create index Names_CID_LID_NID_idx on Names (CID, NID, LID);",
+		"create index Names_CID_NID_LID_idx on Names (CID, NID, LID);",
 		// 10 - NameTranslations - NAMETRANSLATIONS.DAT; skipped for now
 		// 11 - SubtypeTranslations - SUBTYPETRANSLATIONS.DAT; skipped for now
 		// 12 - ERNo_belongs_to_country - ERNO_BELONGS_TO_CO.DAT; skipped for now
