@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -98,6 +99,21 @@ public class TMC {
 	 */
 	static BufferedReader openLTFile(File file) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+		/*
+		 * According to the original TMC spec, encoding for the LT is ISO-8859-1. However, by now
+		 * TISA has certified location tables in UTF-8 encoding. Examples are Switzerland, Italy
+		 * and Slovakia (all files), as well as Sweden (NAMES only). Hence we try to probe for the
+		 * encoding actually used and open the file accordingly.
+		 */
+		try {
+			String line = br.readLine();
+			if (line.codePointAt(0) == 0xfeff)
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")));
+			else
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charset.forName("ISO-8859-1")));
+		} catch (Exception e) {
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+		}
 		return br;
 	}
 	
