@@ -12,6 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -58,7 +60,7 @@ public class TMC {
 		"create index Roads_CID_TABCD_LCD_idx on Roads (CID, TABCD, LCD);",
 		// 16 - Road_network_level_types - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
 		// 17 - Segments - SEGMENTS.DAT;
-		"create cached table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD), unique(CID, TABCD, LCD));",
+		"create cached table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
 		"drop index if exists Segments_CID_TABCD_LCD_idx;",
 		"create index Segments_CID_TABCD_LCD_idx on Segments (CID, TABCD, LCD);",
 		// 18 - Soffsets - SOFFSETS.DAT
@@ -565,9 +567,154 @@ public class TMC {
 			setDbUrl(url);
 		}
 	}
+	
+	/**
+	 * @brief Compares two version strings and determines which one is newer.
+	 * 
+	 * String comparison is done by breaking down both strings into groups of numeric and non-numeric
+	 * characters and comparing group by group, starting with the first. When the two groups are
+	 * equal, the following groups from each string are compared. The following rules apply:
+	 * <ul>
+	 * <li>{@code null} is less than a string.</li>
+	 * <li>Two numeric groups are compared as numbers.</li>
+	 * <li>If at least one of the groups is non-numeric, they are compared as strings.</li>
+	 * <li>Empty groups are considered less than non-empty groups.</li>
+	 * </ul>
+	 * 
+	 * Note that dots are treated as non-numeric groups, not as decimal separators. Thus
+	 * {@code 42.10 &gt; 42.9}.
+	 * 
+	 * @param v1
+	 * @param v2
+	 * @return The result of the comparison {@code v1 >= v2}.
+	 */
+	public static boolean isSameOrNewerVersion(String v1, String v2) {
+		if (v1 == null)
+			return (v2 == null);
+		ArrayList<String> arr1 = new ArrayList<String>();
+		ArrayList<String> arr2 = new ArrayList<String>();
+		for (int i = 0; i < v1.length(); i++) {
+			if ((i == 0) || (Character.isDigit(v1.charAt(i)) != Character.isDigit(v1.charAt(i - 1))))
+				arr1.add("");
+			arr1.set(arr1.size() - 1, arr1.get(arr1.size() - 1) + v1.charAt(i));
+		}
+		for (int i = 0; i < v2.length(); i++) {
+			if ((i == 0) || (Character.isDigit(v2.charAt(i)) != Character.isDigit(v2.charAt(i - 1))))
+				arr2.add("");
+			arr2.set(arr2.size() - 1, arr2.get(arr2.size() - 1) + v2.charAt(i));
+		}
+		for (int i = 0; i <= arr1.size(); i++) {
+			boolean numComp; // whether to do a numeric comparison
+			int cmpres;      // + for arr1[i] > arr2[i], - for arr1[i] < arr2[i], 0 for arr1[i] == arr2[i]  
+			if ((i < arr1.size()) && (i >= arr2.size()))
+				return true;
+			if ((i == arr1.size()) && (i == arr2.size()))
+				return true;
+			if ((i == arr1.size()) && (i < arr2.size()))
+				return false;
+			if (arr1.get(i).isEmpty())
+				return arr2.get(i).isEmpty();
+			if (arr2.get(i).isEmpty())
+				return true;
+			try {
+				numComp = (((Integer.parseInt(arr1.get(i)) != 0) || (arr1.get(i).charAt(0) == '0'))
+					&& ((Integer.parseInt(arr2.get(i)) != 0) || (arr2.get(i).charAt(0) == '0')));
+			} catch (NumberFormatException e) {
+				numComp = false;
+			}
+			if (numComp)
+				cmpres = Integer.parseInt(arr1.get(i)) - Integer.parseInt(arr2.get(i));
+			else
+				cmpres = arr1.get(i).compareTo(arr2.get(i));
+			if (cmpres > 0)
+				return true;
+			else if (cmpres < 0)
+				return false;
+		}
+		// This should never happen, but Eclipse will nag about a missing return value if I omit the last return statement.
+		System.err.println(String.format("wtf? Comparison of %s and %s produced no result, assuming true",
+				Arrays.toString(arr1.toArray()),
+				Arrays.toString(arr2.toArray())));
+		return true;
+	}
+	
+	/**
+	 * @brief Determines if the location data set at {@code path} needs to be imported in the database,
+	 * and removes older versions of the data set.
+	 * 
+	 * A location data set will be imported into the database if the database does not yet contain a
+	 * data set with the same CID and TABCD, or if it contains an older version. In the latter case,
+	 * this method will delete all data associated with the older version.
+	 * 
+	 * If the folder at {@code path} does not hold a valid location data set (specifically, if its
+	 * {@code LOCATIONDATASETS.DAT} file is not found), the result will be {@code false}. 
+	 * 
+	 * @param path The path to the folder which holds the files of the new data set
+	 * @return {@code true} if an import is needed, {@code false} if not.
+	 */
+	public static boolean prepareDataSetUpdate(File path) {
+		boolean ret = false;
+		String version = null;
+		File file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
+		PreparedStatement stmt = null;
+		int cid = -1;
+		int tabcd = -1;
+		if (file.exists()) {
+			try {
+				BufferedReader br = openLTFile(file);
+				String line = br.readLine();
+				String[] fields = getFields(line);
+				line = br.readLine();
+				String[] values = TMC.colonPattern.split(line);
+				for (int i = 0; i < fields.length; i++) {
+					if (fields[i].equals("CID"))
+						cid = Integer.parseInt(values[i]);
+					else if (fields[i].equals("TABCD"))
+						tabcd = Integer.parseInt(values[i]);
+					else if (fields[i].equals("VERSION"))
+						version = values[i];
+				}
+				if ((cid == -1) || (tabcd == -1))
+					throw new IllegalArgumentException();
+				stmt = dbConnection.prepareStatement("select * from LocationDataSets where CID = ? and TABCD = ?;");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				ResultSet rset = stmt.executeQuery();
+				if (!rset.next()) {
+					System.out.println(String.format("Location data set in %s is not in DB yet, importing", path.getAbsolutePath()));
+					ret = true;
+				} else if (isSameOrNewerVersion(version, rset.getString("VERSION"))) {
+					System.out.println(String.format("Location data set in %s is newer than DB or same age, importing", path.getAbsolutePath()));
+					ret = true;
+				} else {
+					System.out.println(String.format("Location data set in %s is older than DB, skipping", path.getAbsolutePath()));
+					return false;
+				}
+
+				if (ret) {
+					stmt = dbConnection.prepareStatement("delete from LocationDataSets where CID = ? and TABCD = ?;");
+					stmt.setInt(1, cid);
+					stmt.setInt(2, tabcd);
+					stmt.executeUpdate();
+					dbConnection.commit();
+				}
+				return ret;
+			} catch (Exception e) {
+				System.out.println(String.format("File %s is invalid, skipping", file.getAbsolutePath()));
+				return false;
+			}
+		} else {
+			System.out.println(String.format("No LOCATIONDATASETS.DAT in %s, skipping", path.getAbsolutePath()));
+			return false;
+		}
+	}
 
 	public static void readLocationTablesFromDir(File path) {
 		File file;
+		
+		if (!prepareDataSetUpdate(path)) {
+			return;
+		}
 		
 		// 1 - COUNTRIES.DAT;
 		file = new File(path.getAbsolutePath() + File.separator + "COUNTRIES.DAT");
@@ -661,7 +808,7 @@ public class TMC {
 	static void importTable(String table, File file) {
 		PreparedStatement stmt = null;
 		Boolean hasConstraintViolations = false;
-		System.out.println(String.format("Processing table %s from file %s", table, file.getAbsolutePath())); // TODO remove
+		System.out.println(String.format("Processing table %s from file %s", table, file.getAbsolutePath()));
 		if (file.exists()) {
 			try {
 				BufferedReader br = openLTFile(file);
@@ -736,7 +883,7 @@ public class TMC {
 				return;
 			}
 			if (hasConstraintViolations)
-				System.err.println("Some records were skipped due to integrity constraint violations.");
+				System.err.println(String.format("Some records from %s were skipped due to integrity constraint violations.", file.getAbsolutePath()));
 		}
 	}
 }
