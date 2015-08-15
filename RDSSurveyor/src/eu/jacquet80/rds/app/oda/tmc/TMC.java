@@ -10,6 +10,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.Map;
@@ -638,6 +639,7 @@ public class TMC {
 	 */
 	static void importTable(String table, File file) {
 		PreparedStatement stmt = null;
+		Boolean hasConstraintViolations = false;
 		System.out.println(String.format("Processing table %s from file %s", table, file.getAbsolutePath())); // TODO remove
 		if (file.exists()) {
 			try {
@@ -695,7 +697,12 @@ public class TMC {
 										stmt.setNull(i + 1, types[i]);
 								}
 						}
-						stmt.executeUpdate();
+						
+						try {
+							stmt.executeUpdate();
+						} catch (SQLIntegrityConstraintViolationException e) {
+							hasConstraintViolations = true;
+						}
 					}
 				dbConnection.commit();
 			} catch (IOException e) {
@@ -707,6 +714,8 @@ public class TMC {
 				e.printStackTrace(System.err);
 				return;
 			}
+			if (hasConstraintViolations)
+				System.err.println("Some records were skipped due to integrity constraint violations.");
 		}
 	}
 }
