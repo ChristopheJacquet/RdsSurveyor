@@ -19,7 +19,7 @@ public class TMC {
 	// TODO primary key, unique/not null constraints
 	private static final String[] initStmts = {
 		// 1 - Countries - COUNTRIES.DAT;
-		"create table if not exists Countries(CID integer, ECC varchar(2), CCD varchar(1), CNAME varchar(50));",
+		"create cached table if not exists Countries(CID integer, ECC varchar(2), CCD varchar(1), CNAME varchar(50));",
 		"drop index if exists Countries_ECC_idx;",
 		"drop index if exists Countries_CID_idx;",
 		"drop index if exists Countries_CCD_idx;",
@@ -27,7 +27,7 @@ public class TMC {
 		"create index Countries_CID_idx ON Countries (CID);",
 		"create index Countries_CCD_idx ON Countries (CCD);",
 		// 2 - LocationDataSets - LOCATIONDATASETS.DAT;
-		"create table if not exists LocationDataSets(CID integer, TABCD integer, DCOMMENT varchar(100), VERSION varchar(7), VERSIONDESCRIPTION varchar(100));",
+		"create cached table if not exists LocationDataSets(CID integer, TABCD integer, DCOMMENT varchar(100), VERSION varchar(7), VERSIONDESCRIPTION varchar(100));",
 		"drop index if exists LocationDataSets_CID_TABCD_idx;",
 		"create index LocationDataSets_CID_TABCD_idx on LocationDataSets (CID, TABCD);",
 		// 3 - Locationcodes - LOCATIONCODES.DAT; skipped for now
@@ -37,40 +37,40 @@ public class TMC {
 		// 7 - Languages - LANGUAGES.DAT; skipped for now
 		// 8 - EuroRoadNo - EUROROADNO.DAT; skipped for now;
 		// 9 - Names - NAMES.DAT;
-		"create table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100), NCOMMENT varchar(100));",
+		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100), NCOMMENT varchar(100));",
 		"drop index if exists Names_CID_LID_NID_idx;",
 		"create index Names_CID_LID_NID_idx on Names (CID, LID, NID);",
 		// 10 - NameTranslations - NAMETRANSLATIONS.DAT; skipped for now
 		// 11 - SubtypeTranslations - SUBTYPETRANSLATIONS.DAT; skipped for now
 		// 12 - ERNo_belongs_to_country - ERNO_BELONGS_TO_CO.DAT; skipped for now
 		// 13 - AdministrativeAreas - ADMINISTRATIVEAREA.DAT;
-		"create table if not exists AdministrativeAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, NID integer, POL_LCD integer);",
+		"create cached table if not exists AdministrativeAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, NID integer, POL_LCD integer);",
 		"drop index if exists AdministrativeAreas_CID_TABCD_LCD_idx;",
 		"create index AdministrativeAreas_CID_TABCD_LCD_idx on AdministrativeAreas (CID, TABCD, LCD);",
 		// 14 - OtherAreas - OTHERAREAS.DAT;
-		"create table if not exists OtherAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, NID integer, POL_LCD integer);",
+		"create cached table if not exists OtherAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, NID integer, POL_LCD integer);",
 		"drop index if exists OtherAreas_CID_TABCD_LCD_idx;",
 		"create index OtherAreas_CID_TABCD_LCD_idx on OtherAreas (CID, TABCD, LCD);",
 		// 15 - Roads - ROADS.DAT;
-		"create table if not exists Roads(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, PES_LEV integer, RDID integer);",
+		"create cached table if not exists Roads(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, PES_LEV integer, RDID integer);",
 		"drop index if exists Roads_CID_TABCD_LCD_idx;",
 		"create index Roads_CID_TABCD_LCD_idx on Roads (CID, TABCD, LCD);",
 		// 16 - Road_network_level_types - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
 		// 17 - Segments - SEGMENTS.DAT;
-		"create table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer);",
+		"create cached table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer);",
 		"drop index if exists Segments_CID_TABCD_LCD_idx;",
 		"create index Segments_CID_TABCD_LCD_idx on Segments (CID, TABCD, LCD);",
 		// 18 - Soffsets - SOFFSETS.DAT
-		"create table if not exists Soffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer);",
+		"create cached table if not exists Soffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer);",
 		"drop index if exists Soffsets_CID_TABCD_LCD_idx;",
 		"create index Soffsets_CID_TABCD_LCD_idx on Soffsets (CID, TABCD, LCD);",
 		// 19 - Seg_has_ERNo - SEG_HAS_ERNO.DAT; skipped for now
 		// 20 - Points - POINTS.DAT;
-		"create table if not exists Points(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, JUNCTIONNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, OTH_LCD integer, SEG_LCD integer, ROA_LCD integer, INPOS integer, INNEG integer, OUTPOS integer, OUTNEG integer, PRESENTPOS integer, PRESENTNEG integer, DIVERSIONPOS varchar(10), DIVERSIONNEG varchar(10), XCOORD decimal(8,5), YCOORD decimal(7,5), INTERRUPTSROAD integer, URBAN boolean, JNID integer);",
+		"create cached table if not exists Points(CID integer, TABCD integer, LCD integer, CLASS varchar(1), TCD integer, STCD integer, JUNCTIONNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, OTH_LCD integer, SEG_LCD integer, ROA_LCD integer, INPOS integer, INNEG integer, OUTPOS integer, OUTNEG integer, PRESENTPOS integer, PRESENTNEG integer, DIVERSIONPOS varchar(10), DIVERSIONNEG varchar(10), XCOORD decimal(8,5), YCOORD decimal(7,5), INTERRUPTSROAD integer, URBAN boolean, JNID integer);",
 		"drop index if exists Points_CID_TABCD_LCD_idx;",
 		"create index Points_CID_TABCD_LCD_idx on Points (CID, TABCD, LCD);",
 		// 21 - Poffsets - POFFSETS.DAT
-		"create table if not exists Poffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer);",
+		"create cached table if not exists Poffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer);",
 		"drop index if exists Poffsets_CID_TABCD_LCD_idx;",
 		"create index Poffsets_CID_TABCD_LCD_idx on Poffsets (CID, TABCD, LCD);"
 		// 22 - Intersections - INTERSECTIONS.DAT; skipped for now
