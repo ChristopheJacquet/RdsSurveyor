@@ -269,8 +269,8 @@ public class RDSSurveyor {
 			liveGroupInput = dialog.live;
 		}
 
-		if(reader == null) {
-			System.out.println("No source provided, aborting. A source must be provided.");
+		if ((reader == null) && (inLtPath == null)) {
+			System.out.println("A source or a set of TMC location tables must be provided. Aborting.");
 			System.exit(0);
 		}
 		
@@ -281,6 +281,8 @@ public class RDSSurveyor {
 			System.out.println("Processing TMC location tables...");
 			TMC.readLocationTables(new File(inLtPath));
 			System.out.println("Done processing TMC location tables.");
+			if (reader == null)
+				System.exit(0);
 		}
 		
 		// Create a decoder "shell"
