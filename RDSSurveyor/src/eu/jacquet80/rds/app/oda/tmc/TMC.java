@@ -136,7 +136,14 @@ public class TMC {
 	 * @param dbUrl the dbUrl to set
 	 */
 	public static void setDbUrl(String dbUrl) {
-		// TODO handle cases in which DB is already open (close current DB connection or prevent change)
+		if (dbConnection != null)
+			try {
+				if (!dbConnection.isClosed())
+					dbConnection.close();
+			} catch (Exception e) {
+				// NOP
+			}
+
 		TMC.dbUrl = dbUrl;
 		try {
 			dbConnection = DriverManager.getConnection(dbUrl);
@@ -543,6 +550,20 @@ public class TMC {
 		for (File file: path.listFiles())
 			if (file.isDirectory())
 				readLocationTablesFromDir(file);
+		
+		if (!dbUrl.startsWith("jdbc:hsqldb:mem:")) {
+			// if database is not an in-memory DB, close database to compact files on disk, then reopen it
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("shutdown compact;");
+				stmt.execute();
+				dbConnection.commit();
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return;
+			}	
+			String url = getDbUrl();
+			setDbUrl(url);
+		}
 	}
 
 	public static void readLocationTablesFromDir(File path) {
