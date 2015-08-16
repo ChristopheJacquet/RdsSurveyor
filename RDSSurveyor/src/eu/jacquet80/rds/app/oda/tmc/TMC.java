@@ -543,8 +543,11 @@ public class TMC {
 	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
 		POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
-
-	public static void readLocationTables(File path) {
+	
+	/**
+	 * @brief Initializes the database tables.
+	 */
+	private static void initDb() {
 		// read and execute SQL initialization script
 		for (String stmtSql: initStmts) {
 			try {
@@ -556,7 +559,14 @@ public class TMC {
 				return;
 			}	
 		}
+	}
 
+	/**
+	 * @brief Reads location data sets from the given path and its immediate subfolders.
+	 * @param path
+	 */
+	public static void readLocationTables(File path) {
+		initDb();
 		readLocationTablesFromDir(path);
 		for (File file: path.listFiles())
 			if (file.isDirectory())
@@ -718,6 +728,11 @@ public class TMC {
 		}
 	}
 
+	/**
+	 * @brief Reads a single location data set from the given path.
+	 * 
+	 * @param path The folder in which the files for the location data set are located.
+	 */
 	public static void readLocationTablesFromDir(File path) {
 		File file;
 		
