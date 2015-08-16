@@ -147,6 +147,9 @@ public class TMC {
 		try {
 			dbConnection = DriverManager.getConnection(dbUrl);
 			dbConnection.setAutoCommit(false);
+			// for an in-memory DB, create tables
+			if (isDbInMemory())
+				initDb();
 		} catch (SQLException e) {
 			dbUrl = null;
 			e.printStackTrace(System.err);
@@ -566,7 +569,10 @@ public class TMC {
 	 * @param path
 	 */
 	public static void readLocationTables(File path) {
-		initDb();
+		// create tables (unless it's an in-memory DB, for which we have already done this)
+		if (!isDbInMemory())
+			initDb();
+		
 		readLocationTablesFromDir(path);
 		for (File file: path.listFiles())
 			if (file.isDirectory())
