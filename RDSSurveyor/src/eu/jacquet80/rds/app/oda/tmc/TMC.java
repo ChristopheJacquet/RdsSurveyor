@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class TMC {
-	// TODO primary key, unique/not null constraints
 	private static final String[] initStmts = {
 		// 1 - Countries - COUNTRIES.DAT;
 		"create cached table if not exists Countries(CID integer primary key, ECC varchar(2), CCD varchar(1), CNAME varchar(50));",
@@ -29,9 +28,7 @@ public class TMC {
 		"create index Countries_ECC_idx ON Countries (ECC);",
 		"create index Countries_CCD_idx ON Countries (CCD);",
 		// 2 - LocationDataSets - LOCATIONDATASETS.DAT;
-		"create cached table if not exists LocationDataSets(CID integer, TABCD integer, DCOMMENT varchar(100), VERSION varchar(7), VERSIONDESCRIPTION varchar(100), unique(CID, TABCD));",
-		"drop index if exists LocationDataSets_CID_TABCD_idx;",
-		"create index LocationDataSets_CID_TABCD_idx on LocationDataSets (CID, TABCD);",
+		"create cached table if not exists LocationDataSets(CID integer, TABCD integer, DCOMMENT varchar(100), VERSION varchar(7), VERSIONDESCRIPTION varchar(100), primary key(CID, TABCD));",
 		"drop trigger if exists LocationDataSets_after_delete_trigger;",
 		"create trigger LocationDataSets_after_delete_trigger after delete on LocationDataSets delete from Countries where CID not in (select CID from LocationDataSets);",
 		// 3 - Locationcodes - LOCATIONCODES.DAT; skipped for now
@@ -41,42 +38,26 @@ public class TMC {
 		// 7 - Languages - LANGUAGES.DAT; skipped for now
 		// 8 - EuroRoadNo - EUROROADNO.DAT; skipped for now;
 		// 9 - Names - NAMES.DAT;
-		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100) not null, NCOMMENT varchar(100), unique(CID, NID), foreign key(CID) references Countries(CID) on delete cascade);",
-		"drop index if exists Names_CID_NID_LID_idx;",
-		"create index Names_CID_NID_LID_idx on Names (CID, NID, LID);",
+		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100) not null, NCOMMENT varchar(100), primary key(CID, NID), foreign key(CID) references Countries(CID) on delete cascade);",
 		// 10 - NameTranslations - NAMETRANSLATIONS.DAT; skipped for now
 		// 11 - SubtypeTranslations - SUBTYPETRANSLATIONS.DAT; skipped for now
 		// 12 - ERNo_belongs_to_country - ERNO_BELONGS_TO_CO.DAT; skipped for now
 		// 13 - AdministrativeAreas - ADMINISTRATIVEAREA.DAT;
-		"create cached table if not exists AdministrativeAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, NID integer, POL_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists AdministrativeAreas_CID_TABCD_LCD_idx;",
-		"create index AdministrativeAreas_CID_TABCD_LCD_idx on AdministrativeAreas (CID, TABCD, LCD);",
+		"create cached table if not exists AdministrativeAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, NID integer, POL_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 14 - OtherAreas - OTHERAREAS.DAT;
-		"create cached table if not exists OtherAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, NID integer, POL_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists OtherAreas_CID_TABCD_LCD_idx;",
-		"create index OtherAreas_CID_TABCD_LCD_idx on OtherAreas (CID, TABCD, LCD);",
+		"create cached table if not exists OtherAreas(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, NID integer, POL_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 15 - Roads - ROADS.DAT;
-		"create cached table if not exists Roads(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, PES_LEV integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists Roads_CID_TABCD_LCD_idx;",
-		"create index Roads_CID_TABCD_LCD_idx on Roads (CID, TABCD, LCD);",
+		"create cached table if not exists Roads(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, PES_LEV integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 16 - Road_network_level_types - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
 		// 17 - Segments - SEGMENTS.DAT;
-		"create cached table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists Segments_CID_TABCD_LCD_idx;",
-		"create index Segments_CID_TABCD_LCD_idx on Segments (CID, TABCD, LCD);",
+		"create cached table if not exists Segments(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, ROADNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, ROA_LCD integer, SEG_LCD integer, POL_LCD integer, RDID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 18 - Soffsets - SOFFSETS.DAT
-		"create cached table if not exists Soffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists Soffsets_CID_TABCD_LCD_idx;",
-		"create index Soffsets_CID_TABCD_LCD_idx on Soffsets (CID, TABCD, LCD);",
+		"create cached table if not exists Soffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 19 - Seg_has_ERNo - SEG_HAS_ERNO.DAT; skipped for now
 		// 20 - Points - POINTS.DAT;
-		"create cached table if not exists Points(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, JUNCTIONNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, OTH_LCD integer, SEG_LCD integer, ROA_LCD integer, INPOS integer, INNEG integer, OUTPOS integer, OUTNEG integer, PRESENTPOS integer, PRESENTNEG integer, DIVERSIONPOS varchar(10), DIVERSIONNEG varchar(10), XCOORD decimal(8,5), YCOORD decimal(7,5), INTERRUPTSROAD integer, URBAN boolean not null, JNID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists Points_CID_TABCD_LCD_idx;",
-		"create index Points_CID_TABCD_LCD_idx on Points (CID, TABCD, LCD);",
+		"create cached table if not exists Points(CID integer, TABCD integer, LCD integer, CLASS varchar(1) not null, TCD integer not null, STCD integer not null, JUNCTIONNUMBER varchar(10), RNID integer, N1ID integer, N2ID integer, POL_LCD integer, OTH_LCD integer, SEG_LCD integer, ROA_LCD integer, INPOS integer, INNEG integer, OUTPOS integer, OUTNEG integer, PRESENTPOS integer, PRESENTNEG integer, DIVERSIONPOS varchar(10), DIVERSIONNEG varchar(10), XCOORD decimal(8,5), YCOORD decimal(7,5), INTERRUPTSROAD integer, URBAN boolean not null, JNID integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 21 - Poffsets - POFFSETS.DAT
-		"create cached table if not exists Poffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, unique(CID, TABCD, LCD));",
-		"drop index if exists Poffsets_CID_TABCD_LCD_idx;",
-		"create index Poffsets_CID_TABCD_LCD_idx on Poffsets (CID, TABCD, LCD);"
+		"create cached table if not exists Poffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 22 - Intersections - INTERSECTIONS.DAT; skipped for now
 	};
 	private static String dbUrl = null;
