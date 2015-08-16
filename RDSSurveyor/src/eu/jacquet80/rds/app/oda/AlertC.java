@@ -26,18 +26,26 @@
 package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
-import java.text.Format;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventDurationType;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventNature;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
+import eu.jacquet80.rds.app.oda.tmc.TMCLocation;
+import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
@@ -54,6 +62,7 @@ public class AlertC extends ODA {
 	private String[] providerName = {"????", "????"};
 	
 	// basic parameters
+	private int cc = -1;			// country code (CC) from PID
 	private int ltn = -1;			// location table number
 	private int afi = -1;			// AF indicator
 	private int mgs = -1;			// message geographical scope
@@ -80,6 +89,10 @@ public class AlertC extends ODA {
 		
 		// in all cases, we need all blocks to proceed
 		if(!blocksOk[2] || !blocksOk[3]) return;
+		
+		// get CC so that we can decode locations
+		if (blocksOk[0])
+			cc = blocks[0] >> 12;
 		
 		if(type == 3 && version == 0) {
 			int var = (blocks[2]>>14) & 0x3;
@@ -118,6 +131,9 @@ public class AlertC extends ODA {
 			console.print("T=" + x4 + " ");
 			
 			if(x4 == 0) {
+				Date date = station.getRealTimeForStreamTime(time);
+				if (date == null)
+					date = new Date();
 				int single_group = (blocks[1] & 0x8)>>3;
 				if(single_group == 1) {
 					console.print("single-group: ");
@@ -128,7 +144,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone(), div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -156,7 +172,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, date, station.getTimeZone());
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -408,24 +424,59 @@ public class AlertC extends ODA {
 		}
 	}
 	
+	/**
+	 * @brief Represents a TMC message.
+	 * 
+	 * A TMC message is a single report about an event at a particular location. It contains one or
+	 * more event codes (description of "what"), a primary location and an optional secondary location
+	 * (description of "where").
+	 */
 	public static class Message {
 		// basic information
 		private final int direction;
+		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
+		/** The time at which the message was received. */
+		private Date date = null;
+		/** The time zone to be used for persistence times based on "midnight". */
+		private TimeZone timeZone;
+		/** The country code from RDS PI. */
+		private final int cc;
+		/** The Location Table Number (LTN). */
+		private final int ltn;
+		/** The raw location code. */
 		private final int location;
+		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
+		private final TMCLocation locationInfo;
+		/** Whether the default directionality of the message should be reversed. */
 		private boolean reversedDirectionality = false;
+		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 
+		private boolean reversedDurationType = false;
 		
-		private int duration = -1;		// 0- duration 
+		private int duration = 0;		// 0- duration (0 if not set)
 		private int startTime = -1;		// 7- start time
 		private int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
 
-		// urgency: that of 1st event?   // 1.0, 1.1
-		// directionality: that of 1st event?    // 1.2
-		private boolean dynamic = true;      // TODO default   // 1.3
+		/** Number of levels by which to increase or decrease default urgency. */
+		private int increasedUrgency = 0;
+		/** The urgency of the message. */
+		private EventUrgency urgency;
+		
+		/*
+		 * The TMC event which was followed by the duration.
+		 * 
+		 * Duration and expiration of a message is represented by a duration code. How this code
+		 * maps to actual times is governed by the event nature and duration type. The latter two
+		 * values are specific to an event and may differ between multiple events of a multi-event
+		 * message. In this case, the nature and duration type of the last event received before the
+		 * duration field apply (the last event may be the first group event).
+		 */
+		private AlertC.Event eventForDuration = null;
+		
 		private boolean spoken = false;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
 		
@@ -461,33 +512,69 @@ public class AlertC extends ODA {
 			}
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location) {
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for multi-group messages, which have no fixed fields for
+		 * diversion and duration. Instead, default values (duration 0, no diversion) are assumed
+		 * unless one of the optional fields in the subsequent messages of the group sets a
+		 * different value.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 */
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz) {
 			this.direction = direction;
 			this.extent = extent;
+			this.date = date;
+			this.timeZone = tz;
+			this.cc = cc;
+			this.ltn = ltn;
 			this.location = location;
+			this.locationInfo = TMC.getLocation(String.format("%X", cc), ltn, location);
 			addInformationBlock(eventCode);
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location);
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for single-group messages, which have fields for diversion and duration.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 * @param diversion
+		 * @param duration
+		 */
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, Date date, TimeZone tz, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, date, tz);
 			this.diversion = diversion;
 			this.duration = duration;
+			this.eventForDuration = this.currentInformationBlock.currentEvent;
 		}
 		
 		public void addField(int label, int value) {
 			switch(label) {
 			// duration
-			case 0: duration = value;
-			break;
+			case 0:
+				duration = value;
+				this.eventForDuration = this.currentInformationBlock.currentEvent;
+				break;
 			
 			// control code
 			case 1:
-				Event evt = this.informationBlocks.get(0).events.get(0);
 				switch(value) {
-				case 0: evt.urgency = evt.urgency.next(); break;
-				case 1: evt.urgency = evt.urgency.prev(); break;
+				case 0: increasedUrgency++; break;
+				case 1: increasedUrgency--; break;
 				case 2: reversedDirectionality = true; break;
-				case 3: dynamic = !dynamic; break;
+				case 3: reversedDurationType = true; break;
 				case 4: spoken = !spoken; break;
 				case 5: diversion = true; break;
 				case 6: extent += 8; break;			// extent == number of steps
@@ -560,16 +647,40 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				for(Event e : ib.events) {
 					this.bidirectional &= e.tmcEvent.bidirectional;
+					if (urgency == null)
+						urgency = e.urgency;
+					else
+						urgency = EventUrgency.max(urgency, e.urgency);
 				}
 			}
 			
 			if(reversedDirectionality) this.bidirectional = !this.bidirectional;
 			
+			if (increasedUrgency > 0)
+				for (int i = 0; i < increasedUrgency; i++)
+					urgency.next();
+			else if (increasedUrgency < 0)
+				for (int i = 0; i > increasedUrgency; i--)
+					urgency.prev();
+			
+			/*
+			 * TODO: what if we have a multi-event message with different duration types and no
+			 * duration set explicitly? As per the spec, duration would be assumed to be 0, which
+			 * means the event is expected to last for an unspecified time. Even then, persistence
+			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
+			 * we use? (Nature is not relevant for persistence.)
+			 */
+			if (eventForDuration == null)
+				eventForDuration = this.informationBlocks.get(0).events.get(0);
+			
+			if (reversedDurationType)
+				eventForDuration.invertDurationType(); 
+			
 			this.complete = true;
 		}
 		
 		public boolean overrides(Message m) {
-			return
+			return // FIXME: check cc and ltn
 				(location == m.location || location == 65535) &&
 				(direction == m.direction) &&
 				hasAnEventFromTheSameUpdateClassAs(m) &&
@@ -636,16 +747,70 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("Location: ").append(location);
+			StringBuilder res = new StringBuilder("");
+			if (locationInfo != null) {
+				String tmp = this.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				String name = this.getDisplayName();
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("\n");
+			}
+			res.append("CC: ").append(String.format("%X", cc));
+			res.append(", LTN: ").append(ltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append('\n');
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
+			res.append('\n');
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
+			}
+			if (locationInfo != null) {
+				res.append("-------------\n").append(locationInfo).append("\n");
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo) {
+					res.append("-------------\nExtent:\n").append(secondary);
+					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
+						res.append("\n");
+						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+						res.append("Link: http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord
+								+ "\n");
+					}
+				}
 			}
 			
 			return res.toString();
@@ -655,20 +820,264 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("<html>Location: ").append(location);
+			StringBuilder res = new StringBuilder("<html>");
+			if (locationInfo != null) {
+				String tmp = this.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				String name = this.getDisplayName();
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("<br/>");
+			}
+			res.append("CC: ").append(String.format("%X", cc));
+			res.append(", LTN: ").append(ltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append("<br/>");
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			res.append("<br/>");
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
 			}
+			if (locationInfo != null) {
+				res.append("<hr>").append(locationInfo.html());
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo) {
+					res.append("<hr>Extent:<br>").append(secondary.html());
+					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
+						res.append("<br>");
+						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+						res.append("<a href=\"http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord 
+								+ "\">");
+						res.append("http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ ((TMCPoint) secondary).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) secondary).xCoord 
+								+ "%3B" 
+								+ ((TMCPoint) locationInfo).yCoord 
+								+ "%2C" 
+								+ ((TMCPoint) locationInfo).xCoord);
+						res.append("</a>");
+					}
+				}
+			}
 			res.append("</html>");
 			
 			return res.toString();			
+		}
+		
+		/**
+		 * @brief Returns a name for the location which can be displayed to the user.
+		 * 
+		 * The display name, together with the road number (if any), identifies the location of the event.
+		 * For formatting of the display name, see
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCLocation#getDisplayName(TMCLocation, int)}.
+		 * 
+		 * @return A user-friendly string describing the location of the event, or {@code null} if
+		 * the location of the message could not be resolved.
+		 */
+		public String getDisplayName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			return locationInfo.getDisplayName(secondary, this.direction);
+		}
+		
+		/**
+		 * @brief Returns the time until which receivers should store the message.
+		 * 
+		 * Persistence is determined by three factors: the date and time at which the message was
+		 * last received, its duration type.
+		 * 
+		 * @return The date and time at which the message expires.
+		 */
+		public Date getPersistence() {
+			/* 15 min, 30 min, 1 h, 2 h, 3 h, 4 h and 24 h in milliseconds, respectively */
+			long MS_15_MIN  = 900000;
+			long MS_30_MIN = 1800000;
+			long MS_1_H    = 3600000;
+			long MS_2_H    = 7200000;
+			long MS_3_H   = 10800000;
+			long MS_4_H   = 14400000;
+			long MS_24_H =  86400000;
+			
+			/* Calculate midnight (end of current day) in current time zone */
+			Calendar cal = new GregorianCalendar(this.timeZone);
+			cal.setTime(this.date);
+			cal.setLenient(true);
+			cal.set(Calendar.HOUR_OF_DAY, 24);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			Date midnight = cal.getTime();
+			
+			switch (duration) {
+			case 0:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_1_H);
+			case 1:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_2_H);
+			case 2:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_30_MIN);
+				else
+					return new Date(midnight.getTime());
+			case 3:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_1_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 4:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_2_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 5:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_3_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 6:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_4_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 7:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(midnight.getTime());
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			}
+			return null;
+		}
+		
+		/**
+		 * @brief Returns the junction number of the primary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the primary location is not a
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no junction number or could not be
+		 * resolved.
+		 */
+		public String getPrimaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) locationInfo;
+			if (!loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the primary location, if any.
+		 * 
+		 * @return The name of the primary location, or {@code null} if the primary location is not
+		 * a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no name or could not be resolved.
+		 */
+		public String getPrimaryName() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			if ((locationInfo.name1.name == null) || (locationInfo.name1.name.isEmpty()))
+				return null;
+			else
+				return locationInfo.name1.name;
+		}
+		
+		/**
+		 * @brief Returns the road number for the message, if any.
+		 * 
+		 * @return The road number, or {@code null} if the message does not have a corresponding road number,
+		 * or if the location of the message could not be resolved.
+		 */
+		public String getRoadNumber() {
+			if (locationInfo == null)
+				return null;
+			return locationInfo.getRoadNumber();
+		}
+		
+		/**
+		 * @brief Returns the junction number of the secondary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the message has no secondary location,
+		 * the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no
+		 * junction number or could not be resolved.
+		 */
+		public String getSecondaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) secondary;
+			if (!loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the secondary location, if any.
+		 * 
+		 * @return The name of the secondary location, or {@code null} if the message has no secondary
+		 * location, the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint},
+		 * has no name or could not be resolved.
+		 */
+		public String getSecondaryName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			if ((secondary.name1.name == null) || (secondary.name1.name.isEmpty()))
+				return null;
+			else
+				return secondary.name1.name;
 		}
 		
 		public int getLocation() {
@@ -901,7 +1310,9 @@ public class AlertC extends ODA {
 	
 	public static class Event {
 		private TMCEvent tmcEvent;
-		private TMCEvent.EventUrgency urgency;
+		private EventUrgency urgency;
+		private EventNature nature;
+		private EventDurationType durationType;
 		private int sourceLocation = -1;
 
 		private int quantifier = -1;
@@ -915,6 +1326,8 @@ public class AlertC extends ODA {
 			}
 			
 			this.urgency = this.tmcEvent.urgency;
+			this.nature = this.tmcEvent.nature;
+			this.durationType = this.tmcEvent.durationType;
 		}
 		
 
@@ -928,6 +1341,8 @@ public class AlertC extends ODA {
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
 			if(this.suppInfo.size() > 0) res.append("\nSupplementary information: ").append(this.suppInfo);
@@ -943,6 +1358,8 @@ public class AlertC extends ODA {
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.suppInfo.size() > 0) {
 				res.append("<font color='#555555'><br>Supplementary information: <br>");
@@ -954,5 +1371,11 @@ public class AlertC extends ODA {
 			return res.toString();
 		}
 		
+		private void invertDurationType() {
+			if (this.durationType == EventDurationType.DYNAMIC)
+				this.durationType = EventDurationType.LONGER_LASTING;
+			else
+				this.durationType = EventDurationType.DYNAMIC;
+		}
 	}
 }
