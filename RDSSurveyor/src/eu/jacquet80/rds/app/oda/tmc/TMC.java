@@ -147,10 +147,25 @@ public class TMC {
 		try {
 			dbConnection = DriverManager.getConnection(dbUrl);
 			dbConnection.setAutoCommit(false);
+			// for an in-memory DB, create tables
+			if (isDbInMemory())
+				initDb();
 		} catch (SQLException e) {
 			dbUrl = null;
 			e.printStackTrace(System.err);
 		}
+	}
+	
+	/**
+	 * @brief Whether an in-memory database is used.
+	 * 
+	 * @return {@code true} if an in-memory database is used, {@code false} if a different type of
+	 * database is used or if the database is invalid.
+	 */
+	private static boolean isDbInMemory() {
+		if (dbUrl == null)
+			return false;
+		return dbUrl.startsWith("jdbc:hsqldb:mem:");
 	}
 
 
@@ -531,8 +546,11 @@ public class TMC {
 	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
 		POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
-
-	public static void readLocationTables(File path) {
+	
+	/**
+	 * @brief Initializes the database tables.
+	 */
+	private static void initDb() {
 		// read and execute SQL initialization script
 		for (String stmtSql: initStmts) {
 			try {
@@ -544,13 +562,23 @@ public class TMC {
 				return;
 			}	
 		}
+	}
 
+	/**
+	 * @brief Reads location data sets from the given path and its immediate subfolders.
+	 * @param path
+	 */
+	public static void readLocationTables(File path) {
+		// create tables (unless it's an in-memory DB, for which we have already done this)
+		if (!isDbInMemory())
+			initDb();
+		
 		readLocationTablesFromDir(path);
 		for (File file: path.listFiles())
 			if (file.isDirectory())
 				readLocationTablesFromDir(file);
 		
-		if (!dbUrl.startsWith("jdbc:hsqldb:mem:")) {
+		if (!isDbInMemory()) {
 			// if database is not an in-memory DB, close database to compact files on disk, then reopen it
 			try {
 				PreparedStatement stmt = dbConnection.prepareStatement("shutdown compact;");
@@ -706,6 +734,11 @@ public class TMC {
 		}
 	}
 
+	/**
+	 * @brief Reads a single location data set from the given path.
+	 * 
+	 * @param path The folder in which the files for the location data set are located.
+	 */
 	public static void readLocationTablesFromDir(File path) {
 		File file;
 		

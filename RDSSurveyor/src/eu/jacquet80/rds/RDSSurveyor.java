@@ -273,16 +273,19 @@ public class RDSSurveyor {
 					System.exit(1);
 				}
 			}
-		} else if(showGui) {
-			console = null;
-			InputSelectionDialog dialog = new InputSelectionDialog();
-			reader = dialog.makeChoice();
-			liveGroupInput = dialog.live;
 		}
 
 		if ((reader == null) && (inLtPath == null)) {
-			System.out.println("A source or a set of TMC location tables must be provided. Aborting.");
-			System.exit(0);
+			if(showGui) {
+				console = null;
+				InputSelectionDialog dialog = new InputSelectionDialog();
+				reader = dialog.makeChoice();
+				liveGroupInput = dialog.live;
+			}
+			if (reader == null) {
+				System.out.println("A source or a set of TMC location tables must be provided. Aborting.");
+				System.exit(0);
+			}
 		}
 		
 		TMC.setDbUrl(dbUrl);
