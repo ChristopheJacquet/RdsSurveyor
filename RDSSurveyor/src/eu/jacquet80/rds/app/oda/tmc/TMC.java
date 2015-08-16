@@ -152,6 +152,18 @@ public class TMC {
 			e.printStackTrace(System.err);
 		}
 	}
+	
+	/**
+	 * @brief Whether an in-memory database is used.
+	 * 
+	 * @return {@code true} if an in-memory database is used, {@code false} if a different type of
+	 * database is used or if the database is invalid.
+	 */
+	private static boolean isDbInMemory() {
+		if (dbUrl == null)
+			return false;
+		return dbUrl.startsWith("jdbc:hsqldb:mem:");
+	}
 
 
 	static Pattern colonPattern = Pattern.compile(";");
@@ -550,7 +562,7 @@ public class TMC {
 			if (file.isDirectory())
 				readLocationTablesFromDir(file);
 		
-		if (!dbUrl.startsWith("jdbc:hsqldb:mem:")) {
+		if (!isDbInMemory()) {
 			// if database is not an in-memory DB, close database to compact files on disk, then reopen it
 			try {
 				PreparedStatement stmt = dbConnection.prepareStatement("shutdown compact;");
