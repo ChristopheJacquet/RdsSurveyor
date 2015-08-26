@@ -1,4 +1,4 @@
-FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -I hidapi/hidapi
+FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -I hidapi/hidapi -fPIC
 LINKFLAGS=`pkg-config libusb-1.0 --libs` -lrt -lpthread
 
 all: si470x_hidapi si470x_plugin si470x_test
