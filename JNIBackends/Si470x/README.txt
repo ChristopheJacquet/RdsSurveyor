@@ -19,6 +19,9 @@ You may need to install the following packages:
  - libusb-1.0-0-dev
  - libudev-dev
 
+In order to use this driver with a non-root account, you need to supply the appropriate rules for udev.
+To do this, copy 40-si470x-libusb.rules to /lib/udev/rules.d.
+
 
 * Windows
 
