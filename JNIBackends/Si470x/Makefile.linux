@@ -1,14 +1,14 @@
-FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -I hidapi/hidapi -fPIC
-LINKFLAGS=`pkg-config libusb-1.0 --libs` -lrt -lpthread
+FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -fPIC
+LINKFLAGS=`pkg-config hidapi-libusb --libs` -lrt -lpthread
 
 all: si470x_hidapi si470x_plugin si470x_test
 
 si470x_hidapi: si470x_hidapi.c si470x_hidapi.h
-	gcc -c si470x_hidapi.c $(FLAGS)
+	gcc -c si470x_hidapi.c -I /usr/include/hidapi $(FLAGS)
 
 si470x_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h si470x_plugin.c
-	gcc -shared -o si470x.so si470x_hidapi.o hidapi/libusb/hid.o si470x_plugin.c -I /usr/lib/jvm/default-java/include $(FLAGS) $(LINKFLAGS)
+	gcc -shared -o si470x.so si470x_hidapi.o si470x_plugin.c -I /usr/lib/jvm/default-java/include $(FLAGS) $(LINKFLAGS)
 
 si470x_test: si470x_test.c si470x_hidapi.o
-	gcc -o si470x_test si470x_test.c si470x_hidapi.o hidapi/libusb/hid.o $(FLAGS) $(LINKFLAGS)
+	gcc -o si470x_test si470x_test.c si470x_hidapi.o $(FLAGS) $(LINKFLAGS)
 	
