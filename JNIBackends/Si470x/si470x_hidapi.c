@@ -623,6 +623,8 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 
     if(cur_dev) {
     	dev->devh = hid_open(cur_dev->vendor_id, cur_dev->product_id, NULL);
+    	if (!dev->devh)
+    		return -1; // TODO should we use different return values for different errors here?
     } else {
 		retval = -1;
 		goto err;
