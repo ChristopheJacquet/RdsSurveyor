@@ -623,9 +623,13 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 
     if(cur_dev) {
     	dev->devh = hid_open(cur_dev->vendor_id, cur_dev->product_id, NULL);
-    	if (!dev->devh)
+    	if (!dev->devh) {
+    		/* If we get here, a device was listed but could not be opened. This indicates a permission problem. */
+        	printf("Opening device %04X:%04X failed. Make sure you have the necessary permissions.\n", cur_dev->vendor_id, cur_dev->product_id);
     		return -1; // TODO should we use different return values for different errors here?
+    	}
     } else {
+    	printf("No Si470x device found!\n");
 		retval = -1;
 		goto err;
     }
