@@ -495,6 +495,7 @@ public class TMC {
 						segment = new Segment(rset, null);
 					putSegment(cid, tabcd, lcd, segment);
 					putLocation(cid, tabcd, lcd, segment);
+					// TODO add to FIRST_SEGMENTS, LAST_SEGMENTS if conditions are met
 					return segment;
 				} else
 					return null;
@@ -507,6 +508,120 @@ public class TMC {
 	
 	public static void putSegment(int cid, int tabcd, int lcd, Segment segment) {
 		SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
+	}
+	
+	private static Map<String, Segment> FIRST_SEGMENTS = new HashMap<String, Segment>();
+
+	/**
+	 * @brief Gets the first segment of the location specified by the arguments.
+	 * 
+	 * @param cid
+	 * @param tabcd
+	 * @param lcd
+	 * 
+	 * @return The first segment, or {@code null} if not found.
+	 */
+	public static Segment getFirstSegment(int cid, int tabcd, int lcd) {
+		Segment ret = FIRST_SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null)
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Segments where CID = ? AND TABCD = ? AND (SEG_LCD = ? OR ROA_LCD = ?) AND NOT EXISTS (SELECT * FROM Soffsets WHERE Soffsets.CID = Segments.CID AND Soffsets.TABCD = Segments.TABCD AND Soffsets.LCD = Segments.LCD AND Soffsets.NEG_OFF_LCD IS NOT NULL)");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				stmt.setInt(4, lcd);
+				ResultSet rset = stmt.executeQuery();
+				Segment segment = null;
+				if (rset.next()) {
+					try {
+						segment = getSegment(cid, tabcd, rset.getInt("LCD"));
+					} catch (SQLException e) {
+						segment = null;
+					}
+					if (segment == null) {
+						stmt = dbConnection.prepareStatement("select * from Soffsets where CID = ? AND TABCD = ? AND LCD = ?");
+						stmt.setInt(1, cid);
+						stmt.setInt(2, tabcd);
+						stmt.setInt(3, lcd);
+						ResultSet offsets = stmt.executeQuery();
+						if (offsets.next())
+							segment = new Segment(rset, offsets);
+						else
+							segment = new Segment(rset, null);
+						putSegment(cid, tabcd, segment.lcd, segment);
+						putLocation(cid, tabcd, segment.lcd, segment);
+					}
+					putFirstSegment(cid, tabcd, lcd, segment);
+					// TODO populate LAST_SEGMENTS if available
+					return segment;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
+	}
+	
+	public static void putFirstSegment(int cid, int tabcd, int lcd, Segment segment) {
+		FIRST_SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
+	}
+	
+	private static Map<String, Segment> LAST_SEGMENTS = new HashMap<String, Segment>();
+
+	/**
+	 * @brief Gets the last segment of the location specified by the arguments.
+	 * 
+	 * @param cid
+	 * @param tabcd
+	 * @param lcd
+	 * 
+	 * @return The last segment, or {@code null} if not found.
+	 */
+	public static Segment getLastSegment(int cid, int tabcd, int lcd) {
+		Segment ret = LAST_SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null)
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Segments where CID = ? AND TABCD = ? AND (SEG_LCD = ? OR ROA_LCD = ?) AND NOT EXISTS (SELECT * FROM Soffsets WHERE Soffsets.CID = Segments.CID AND Soffsets.TABCD = Segments.TABCD AND Soffsets.LCD = Segments.LCD AND Soffsets.POS_OFF_LCD IS NOT NULL)");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				stmt.setInt(4, lcd);
+				ResultSet rset = stmt.executeQuery();
+				Segment segment = null;
+				if (rset.next()) {
+					try {
+						segment = getSegment(cid, tabcd, rset.getInt("LCD"));
+					} catch (SQLException e) {
+						segment = null;
+					}
+					if (segment == null) {
+						stmt = dbConnection.prepareStatement("select * from Soffsets where CID = ? AND TABCD = ? AND LCD = ?");
+						stmt.setInt(1, cid);
+						stmt.setInt(2, tabcd);
+						stmt.setInt(3, lcd);
+						ResultSet offsets = stmt.executeQuery();
+						if (offsets.next())
+							segment = new Segment(rset, offsets);
+						else
+							segment = new Segment(rset, null);
+						putSegment(cid, tabcd, segment.lcd, segment);
+						putLocation(cid, tabcd, segment.lcd, segment);
+					}
+					putLastSegment(cid, tabcd, lcd, segment);
+					// TODO populate FIRST_SEGMENTS if available
+					return segment;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
+	}
+	
+	public static void putLastSegment(int cid, int tabcd, int lcd, Segment segment) {
+		LAST_SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
 	}
 	
 	private static Map<String, TMCPoint> POINTS = new HashMap<String, TMCPoint>();
@@ -533,6 +648,7 @@ public class TMC {
 						point = new TMCPoint(rset, null);
 					putPoint(cid, tabcd, lcd, point);
 					putLocation(cid, tabcd, lcd, point);
+					// TODO add to FIRST_POINTS, LAST_POINTS if conditions are met
 					return point;
 				} else
 					return null;
@@ -545,6 +661,120 @@ public class TMC {
 	
 	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
 		POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
+	}
+	
+	private static Map<String, TMCPoint> FIRST_POINTS = new HashMap<String, TMCPoint>();
+
+	/**
+	 * @brief Gets the first point of the location specified by the arguments.
+	 * 
+	 * @param cid
+	 * @param tabcd
+	 * @param lcd
+	 * 
+	 * @return The first point, or {@code null} if not found.
+	 */
+	public static TMCPoint getFirstPoint(int cid, int tabcd, int lcd) {
+		TMCPoint ret = FIRST_POINTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null)
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Points where CID = ? AND TABCD = ? AND (SEG_LCD = ? OR ROA_LCD = ?) AND NOT EXISTS (SELECT * FROM Poffsets WHERE Poffsets.CID = Points.CID AND Poffsets.TABCD = Points.TABCD AND Poffsets.LCD = Points.LCD AND Poffsets.NEG_OFF_LCD IS NOT NULL) AND (INTERRUPTSROAD IS NULL OR INTERRUPTSROAD = 0)");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				stmt.setInt(4, lcd);
+				ResultSet rset = stmt.executeQuery();
+				TMCPoint point = null;
+				if (rset.next()) {
+					try {
+						point = getPoint(cid, tabcd, rset.getInt("LCD"));
+					} catch (SQLException e) {
+						point = null;
+					}
+					if (point == null) {
+						stmt = dbConnection.prepareStatement("select * from Poffsets where CID = ? AND TABCD = ? AND LCD = ?");
+						stmt.setInt(1, cid);
+						stmt.setInt(2, tabcd);
+						stmt.setInt(3, lcd);
+						ResultSet offsets = stmt.executeQuery();
+						if (offsets.next())
+							point = new TMCPoint(rset, offsets);
+						else
+							point = new TMCPoint(rset, null);
+						putPoint(cid, tabcd, point.lcd, point);
+						putLocation(cid, tabcd, point.lcd, point);
+					}
+					putFirstPoint(cid, tabcd, lcd, point);
+					// TODO populate LAST_POINTS if applicable
+					return point;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
+	}
+	
+	public static void putFirstPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		FIRST_POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
+	}
+	
+	private static Map<String, TMCPoint> LAST_POINTS = new HashMap<String, TMCPoint>();
+
+	/**
+	 * @brief Gets the last point of the location specified by the arguments.
+	 * 
+	 * @param cid
+	 * @param tabcd
+	 * @param lcd
+	 * 
+	 * @return The last point, or {@code null} if not found.
+	 */
+	public static TMCPoint getLastPoint(int cid, int tabcd, int lcd) {
+		TMCPoint ret = LAST_POINTS.get(cid + ";" + tabcd + ";" + lcd);
+		if (ret == null)
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Points where CID = ? AND TABCD = ? AND (SEG_LCD = ? OR ROA_LCD = ?) AND NOT EXISTS (SELECT * FROM Poffsets WHERE Poffsets.CID = Points.CID AND Poffsets.TABCD = Points.TABCD AND Poffsets.LCD = Points.LCD AND Poffsets.POS_OFF_LCD IS NOT NULL) AND (INTERRUPTSROAD IS NULL OR INTERRUPTSROAD = 0)");
+				stmt.setInt(1, cid);
+				stmt.setInt(2, tabcd);
+				stmt.setInt(3, lcd);
+				stmt.setInt(4, lcd);
+				ResultSet rset = stmt.executeQuery();
+				TMCPoint point = null;
+				if (rset.next()) {
+					try {
+						point = getPoint(cid, tabcd, rset.getInt("LCD"));
+					} catch (SQLException e) {
+						point = null;
+					}
+					if (point == null) {
+						stmt = dbConnection.prepareStatement("select * from Poffsets where CID = ? AND TABCD = ? AND LCD = ?");
+						stmt.setInt(1, cid);
+						stmt.setInt(2, tabcd);
+						stmt.setInt(3, lcd);
+						ResultSet offsets = stmt.executeQuery();
+						if (offsets.next())
+							point = new TMCPoint(rset, offsets);
+						else
+							point = new TMCPoint(rset, null);
+						putPoint(cid, tabcd, point.lcd, point);
+						putLocation(cid, tabcd, point.lcd, point);
+					}
+					putLastPoint(cid, tabcd, lcd, point);
+					// TODO populate FIRST_POINTS if applicable
+					return point;
+				} else
+					return null;
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		return ret;
+	}
+	
+	public static void putLastPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		LAST_POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
 	
 	/**

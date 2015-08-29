@@ -178,6 +178,30 @@ public abstract class TMCLocation {
 	}
 	
 	/**
+	 * @brief Returns the coordinates of the first point of this Location.
+	 *
+	 * This is a dummy implementation which can be used for all subclasses which have no explicit
+	 * or implicit coordinates. It will simply return {@code null}.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	public float[] getFirstCoordinates() {
+		return null;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the last point of this Location.
+	 *
+	 * This is a dummy implementation which can be used for all subclasses which have no explicit
+	 * or implicit coordinates. It will simply return {@code null}.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	public float[] getLastCoordinates() {
+		return null;
+	}
+	
+	/**
 	 * @brief Returns the location at the given offset in the given direction from the current one.
 	 *
 	 * This is a dummy implementation which can be used for all subclasses for which extents have

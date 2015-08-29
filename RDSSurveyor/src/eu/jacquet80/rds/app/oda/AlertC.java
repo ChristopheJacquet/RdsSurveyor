@@ -453,6 +453,10 @@ public class AlertC extends ODA {
 		private boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
+		/** The coordinates of the event. */
+		private float[] coords = null;
+		/** The auxiliary coordinates of the event. */
+		private float[] auxCoords = null;
 
 		private boolean reversedDurationType = false;
 		
@@ -789,28 +793,41 @@ public class AlertC extends ODA {
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
 			res.append('\n');
+			if (locationInfo != null) {
+				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
+				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+				float[] c = this.getCoordinates();
+				if ((c != null) && (c.length >= 2)) {
+					if (c.length >= 4)
+						res.append("Link: http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ "\n");
+					else
+						res.append("Link: http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q\n");
+				}
+			}
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
 			}
 			if (locationInfo != null) {
 				res.append("-------------\n").append(locationInfo).append("\n");
 				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				if (secondary != locationInfo) {
+				if (secondary != locationInfo)
 					res.append("-------------\nExtent:\n").append(secondary);
-					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
-						res.append("\n");
-						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
-						res.append("Link: http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
-								+ ((TMCPoint) secondary).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) secondary).xCoord 
-								+ "%3B" 
-								+ ((TMCPoint) locationInfo).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) locationInfo).xCoord
-								+ "\n");
-					}
-				}
 			}
 			
 			return res.toString();
@@ -862,42 +879,178 @@ public class AlertC extends ODA {
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
+			if (locationInfo != null) {
+				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
+				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+				float[] c = this.getCoordinates();
+				if ((c != null) && (c.length >= 2)) {
+					if (c.length >= 4) {
+						res.append("<a href=\"http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ "\">");
+						res.append("http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ " ");
+						res.append("</a>");
+					} else {
+						res.append("<a href=\"http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q\">");
+						res.append("http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q");
+						res.append("</a>");
+					}
+				}
+			}
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
 			}
 			if (locationInfo != null) {
 				res.append("<hr>").append(locationInfo.html());
 				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				if (secondary != locationInfo) {
+				if (secondary != locationInfo)
 					res.append("<hr>Extent:<br>").append(secondary.html());
-					if ((locationInfo instanceof TMCPoint) && (secondary instanceof TMCPoint)) {
-						res.append("<br>");
-						// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
-						res.append("<a href=\"http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
-								+ ((TMCPoint) secondary).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) secondary).xCoord 
-								+ "%3B" 
-								+ ((TMCPoint) locationInfo).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) locationInfo).xCoord 
-								+ "\">");
-						res.append("http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
-								+ ((TMCPoint) secondary).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) secondary).xCoord 
-								+ "%3B" 
-								+ ((TMCPoint) locationInfo).yCoord 
-								+ "%2C" 
-								+ ((TMCPoint) locationInfo).xCoord);
-						res.append("</a>");
-					}
-				}
 			}
 			res.append("</html>");
 			
 			return res.toString();			
 		}
+		
+		
+		/**
+		 * @brief Returns the auxiliary coordinates of the message location.
+		 * 
+		 * Auxiliary coordinates are needed in cases in which {@link #getCoordinates()} returns a
+		 * two-element array, i.e. a single point which carries no direction information.
+		 * 
+		 * For all other types of locations, this function returns the same result as
+		 * {@link #getCoordinates()}.
+		 * 
+		 * Apart from obtaining direction information, they can also be used to infer the road
+		 * which is affected by the message. While the design of TMC considers the road to be
+		 * unambiguously identified by the primary coordinates, along with the road name or number,
+		 * matching these values to map material may be difficult in practice: due to precision
+		 * constraints, TMC coordinates can never be expected to precisely match those on map data,
+		 * road names may have alternate spellings (via Verdi vs. via Giuseppe Verdi vs. via Verdi
+		 * Giuseppe) and even road numbers may differ (most notoriously, German location tables
+		 * prefix district roads in Bavaria with the letter K, which is not part of their official
+		 * number and thus likely to not match the numbers used in maps).
+		 * 
+		 * Auxiliary coordinates for single-point locations are generally obtained by "stretching"
+		 * the location beyond that single point to its immediate neighbors. For example, if a
+		 * segment contains points 1–2–3 (in that order) and an event is signalled for point 2,
+		 * this function will return the coordinates of point 1 and 3. The order of the points
+		 * depends on the direction of the event, similar to primary and secondary locations in a
+		 * TMC message: the first pair of coordinates refers to a point which is ahead of the
+		 * obstacle, the second pair refers to a point which is behind the end of the queue. In
+		 * other words, drivers traveling through the location in the affected direction will first
+		 * pass the second pair of coordinates, then the first.
+		 * 
+		 * If the location does not have neighbors in both directions, the location itself is used
+		 * in place of any missing neighbors.
+		 * 
+		 * @return The auxiliary coordinates of the message location (see description).
+		 */
+		public float[] getAuxCoordinates() {
+			if (auxCoords == null) {
+				float[] c = getCoordinates();
+				if ((c == null) || (c.length == 4))
+					auxCoords = c;
+				// TODO get coordinates
+			}
+			if ((auxCoords == null) || (auxCoords.length == 0))
+				return null;
+			else
+				return auxCoords.clone();
+		}
+		
+		
+		/**
+		 * @brief Returns the coordinates of the message location.
+		 * 
+		 * The coordinates can take the following form:
+		 * <ul>
+		 * <li>{@code null} if no coordinates can be established (e.g. location of type AREA or
+		 * unknown location code)</li>
+		 * <li>A two-element array, representing longitude and latitude, for single-point locations
+		 * (location of type POINT and extent 0)</li>
+		 * <li>A four-element array, representing longitude and latitude of the primary location,
+		 * followed by those of the secondary location, for multi-point locations (location of type
+		 * POINT and nonzero extent, or location of type SEGMENT or ROAD)</li>
+		 * </ul>
+		 * 
+		 * If the message location is of type POINT, this function will simply return its
+		 * coordinates and, if present, those of the secondary location.
+		 * 
+		 * Message locations of type SEGMENT or ROAD will be "translated" into a pair of points in
+		 * the following way: For a SEGMENT with zero extent or a ROAD, its start and end points
+		 * are determined. For a SEGMENT with a nonzero extent, the outer end point of each segment
+		 * (pointing away from the other segment) is used. Then the coordinates of these two points
+		 * are returned.
+		 * 
+		 * Directionality is always preserved: queue growth is from the first to the second pair of
+		 * coordinates. In other words, drivers traveling through the location in the affected
+		 * direction will first pass the second pair of coordinates, then the first.
+		 * 
+		 * @return The coordinates of the message location (see description).
+		 */
+		public float[] getCoordinates() {
+			float[] c1, c2;
+			// TODO do we need to deal with extent changes?
+			if (coords == null) {
+				if (direction == 0)
+					c1 = locationInfo.getFirstCoordinates();
+				else
+					c1 = locationInfo.getLastCoordinates();
+				if ((c1 == null) || (c1.length < 2))
+					coords = new float[] {};
+				else {
+					TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+					if ((locationInfo.equals(secondary)) && (locationInfo instanceof TMCPoint))
+						coords = c1;
+					else {
+						if (direction == 0)
+							c2 = secondary.getLastCoordinates();
+						else
+							c2 = secondary.getFirstCoordinates();
+						if ((c2 == null) || (c2.length < 2))
+							coords = c1;
+						else
+							coords = new float[] {c1[0], c1[1], c2[0], c2[1]};
+					}
+				}
+			}
+			if ((coords == null) || (coords.length == 0))
+				return null;
+			else
+				return coords.clone();
+		}
+		
 		
 		/**
 		 * @brief Returns a name for the location which can be displayed to the user.

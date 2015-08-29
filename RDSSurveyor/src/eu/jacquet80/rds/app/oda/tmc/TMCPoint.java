@@ -55,7 +55,14 @@ public class TMCPoint extends TMCLocation {
 	/** The Y (longitude) coordinate of the point. */
 	public float yCoord;
 	
-	// INTERRUPTSROAD TODO next location after interruption in the road (?)
+	/**
+	 * If a road is interrupted, the points bordering on the interruption have only one neighbor
+	 * each. Their {@code interruptsRoad} members then refer to each other.
+	 * 
+	 * Note that a road interrupted in that way is not necessarily segmented, and that segments
+	 * can likewise be interrupted without being split up in lower-level segments.
+	 */
+	public int interruptsRoad = -1;
 	
 	/** Whether the point is in a built-up area. */
 	public boolean urban;
@@ -140,7 +147,10 @@ public class TMCPoint extends TMCLocation {
 		this.xCoord = rset.getFloat("XCOORD");
 		this.yCoord = rset.getFloat("YCOORD");
 		
-		// INTERRUPTSROAD TODO
+		int interruptsRoad = rset.getInt("INTERRUPTSROAD");
+		if (!rset.wasNull()) {
+			this.interruptsRoad = interruptsRoad;
+		}
 		
 		this.urban = rset.getBoolean("URBAN");
 		
@@ -208,6 +218,30 @@ public class TMCPoint extends TMCLocation {
 		if ((this.posOffset == null) && (this.posOffLcd != -1))
 			this.posOffset = TMC.getPoint(this.cid, this.tabcd, this.posOffLcd);
 		return this.posOffset;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the first point of this Location.
+	 *
+	 * For a POINT location, this method will simply return its coordinates.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getFirstCoordinates() {
+		return new float[] {xCoord, yCoord};
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the last point of this Location.
+	 *
+	 * For a POINT location, this method will simply return its coordinates.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getLastCoordinates() {
+		return new float[] {xCoord, yCoord};
 	}
 	
 	/**
