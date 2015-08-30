@@ -1,5 +1,6 @@
 package eu.jacquet80.rds.input;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,9 +21,10 @@ public class FileFormatGuesser {
 	
 	private static GroupReader createReader(InputStream is) throws IOException {
 		char[] guessBuffer = new char[GUESS_BUFFER_SIZE];
-		BufferedReader br = new BufferedReader(new InputStreamReader(is, "ASCII"));
-		br.mark(GUESS_BUFFER_SIZE+1);
-		int guessCharCount = br.read(guessBuffer);
+		BufferedInputStream bis = new BufferedInputStream(is);
+		InputStreamReader isr = new InputStreamReader(bis, "ASCII");
+		bis.mark(GUESS_BUFFER_SIZE+1);
+		int guessCharCount = isr.read(guessBuffer);
 		
 		if(guessCharCount < 1) {
 			throw new IOException("File empty or almost empty.");
@@ -33,16 +35,21 @@ public class FileFormatGuesser {
 		if(guessString.startsWith("% RDS hexgroups") ||
 				guessString.startsWith("<recorder=\"RDS Spy\"") ||
 				HEXGROUP_PATTERN.matcher(guessString).matches()) {
-			br.reset();
-			return new HexFileGroupReader(br);
+			// grouphexfile
+			bis.reset();
+			return new HexFileGroupReader(new BufferedReader(new InputStreamReader(bis)));
 		} else if (BINSTR_PATTERN.matcher(guessString).matches()) {
-			br.reset();
-			return new BitStreamSynchronizer(System.out, new BinStringFileBitReader(br));
+			// binstrfile
+			bis.reset();
+			return new BitStreamSynchronizer(System.out, new BinStringFileBitReader(bis));
+		} else if ((guessString.length() >= 2) && (guessString.codePointAt(0) == 0xfffd) && (guessString.codePointAt(1) == 0x6)) {
+			// syncbinfile
+			bis.reset();
+			return new BitStreamSynchronizer(System.out, new SyncBinaryFileBitReader(bis));
 		} else {
-			// binary file
-			// do not call br.close()!
-			br.reset();
-			return new BitStreamSynchronizer(System.out, new BinaryFileBitReader(is));
+			// binfile
+			bis.reset();
+			return new BitStreamSynchronizer(System.out, new BinaryFileBitReader(bis));
 		}
 		
 		//throw new IOException("Could not identify the file format");

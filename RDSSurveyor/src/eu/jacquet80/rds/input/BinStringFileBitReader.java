@@ -36,14 +36,14 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 
 public class BinStringFileBitReader extends BitReader {
-	private final BufferedReader isr;
+	private final InputStream isr;
 	
-	public BinStringFileBitReader(BufferedReader isr) {
+	public BinStringFileBitReader(InputStream isr) {
 		this.isr = isr;
 	}
 	
 	public BinStringFileBitReader(File f) throws IOException {
-		isr = new BufferedReader(new InputStreamReader(new FileInputStream(f), "ASCII"));
+		isr = new FileInputStream(f);
 	}
 	
 	public boolean getBit() throws IOException {
