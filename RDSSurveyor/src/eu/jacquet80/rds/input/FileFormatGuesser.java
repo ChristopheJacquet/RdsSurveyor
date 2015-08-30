@@ -15,6 +15,8 @@ public class FileFormatGuesser {
 	private static final int GUESS_BUFFER_SIZE = 40;
 	private static final Pattern HEXGROUP_PATTERN = 
 			Pattern.compile("([0-9A-F]{4}|----)\\s+([0-9A-F]{4}|----)\\s+([0-9A-F]{4}|----)\\s+([0-9A-F]{4}|----)");
+	private static final Pattern BINSTR_PATTERN =
+			Pattern.compile("[01]{40}");
 	
 	private static GroupReader createReader(InputStream is) throws IOException {
 		char[] guessBuffer = new char[GUESS_BUFFER_SIZE];
@@ -33,6 +35,9 @@ public class FileFormatGuesser {
 				HEXGROUP_PATTERN.matcher(guessString).matches()) {
 			br.reset();
 			return new HexFileGroupReader(br);
+		} else if (BINSTR_PATTERN.matcher(guessString).matches()) {
+			br.reset();
+			return new BitStreamSynchronizer(System.out, new BinStringFileBitReader(br));
 		} else {
 			// binary file
 			// do not call br.close()!
