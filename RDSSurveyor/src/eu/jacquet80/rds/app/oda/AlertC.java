@@ -433,6 +433,7 @@ public class AlertC extends ODA {
 	 */
 	public static class Message {
 		// basic information
+		/** Direction of queue growth (0 for positive, 1 for negative). */
 		private final int direction;
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		private int extent;		
