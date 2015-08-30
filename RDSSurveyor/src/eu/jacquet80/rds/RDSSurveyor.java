@@ -239,6 +239,7 @@ public class RDSSurveyor {
 					System.out.println("Arguments:");
 					System.out.println("  -inaudio                 Use sound card audio as input");
 					System.out.println("  -inbinfile <file>        Use the given binary file as input");
+					System.out.println("  -insyncbinfile <file>    Use the given synchronized binary file as input");
 					System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 					System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 					System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
