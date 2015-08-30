@@ -36,18 +36,22 @@ public class FileFormatGuesser {
 				guessString.startsWith("<recorder=\"RDS Spy\"") ||
 				HEXGROUP_PATTERN.matcher(guessString).matches()) {
 			// grouphexfile
+			System.out.println("Detected a group-level file.");
 			bis.reset();
 			return new HexFileGroupReader(new BufferedReader(new InputStreamReader(bis)));
 		} else if (BINSTR_PATTERN.matcher(guessString).matches()) {
 			// binstrfile
+			System.out.println("Detected a binary string file.");
 			bis.reset();
 			return new BitStreamSynchronizer(System.out, new BinStringFileBitReader(bis));
 		} else if ((guessString.length() >= 2) && (guessString.codePointAt(0) == 0xfffd) && (guessString.codePointAt(1) == 0x6)) {
 			// syncbinfile
+			System.out.println("Detected a synchronized binary file.");
 			bis.reset();
 			return new BitStreamSynchronizer(System.out, new SyncBinaryFileBitReader(bis));
 		} else {
 			// binfile
+			System.out.println("Detected a binary file.");
 			bis.reset();
 			return new BitStreamSynchronizer(System.out, new BinaryFileBitReader(bis));
 		}
