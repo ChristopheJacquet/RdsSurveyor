@@ -27,14 +27,18 @@ package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -42,9 +46,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.html.HTMLDocument;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
@@ -109,8 +117,26 @@ public class AlertCPanel extends AppPanel {
 		final JPanel pnlMain = new JPanel(new GridLayout(1, 2, 6, 6));
 		
 		tblList = new JTable(model);
-		final JLabel txtDetails = new JLabel();
-		txtDetails.setVerticalAlignment(JLabel.TOP);
+		final JEditorPane txtDetails = new JEditorPane("text/html", null);
+		txtDetails.setEditable(false);
+		String bodyRule = "body { font-family: Liberation Sans,Helvetica,Arial; }";
+		((HTMLDocument) txtDetails.getDocument()).getStyleSheet().addRule(bodyRule);
+		((DefaultCaret) txtDetails.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+		txtDetails.addHyperlinkListener(new HyperlinkListener() {
+
+			@Override
+			public void hyperlinkUpdate(HyperlinkEvent event) {
+				if (event.getEventType()==HyperlinkEvent.EventType.ACTIVATED)
+					try {
+						Desktop.getDesktop().browse(event.getURL().toURI());
+					} catch (URISyntaxException e) {
+						// bad URI
+					} catch (IOException e) {
+						System.err.println("Failed to launch browser.");
+					}
+			}
+			
+		});
 		
 		pnlMain.add(new JScrollPane(tblList));
 		pnlMain.add(new JScrollPane(txtDetails));
