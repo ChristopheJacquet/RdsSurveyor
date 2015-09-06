@@ -73,45 +73,7 @@ public class AlertC extends ODA {
 	
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	private List<Message> messages = new ArrayList<Message>();
-	private Comparator<Message> messageComparator = new Comparator<Message>() {
-
-		@Override
-		public int compare(Message lhs, Message rhs) {
-			int res = 0;
-			/* First compare by a road numbers (if only one location has a road number, it is first) */
-			String lrn = lhs.getRoadNumber();
-			String rrn = rhs.getRoadNumber();
-			if ((lrn != null) && (rrn != null)) {
-				res = lrn.compareTo(rrn);
-				if (res != 0)
-					return res;
-			} else if (lrn != null)
-				return -1;
-			else if (rrn != null)
-				return 1;
-			
-			/* Then compare by area names (if only one location has an area name, it is first) */
-			String lan = lhs.getAreaName();
-			String ran = rhs.getAreaName();
-			if ((lan != null) && (ran != null)) {
-				res = lan.compareTo(ran);
-				if (res != 0)
-					return res;
-			} else if (lan != null)
-				return -1;
-			else if (ran != null)
-				return 1;
-			
-			/* Then compare by primary location codes */
-			res = lhs.location - rhs.location;
-			if (res != 0)
-				return res;
-			
-			/* Finally compare by extent */
-			return lhs.extent - rhs.extent;
-		}
-		
-	};
+	private Comparator<Message> messageComparator = new DefaultComparator();
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
 
@@ -424,6 +386,22 @@ public class AlertC extends ODA {
 	
 	public Set<String> getONInfo() {
 		return onInfo;
+	}
+	
+	/**
+	 * @brief Sets a new comparator, which will be used to sort the list of messages.
+	 * 
+	 * Setting a new comparator causes the list to be sorted with the new comparator and registered
+	 * change listeners to fire.
+	 * 
+	 * @param comparator The new comparator
+	 */
+	public void setComparator(Comparator<Message> comparator) {
+		if (comparator != messageComparator) {
+			messageComparator = comparator;
+			Collections.sort(messages, messageComparator);
+			fireChangeListeners();
+		}
 	}
 	
 	private static class Bitstream {
@@ -1615,6 +1593,60 @@ public class AlertC extends ODA {
 				this.durationType = EventDurationType.LONGER_LASTING;
 			else
 				this.durationType = EventDurationType.DYNAMIC;
+		}
+	}
+	
+	/**
+	 * @brief The default comparator for sorting TMC messages.
+	 * 
+	 * This comparator compares events, using the following items of information in the order
+	 * shown, until a difference is found:
+	 * <ol>
+	 * <li>Road numbers</li>
+	 * <li>Area names</li>
+	 * <li>Location IDs</li>
+	 * <li>Extents</li>
+	 * </ol>
+	 * 
+	 * Road numbers and area names are sorted lexicographically. Null values are placed at the end,
+	 * two null values are considered equal (causing the next items in the above list to be
+	 * examined). Location IDs and extents are sorted numerically. 
+	 */
+	public static class DefaultComparator implements Comparator<Message> {
+		@Override
+		public int compare(Message lhs, Message rhs) {
+			int res = 0;
+			/* First compare by a road numbers (if only one location has a road number, it is first) */
+			String lrn = lhs.getRoadNumber();
+			String rrn = rhs.getRoadNumber();
+			if ((lrn != null) && (rrn != null)) {
+				res = lrn.compareTo(rrn);
+				if (res != 0)
+					return res;
+			} else if (lrn != null)
+				return -1;
+			else if (rrn != null)
+				return 1;
+			
+			/* Then compare by area names (if only one location has an area name, it is first) */
+			String lan = lhs.getAreaName();
+			String ran = rhs.getAreaName();
+			if ((lan != null) && (ran != null)) {
+				res = lan.compareTo(ran);
+				if (res != 0)
+					return res;
+			} else if (lan != null)
+				return -1;
+			else if (ran != null)
+				return 1;
+			
+			/* Then compare by primary location codes */
+			res = lhs.location - rhs.location;
+			if (res != 0)
+				return res;
+			
+			/* Finally compare by extent */
+			return lhs.extent - rhs.extent;
 		}
 	}
 }
