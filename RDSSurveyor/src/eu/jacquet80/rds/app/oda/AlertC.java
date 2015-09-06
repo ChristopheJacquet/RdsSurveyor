@@ -28,6 +28,8 @@ package eu.jacquet80.rds.app.oda;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -71,6 +73,45 @@ public class AlertC extends ODA {
 	
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	private List<Message> messages = new ArrayList<Message>();
+	private Comparator<Message> messageComparator = new Comparator<Message>() {
+
+		@Override
+		public int compare(Message lhs, Message rhs) {
+			int res = 0;
+			/* First compare by a road numbers (if only one location has a road number, it is first) */
+			String lrn = lhs.getRoadNumber();
+			String rrn = rhs.getRoadNumber();
+			if ((lrn != null) && (rrn != null)) {
+				res = lrn.compareTo(rrn);
+				if (res != 0)
+					return res;
+			} else if (lrn != null)
+				return -1;
+			else if (rrn != null)
+				return 1;
+			
+			/* Then compare by area names (if only one location has an area name, it is first) */
+			String lan = lhs.getAreaName();
+			String ran = rhs.getAreaName();
+			if ((lan != null) && (ran != null)) {
+				res = lan.compareTo(ran);
+				if (res != 0)
+					return res;
+			} else if (lan != null)
+				return -1;
+			else if (ran != null)
+				return 1;
+			
+			/* Then compare by primary location codes */
+			res = lhs.location - rhs.location;
+			if (res != 0)
+				return res;
+			
+			/* Finally compare by extent */
+			return lhs.extent - rhs.extent;
+		}
+		
+	};
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
 
@@ -318,6 +359,7 @@ public class AlertC extends ODA {
 			// (unless it is a cancellation message)
 			if(! currentMessage.isCancellation()) {
 				messages.add(currentMessage);
+				Collections.sort(messages, messageComparator);
 			}
 			
 			currentMessage.updateCount = oldUpdate + 1;
@@ -944,6 +986,21 @@ public class AlertC extends ODA {
 			return res.toString();			
 		}
 		
+		
+		/**
+		 * @brief Returns the name of the area surrounding the location.
+		 * 
+		 * For formatting of the area name, see
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCLocation#getAreaName()}.
+		 * 
+		 * @return The area name, or {@code null} if the location of the message could not be
+		 * resolved.
+		 */
+		public String getAreaName() {
+			if (locationInfo == null)
+				return null;
+			return locationInfo.getAreaName();
+		}
 		
 		/**
 		 * @brief Returns the auxiliary coordinates of the message location.
