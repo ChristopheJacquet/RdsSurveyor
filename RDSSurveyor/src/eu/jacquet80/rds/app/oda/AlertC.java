@@ -836,10 +836,11 @@ public class AlertC extends ODA {
 		
 		public String html() {
 			if(! complete) {
-				return "Incomplete!";
+				return "<html><b>Incomplete!</b><html>";
 			}
 			StringBuilder res = new StringBuilder("<html>");
 			if (locationInfo != null) {
+				res.append("<b>");
 				String tmp = this.getRoadNumber();
 				if (tmp != null)
 					res.append(tmp);
@@ -860,6 +861,7 @@ public class AlertC extends ODA {
 						tmp = name;
 					res.append(name);
 				}
+				res.append("</b>");
 				res.append("<br/>");
 			}
 			res.append("CC: ").append(String.format("%X", cc));
@@ -1510,7 +1512,7 @@ public class AlertC extends ODA {
 			} else {
 				text = tmcEvent.text;
 			}
-			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
+			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] <b>").append(text).append("</b/>");
 			res.append(", urgency=").append(urgency);
 			res.append(", nature=").append(nature);
 			res.append(", durationType=").append(durationType);
