@@ -120,7 +120,7 @@ public class AlertCPanel extends AppPanel {
 		tblList = new JTable(model);
 		final JEditorPane txtDetails = new JEditorPane("text/html", null);
 		txtDetails.setEditable(false);
-		String bodyRule = "body { font-family: Liberation Sans,Helvetica,Arial; }";
+		String bodyRule = "body { font-family: Sans-Serif; }";
 		((HTMLDocument) txtDetails.getDocument()).getStyleSheet().addRule(bodyRule);
 		((DefaultCaret) txtDetails.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
 		txtDetails.addHyperlinkListener(new HyperlinkListener() {
