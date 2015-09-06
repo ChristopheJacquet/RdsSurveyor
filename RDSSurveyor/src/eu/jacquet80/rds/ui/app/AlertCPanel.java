@@ -235,7 +235,11 @@ public class AlertCPanel extends AppPanel {
 			if(msg == null) return null;
 			
 			switch(column) {
-			case 0: return msg.getLocation();
+			case 0:
+				String ret = msg.getShortDisplayName();
+				if (ret == null)
+					ret = "#" + msg.getLocation();
+				return ret;
 			case 1:
 				StringBuffer buf = new StringBuffer();
 				for(int event : msg.getEvents()) {

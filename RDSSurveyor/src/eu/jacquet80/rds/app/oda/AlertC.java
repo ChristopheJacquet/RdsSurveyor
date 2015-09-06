@@ -1236,6 +1236,32 @@ public class AlertC extends ODA {
 				return secondary.name1.name;
 		}
 		
+		/**
+		 * @brief Returns a short display name for the location.
+		 * 
+		 * The short display name is intended for use in list views. It identifies the approximate
+		 * location of the event. It can take one of the following forms (the first non-empty item
+		 * is returned):
+		 * <ol>
+		 * <li>Road number</li>
+		 * <li>Area name (for roads without a number)</li>
+		 * <li>The value returned by {@link #getDisplayName()}</li>
+		 * </ol>
+		 * 
+		 * @return The short display name, or {@code null} if the location of the message could not
+		 * be resolved.
+		 */
+		public String getShortDisplayName() {
+			if (locationInfo == null)
+				return null;
+			String ret = locationInfo.getRoadNumber();
+			if (ret == null)
+				ret = locationInfo.getAreaName();
+			if (ret == null)
+				ret = getDisplayName();
+			return ret;
+		}
+		
 		public int getLocation() {
 			return location;
 		}

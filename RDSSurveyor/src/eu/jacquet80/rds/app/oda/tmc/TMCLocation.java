@@ -70,6 +70,30 @@ public abstract class TMCLocation {
 	}
 	
 	/**
+	 * @brief Returns the name of the area in which the location is situated.
+	 * 
+	 * If the location is within an area of a lower order than A10.x (town), the name of the town
+	 * is returned.
+	 * 
+	 * This method is somewhat resilient to incomplete or corrupt data: if the area hierarchy is
+	 * interrupted and no A10.x area is found, the name of the highest-order area is returned. If
+	 * no area information is found at all, this method will return {@code null}.
+	 * 
+	 * @return The area name, or {@code null} if no area name can be found.
+	 */
+	public String getAreaName() {
+		String ret = null; // higher-order administrative area name
+		TMCArea a = area;
+		if ((a != null) && (a.name1 != null)) {
+			// when enclosing area is a town district, we want the town (A10.x or higher), not the district
+			while ((a.tcd > 10) && (a.area != null))
+				a = a.area;
+			ret = a.name1.name;
+		}
+		return ret;
+	}
+	
+	/**
 	 * @brief Returns a string specifying the exact location in a road, in a user-friendly form.
 	 * 
 	 * The result of this method is intended to be used as a refinement to the results of
@@ -108,11 +132,11 @@ public abstract class TMCLocation {
 	 * <li>{@code name1 - name2 (roadName)} (for roads with endpoints and a name)</li>
 	 * <li>{@code name1 - name2} (for roads with endpoints but no road name)</li>
 	 * <li>{@code roadName} (for roads with only a road name, e.g. ring roads)</li>
-	 * <li>{@code areaName, roadName} (for roads with no road number, e.g. urban roads)</li>
+	 * <li>{@code roadName, areaName} (for roads with no road number, e.g. urban roads)</li>
 	 * </ul>
 	 * 
 	 * Where endpoint names {@code name1} and {@code name2} are used, they are reordered to match
-	 * the travel direction of affected traffic (is opposite to the direction of queue growth).
+	 * the travel direction of affected traffic (opposite to the direction of queue growth).
 	 * 
 	 * @param secondary The secondary location. If supplied, this method will try to return the names
 	 * for the lowest-order segment or road which spans both locations.
@@ -135,14 +159,7 @@ public abstract class TMCLocation {
 			else if ((name1 != null) && (name2 == null))
 				lname = name1.name;
 			
-			String aname = null; // higher-order administrative area name
-			TMCArea a = area;
-			if ((a != null) && (a.name1 != null)) {
-				// when enclosing area is a town district, we want the town (A10.x or higher), not the district
-				while ((a.tcd > 10) && (a.area != null))
-					a = a.area;
-				aname = a.name1.name;
-			}
+			String aname = getAreaName();
 			
 			if ((n1n2 != null) && (lname != null))
 				return String.format("%s (%s)", n1n2, lname);
