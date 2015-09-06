@@ -66,6 +66,7 @@ public class AlertCPanel extends AppPanel {
 	private AlertC app;
 	private final MessageTableModel model = new MessageTableModel();
 	private final JTable tblList;
+	private boolean freezeDetails = false;
 	private int latestSelectedLocation = -1;
 
 	private final JLabel 
@@ -139,13 +140,16 @@ public class AlertCPanel extends AppPanel {
 		});
 		
 		pnlMain.add(new JScrollPane(tblList));
-		pnlMain.add(new JScrollPane(txtDetails));
+		final JScrollPane scrDetails = new JScrollPane(txtDetails);
+		pnlMain.add(scrDetails);
 		
 		tblList.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			
 			@Override
 			public void valueChanged(ListSelectionEvent evt) {
+				if (freezeDetails)
+					return;
 				int row = tblList.getSelectedRow();
 				if(row >= 0) {
 					Message msg = app.getMessages().get(row);
@@ -198,6 +202,7 @@ public class AlertCPanel extends AppPanel {
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
 
+		freezeDetails = true;
 		model.fireTableDataChanged();
 		
 		// try to restore selection
@@ -206,6 +211,7 @@ public class AlertCPanel extends AppPanel {
 			tblList.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
 		}
 		Util.packColumns(tblList);
+		freezeDetails = false;
 	}
 	
 	private class MessageTableModel extends AbstractTableModel {
