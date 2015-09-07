@@ -87,8 +87,11 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				String libDir = "lib";
 				boolean found = false;
 				String attempts = "Attempts to connect to a device:\n";
+				File[] paths = new File(libDir).listFiles();
+				if (paths == null)
+					paths = new File[]{};
 				
-				for(File path : new File(libDir).listFiles()) {
+				for(File path : paths) {
 					try {
 						if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
 
