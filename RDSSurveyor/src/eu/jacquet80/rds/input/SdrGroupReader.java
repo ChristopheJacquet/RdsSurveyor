@@ -43,17 +43,6 @@ public class SdrGroupReader extends TunerGroupReader {
 	private final Semaphore resumePlaying = new Semaphore(0);
 
 	public SdrGroupReader(PrintStream console, String filename) throws UnavailableInputMethod, IOException {
-		syncIn = new PipedInputStream();
-		tunerOut = new DataOutputStream(new PipedOutputStream(syncIn));
-		synchronizer = new BitStreamSynchronizer(console, new AudioBitReader(new DataInputStream(syncIn), sampleRate));
-		
-		synchronizer.addStatusChangeListener(new BitStreamSynchronizer.StatusChangeListener() {
-			@Override
-			public void report(Status status) {
-				synced = (status == Status.SYNCED) ? true : false;
-			}
-		});
-
 		File path = new File(filename);
 		String absoluteLibPath = path.getAbsolutePath();
 		String aFilename = path.getName();
@@ -64,6 +53,17 @@ public class SdrGroupReader extends TunerGroupReader {
 			throw new UnavailableInputMethod(
 					aFilename + ": cannot load library");
 		}
+
+		syncIn = new PipedInputStream();
+		tunerOut = new DataOutputStream(new PipedOutputStream(syncIn));
+		synchronizer = new BitStreamSynchronizer(console, new AudioBitReader(new DataInputStream(syncIn), sampleRate));
+		
+		synchronizer.addStatusChangeListener(new BitStreamSynchronizer.StatusChangeListener() {
+			@Override
+			public void report(Status status) {
+				synced = (status == Status.SYNCED) ? true : false;
+			}
+		});
 
 		if(open()) {
 			System.out.println(
