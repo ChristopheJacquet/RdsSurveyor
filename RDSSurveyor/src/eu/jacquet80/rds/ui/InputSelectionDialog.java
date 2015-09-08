@@ -25,6 +25,7 @@ import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
+import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
 
 public class InputSelectionDialog extends JFrame implements ActionListener {
@@ -92,17 +93,19 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 					paths = new File[]{};
 				
 				for(File path : paths) {
-					try {
-						if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
+					for (int i = 0; i <= 1; i++) {
+						try {
+							if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
 
-						choice = new NativeTunerGroupReader(path.getAbsolutePath());
-						live = true;
-						found = true;
-						break;
-					} catch(UnavailableInputMethod exc) {
-						// try the next one
-						System.out.println(exc.getMessage());
-						attempts += exc.getMessage() + "\n";
+							choice = (i==0) ? new NativeTunerGroupReader(path.getAbsolutePath()) : new SdrGroupReader(RDSSurveyor.nullConsole, path.getAbsolutePath());
+							live = true;
+							found = true;
+							break;
+						} catch(UnavailableInputMethod exc) {
+							// try the next one
+							System.out.println(exc.getMessage());
+							attempts += exc.getMessage() + "\n";
+						}
 					}
 				}
 				
