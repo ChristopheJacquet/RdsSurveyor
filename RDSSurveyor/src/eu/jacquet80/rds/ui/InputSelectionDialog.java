@@ -141,7 +141,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		setVisible(true);
 		do {
 			choiceDone.acquireUninterruptibly();
-		} while(choice == null);
+		} while((choice == null) && isVisible());
 		setVisible(false);
 
 		return choice;

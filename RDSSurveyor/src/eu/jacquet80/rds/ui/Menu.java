@@ -88,8 +88,10 @@ public class Menu {
 						case OPEN: {
 							InputSelectionDialog dialog = new InputSelectionDialog();
 							GroupReader reader = dialog.makeChoice();
-							mainWindow.setReader(DecoderShell.instance.getLog(), reader);
-							DecoderShell.instance.process(reader, dialog.live);
+							if (reader != null) {
+								mainWindow.setReader(DecoderShell.instance.getLog(), reader);
+								DecoderShell.instance.process(reader, dialog.live);
+							}
 							break;
 						}
 						case WINDOW_GROUP: {
