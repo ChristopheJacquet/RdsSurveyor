@@ -576,7 +576,6 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
 int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 	si470x_dev_t *dev = NULL;
 	uint32_t device_count = 0;
-	int retval;
 
 	dev = malloc(sizeof(si470x_dev_t));
 	if (NULL == dev)
@@ -630,8 +629,7 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
     	}
     } else {
     	printf("No Si470x device found!\n");
-		retval = -1;
-		goto err;
+		return -1;
     }
 
 	hid_free_enumeration(devs);
@@ -639,9 +637,6 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 	*out_dev = dev;
 	
 	return 0;
-	
-	err:
-	return retval;
 }
 
 
