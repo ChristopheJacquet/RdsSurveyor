@@ -47,6 +47,7 @@ import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
@@ -170,6 +171,8 @@ public class RDSSurveyor {
 					reader = new BitStreamSynchronizer(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 				} else if("-ingrouphexfile".equals(args[i])) {
 					reader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
+				} else if("-infile".equals(args[i])) {
+					reader = FileFormatGuesser.createReader(new File(getParam("infile", args, ++i)));
 				} else if("-intcp".equals(args[i])) {
 					reader = new TCPTunerGroupReader(getParam("intcp", args, ++i), 8750);
 				} else if("-inusbkey".equals(args[i])) {
@@ -236,9 +239,11 @@ public class RDSSurveyor {
 					System.out.println("Arguments:");
 					System.out.println("  -inaudio                 Use sound card audio as input");
 					System.out.println("  -inbinfile <file>        Use the given binary file as input");
+					System.out.println("  -insyncbinfile <file>    Use the given synchronized binary file as input");
 					System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 					System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 					System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
+					System.out.println("  -infile <file>           Use the given file as input (autodetect format)");
 					System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 					System.out.println("  -intuner <driver>        Reads from a native tuner, specify driver (.so, .dll, .dylib)");
 					System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");

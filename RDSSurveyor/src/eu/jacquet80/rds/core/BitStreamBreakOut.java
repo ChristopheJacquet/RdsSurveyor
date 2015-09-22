@@ -33,7 +33,7 @@ import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
 
 public class BitStreamBreakOut {
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws IOException {
 		BitReader reader = new BinStringFileBitReader(new File(args[0]));
 		int block = 0;
 		StringBuffer strBlock = new StringBuffer();
