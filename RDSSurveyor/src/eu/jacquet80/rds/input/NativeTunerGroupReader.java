@@ -192,7 +192,8 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 	private final static String[] okNames = {
 		"FM Radio",
 		"Radio",
-		"ADS"
+		"ADS",
+		"Music"
 	};
 
 	
