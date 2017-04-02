@@ -1193,7 +1193,7 @@ public class AlertC extends ODA {
 			if (!(locationInfo instanceof TMCPoint))
 				return null;
 			TMCPoint loc = (TMCPoint) locationInfo;
-			if (!loc.junctionNumber.isEmpty())
+			if ((loc.junctionNumber != null) && !loc.junctionNumber.isEmpty())
 				return loc.junctionNumber;
 			else
 				return null;
@@ -1244,7 +1244,7 @@ public class AlertC extends ODA {
 			if (!(secondary instanceof TMCPoint))
 				return null;
 			TMCPoint loc = (TMCPoint) secondary;
-			if (!loc.junctionNumber.isEmpty())
+			if ((loc.junctionNumber != null) && !loc.junctionNumber.isEmpty())
 				return loc.junctionNumber;
 			else
 				return null;
