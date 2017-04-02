@@ -1060,6 +1060,8 @@ public class AlertC extends ODA {
 		public float[] getCoordinates() {
 			float[] c1, c2;
 			// TODO do we need to deal with extent changes?
+			if (locationInfo == null)
+				return null;
 			if (coords == null) {
 				if (direction == 0)
 					c1 = locationInfo.getFirstCoordinates();
