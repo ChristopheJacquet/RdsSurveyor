@@ -1343,6 +1343,15 @@ public class AlertC extends ODA {
 		}
 		
 		/**
+		 * @brief Returns whether message information is complete.
+		 * 
+		 * This method currently checks for a valid CC and LTN and a fully resolved location.
+		 */
+		public boolean isComplete() {
+			return ((cc >= 0) && (ltn >= 0) && (locationInfo != null));
+		}
+		
+		/**
 		 * @brief Returns whether a diversion route is available.
 		 */
 		public boolean isDiversionAvailable() {
