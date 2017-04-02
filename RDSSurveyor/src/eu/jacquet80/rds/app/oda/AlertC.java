@@ -1110,6 +1110,15 @@ public class AlertC extends ODA {
 		}
 		
 		/**
+		 * @brief Returns the PID country code for the event (single hex digit).
+		 * 
+		 * @return the country code, or -1 if unknown
+		 */
+		public int getCountryCode() {
+			return cc;
+		}
+		
+		/**
 		 * @brief Returns the time until which receivers should store the message.
 		 * 
 		 * Persistence is determined by three factors: the date and time at which the message was
@@ -1303,6 +1312,13 @@ public class AlertC extends ODA {
 			return location;
 		}
 		
+		/**
+		 * @brief Returns the Location Table Number (LTN) for this event.
+		 */
+		public int getLocationTableNumber() {
+			return ltn;
+		}
+		
 		public List<Integer> getEvents() {
 			List<Integer> result = new ArrayList<Integer>();
 			
@@ -1317,6 +1333,20 @@ public class AlertC extends ODA {
 		
 		public int getUpdateCount() {
 			return updateCount;
+		}
+		
+		/**
+		 * @brief Returns whether the message affects both directions.
+		 */
+		public boolean isBidirectional() {
+			return bidirectional;
+		}
+		
+		/**
+		 * @brief Returns whether a diversion route is available.
+		 */
+		public boolean isDiversionAvailable() {
+			return diversion;
 		}
 	}
 	
