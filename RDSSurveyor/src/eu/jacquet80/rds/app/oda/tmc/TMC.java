@@ -145,6 +145,14 @@ public class TMC {
 
 		TMC.dbUrl = dbUrl;
 		try {
+			Class.forName("org.hsqldb.jdbc.JDBCDriver" );
+		} catch (Exception e) {
+			TMC.dbUrl = null;
+			System.err.println("ERROR: failed to load HSQLDB JDBC driver.");
+			e.printStackTrace();
+			return;
+		}
+		try {
 			dbConnection = DriverManager.getConnection(dbUrl);
 			dbConnection.setAutoCommit(false);
 			// for an in-memory DB, create tables
