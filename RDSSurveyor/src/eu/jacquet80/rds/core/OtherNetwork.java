@@ -35,7 +35,7 @@ import java.util.Set;
 
 
 public class OtherNetwork extends Station {
-	private Map<Integer, Set<Integer>> mappedAFs = new HashMap<Integer, Set<Integer>>();
+	private Map<Integer, Set<Integer>> mappedAFs = Collections.synchronizedMap(new HashMap<Integer, Set<Integer>>());
 	private Set<Integer> pseudoMethodAAFs = new HashSet<Integer>();
 	
 	@Override
@@ -94,13 +94,15 @@ public class OtherNetwork extends Station {
 		}
 		
 		String res = "Mapped: ";
-		for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
-			res += "[" + frequencyToString(e.getKey()) + " → ";
-			for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
-				res += frequencyToString(it.next());
-				if(it.hasNext()) res += ", ";
+		synchronized(mappedAFs) {
+			for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
+				res += "[" + frequencyToString(e.getKey()) + " → ";
+				for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
+					res += frequencyToString(it.next());
+					if(it.hasNext()) res += ", ";
+				}
+				res += "] ";
 			}
-			res += "] ";
 		}
 		return res;
 	}
