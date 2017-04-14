@@ -28,6 +28,7 @@ package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import eu.jacquet80.rds.log.RDSTime;
@@ -102,7 +103,7 @@ public class RTPlus extends ODA {
 		"GET_DATA"
 	};
 
-	private List<RTPlusItem> history = new ArrayList<RTPlusItem>();
+	private List<RTPlusItem> history = Collections.synchronizedList(new ArrayList<RTPlusItem>());
 	
 	@Override
 	public String getName() {
@@ -177,8 +178,10 @@ public class RTPlus extends ODA {
 	
 	private void addToHistory(int textIndex, int type, int start, int len) {
 		// do not add anything if this type exists already for this index
-		for(RTPlusItem i : history) {
-			if(i.textIndex == textIndex && i.type == type) return;
+		synchronized(history) {
+			for(RTPlusItem i : history) {
+				if(i.textIndex == textIndex && i.type == type) return;
+			}
 		}
 		
 		// else add a new history entry
@@ -187,15 +190,17 @@ public class RTPlus extends ODA {
 	
 	public String getHistoryForIndex(int textIndex, String text) {
 		StringBuilder res = new StringBuilder();
-		for(RTPlusItem i : history) {
-			if(i.textIndex == textIndex) {
-				int endIndex = i.start + i.len + 1;
-				// handle the case when the currently received RT string is too short
-				if(text.length() < endIndex) endIndex = text.length();
+		synchronized(history) {
+			for(RTPlusItem i : history) {
+				if(i.textIndex == textIndex) {
+					int endIndex = i.start + i.len + 1;
+					// handle the case when the currently received RT string is too short
+					if(text.length() < endIndex) endIndex = text.length();
 
-				res.append(classNames[i.type])
+					res.append(classNames[i.type])
 					.append("=\"").append(text.substring(i.start, endIndex))
 					.append("\"&nbsp;&nbsp;&nbsp;&nbsp;");
+				}
 			}
 		}
 		
