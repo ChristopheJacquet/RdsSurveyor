@@ -153,24 +153,32 @@ public class SdrGroupReader extends TunerGroupReader {
 	 * @brief Returns the signal strength of the current station.
 	 * 
 	 * Signal strength is expressed as a value between 0 and 65535, which corresponds to a range
-	 * from -30 dBm to +10 dBm. These values were chosen because the noise level is slightly above
-	 * -30 dBm, whereas strong nearby transmitters with a minimum of block errors reach +10 dBm and
-	 * more. It also places -10 dBm, which is the practical limit for RDS reception, in the middle
-	 * of the range.
+	 * from -30 dBm to +45 dBm. This mapping was modeled after the Si470x driver, which obtains
+	 * RSSI by reading from the chip's 0x0a register, which provides a 8-bit value (0-255). This is
+	 * then multiplied by 873 (which would allow for a 0-75 input range without causing an
+	 * overflow). Silicon Labs documentation (AN230) anecdotally indicates a practical range of 0
+	 * to +45 dB, whereas measurements with a RTL2832U found values in the range of -30 to +15 dB.
+	 * (The threshold for RDS reception with a RTL2832U was found around -10 dB, slightly less than
+	 * half the range.)
+	 * 
+	 * By adding 30 dB to the RSSI as reported by the RTL2832U and applying the same multiplier as
+	 * the Si470x driver, signal strengths are similar to what the Si470x driver reports under
+	 * similar conditions (albeit slightly stronger, which is congruent with the fact that a
+	 * RTL2832U SDR tends to yield better reception).
 	 * 
 	 * If the actual signal strength is outside the boundaries, the nearest boundary is returned.
 	 * 
 	 * The return value of this function can be calculated from signal strength as follows:
-	 * signal = (rssi + 30) * 8192 / 5
+	 * signal = (rssi + 30) * 873
 	 * 
 	 * Vice versa:
-	 * rssi = signal * 5 / 8192 - 30;
+	 * rssi = signal / 873 - 30;
 	 * 
 	 * @return Signal strength
 	 */
 	@Override
 	public int getSignalStrength() {
-		int signal = (int)((getRssi() + 30) * 8192 / 5);  // 8192 / 5 = 65536 / 40
+		int signal = (int)((getRssi() + 30) * 873);
 		if (signal < 0)
 			signal = 0;
 		else if (signal > 0xFFFF)
