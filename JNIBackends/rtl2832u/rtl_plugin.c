@@ -983,13 +983,17 @@ static void *controller_thread_fn(void *arg)
 					/* we're past the peak, tune directly to the strongest frequency */
 					freq = maxFreq;
 					s->freq = freq;
+					rtlsdr_cancel_async(dongle.dev);
 					optimal_settings(freq, demod.rate_in);
+					fprintf(stderr, "\nSeek: stopped at %d Hz (optimized to %d).\n", freq, dongle.freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				} else if (freq == s->freq) {
 					/* We're back at the original frequency and didn't find any stations */
 					// TODO: should we run another round with RSSI_MIN_DX (DX mode)?
+					rtlsdr_cancel_async(dongle.dev);
 					optimal_settings(freq, demod.rate_in);
+					fprintf(stderr, "\nSeek: aborted after one cycle at %d Hz (optimized to %d).\n", freq, dongle.freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				}
