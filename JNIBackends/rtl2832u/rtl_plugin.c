@@ -953,16 +953,12 @@ static void *controller_thread_fn(void *arg)
 				//TODO do we need to communicate each seek step?
 				(*(s->env))->CallVoidMethod(s->env, s->self, s->onFrequencyChanged, (jint)(freq / 1.0e+3));
 
-				/* get two bursts of samples to measure RSSI */
-				/* FIXME: we have some issue due to which we get the RSSI of the previous frequency
-				 * (or something between both frequencies) after the first call to rtlsdr_callback.
-				 * This may be due to a race condition (lack of synchronization). As a workaround,
-				 * we're doing two passes and discarding the result from the first one.
-				 */
+				/* wait for tuner to settle and flush buffer */
+				usleep(5000);
 				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
 					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
-				rtlsdr_callback(samples, samplesRead, &dongle);
 
+				/* get a burst of samples to measure RSSI */
 				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
 					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
 				rtlsdr_callback(samples, samplesRead, &dongle);
