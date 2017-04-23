@@ -30,6 +30,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import biz.source_code.dsp.filter.FilterCharacteristicsType;
@@ -52,6 +56,15 @@ public class AudioBitReader extends BitReader {
 	
 	/** The input stream */
 	private final DataInputStream in;
+	
+	/** A stream from which other applications can retrieve audio data */
+	private PipedInputStream audioMirrorSource;
+	
+	/** Stream to which audio input is mirrored as it is processed */
+	private DataOutputStream audioMirrorSink = null;
+	
+	/** Whether audio is being mirrored */
+	private boolean isPlaying = false;
 	
 	/** Sample rate, or frames per second */
 	private final int sampleRate;
@@ -79,6 +92,12 @@ public class AudioBitReader extends BitReader {
 	public AudioBitReader(DataInputStream stream, int srate) {
 		this.in = stream;
 		this.sampleRate = srate;
+		this.audioMirrorSource = new PipedInputStream();
+		try {
+			this.audioMirrorSink = new DataOutputStream(new PipedOutputStream(audioMirrorSource));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		new Thread() {
 			public void run() {
 				// Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample
@@ -181,6 +200,13 @@ public class AudioBitReader extends BitReader {
 
 					int i;
 					for (i = 0; i < bytesread; i++) {
+						if (isPlaying)
+							if (audioMirrorSink != null)
+								try {
+									audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
 						if (DEBUG) {
 							if (outRaw != null)
 								try {
@@ -315,6 +341,16 @@ public class AudioBitReader extends BitReader {
 			}
 		}.start();
 	}
+	
+	/**
+	 * @brief Returns a stream on which audio output is mirrored as it is processed.
+	 * 
+	 * To start receiving data from the stream, consumers must call {@link #startPlaying()}.
+	 * Consumers who are no longer interested in audio data must call {@link #stopPlaying()}.
+	 */
+	public InputStream getAudioMirrorStream() {
+		return audioMirrorSource;
+	}
 
 	@Override
 	public boolean getBit() throws IOException {
@@ -327,6 +363,29 @@ public class AudioBitReader extends BitReader {
 				System.err.println("InterruptedException.");
 			}
 		}
+	}
+	
+	/**
+	 * @brief Starts mirroring audio samples to the audio stream.
+	 * 
+	 * Consumers must call this method to receive audio data on the audio mirror stream.
+	 * 
+	 * The audio mirror stream can be obtained by calling {@link #getAudioMirrorStream()}.
+	 */
+	public void startPlaying() {
+		isPlaying = true;
+	}
+	
+	/**
+	 * @brief Stops mirroring audio samples to the audio stream.
+	 * 
+	 * When consumers are no longer interested in audio data from the audio mirror stream, they
+	 * must call this method.
+	 * 
+	 * The audio mirror stream can be obtained by calling {@link #getAudioMirrorStream()}.
+	 */
+	public void stopPlaying() {
+		isPlaying = false;
 	}
 	
 	/**

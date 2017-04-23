@@ -4,25 +4,40 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.SourceDataLine;
+
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.Status;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
+import eu.jacquet80.rds.util.MathUtil;
 
 public class SdrGroupReader extends TunerGroupReader {
 	/** The sample rate at which we receive data from the tuner. */
 	private static final int sampleRate = 250000;
 	
+	/** The sample rate for audio output. */
+	private static final int outSampleRate = 48000;
+	
+	/* The stream from which demodulated audio data is read, linked to tunerOut */
 	private final PipedInputStream syncIn;
+	/* The stream to which the native plugin writes demodulated audio data. */
 	private final DataOutputStream tunerOut;
+	/* The audio bit reader which handles audio stream decoding and provides an audio input stream */
+	private final AudioBitReader reader;
 	private final BitStreamSynchronizer synchronizer;
+	private final InputStream audioStream;
 	private boolean synced = false;
 	private boolean newGroups;
 	
@@ -36,7 +51,6 @@ public class SdrGroupReader extends TunerGroupReader {
 	/* Received signal strength in dBm. Always use getter method for this. */
 	private Float mRssi = new Float(0);
 	
-	// TODO check which members we need
 	private static final String dir, sep;
 	private boolean audioCapable = false;
 	private boolean audioPlaying = false;
@@ -45,7 +59,9 @@ public class SdrGroupReader extends TunerGroupReader {
 	public SdrGroupReader(PrintStream console, String filename) throws UnavailableInputMethod, IOException {
 		syncIn = new PipedInputStream();
 		tunerOut = new DataOutputStream(new PipedOutputStream(syncIn));
-		synchronizer = new BitStreamSynchronizer(console, new AudioBitReader(new DataInputStream(syncIn), sampleRate));
+		reader = new AudioBitReader(new DataInputStream(syncIn), sampleRate);
+		audioStream = reader.getAudioMirrorStream();
+		synchronizer = new BitStreamSynchronizer(console, reader);
 		
 		synchronizer.addStatusChangeListener(new BitStreamSynchronizer.StatusChangeListener() {
 			@Override
@@ -74,17 +90,15 @@ public class SdrGroupReader extends TunerGroupReader {
 					aFilename + ": no device found");
 		}
 		
-		/* TODO implement sound
 		SoundPlayer p = new SoundPlayer();
 		if(audioCapable) {
 			p.start();
 		}
-		*/
 	}
 
 	@Override
 	public boolean isStereo() {
-		return false; // TODO implement sound
+		return false; // TODO implement stereo
 		//return data.stereo;
 	}
 
@@ -139,14 +153,12 @@ public class SdrGroupReader extends TunerGroupReader {
 
 	@Override
 	public boolean isAudioCapable() {
-		return false; // TODO implement sound
-		// return audioCapable;
+		return audioCapable;
 	}
 
 	@Override
 	public boolean isPlayingAudio() {
-		return false; // TODO implement sound
-		// return audioPlaying;
+		return audioPlaying;
 	}
 	
 	/**
@@ -310,8 +322,7 @@ public class SdrGroupReader extends TunerGroupReader {
 	 * Other implementations use it to retrieve RDS data, stereo flags, and RSSI from the tuner,
 	 * requiring it to be called before the respective methods. This makes sense for a tuner but
 	 * not for a SDR: RSSI is retrieved through an event handler method, stereo is currently not
-	 * relevant due to lack of audio support (TODO) and RDS data is decoded from the audio stream
-	 * returned by the SDR.
+	 * supported (TODO) and RDS data is decoded from the audio stream returned by the SDR.
 	 *  
 	 * @return 0
 	 */
@@ -327,67 +338,36 @@ public class SdrGroupReader extends TunerGroupReader {
 	}
 
 
-	/* TODO implement sound
-	private final static String[] okVendors = { // TODO fix these
-		"SILICON",
-		"www.rding.cn"
-	};
-	
-	private final static String[] okNames = { // TODO fix these
-		"FM Radio",
-		"Radio"
-	};
-
-	
 	private class SoundPlayer extends Thread {
-		private Mixer mixer = null;
-		private TargetDataLine inLine;
 		private SourceDataLine outLine;
+		private int inRatio;
+		private int outRatio;
 
 		public SoundPlayer() {
-			
-			for(Mixer.Info mixInfo : AudioSystem.getMixerInfo()) {
-				String vendor = mixInfo.getVendor();
-				if(vendor != null) vendor = vendor.split(" ")[0];
-				
-				String name = mixInfo.getName();
-				if(name != null) name = name.split(" ")[0];
-				
-				if(Arrays.asList(okVendors).contains(vendor) ||
-						Arrays.asList(okNames).contains(name)) {
-
-					System.out.println("Trying to use audio device: '" + mixInfo.getVendor() + 
-							"', '" + mixInfo.getName() + "'");
-					
-					mixer = AudioSystem.getMixer(mixInfo);
-					if(mixer != null) break;
-				}
-			}
-			
-			if(mixer == null) {
-				System.out.println("Native tuner: not found audio device.");
-				return;
-			}
-			
 			try {
-				Line.Info[] linesInfo = mixer.getTargetLineInfo();
-				inLine = (TargetDataLine) mixer.getLine(linesInfo[0]);
 				AudioFormat inFormat =  
-						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 96000, 8, 1, 1, 96000, false);
-				inLine.open(inFormat);
-
+						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, sampleRate, 16, 1, 2, sampleRate, false);
 				AudioFormat outFormat =  
-						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000, 16, 1, 2, 48000, false);
-				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4*48000);
+						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, outSampleRate, 16, 1, 2, outSampleRate, false);
+				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4*250000);
 				outLine = (SourceDataLine) AudioSystem.getLine(outInfo);
 				outLine.open(outFormat);
 			} catch(Exception e) {
-				System.out.println("Native tuner: audio device, but could not open lines:");
+				System.out.println("SDR: could not open output line:");
 				System.out.println("\t" + e);
 				return;
 			}
 			
-			System.out.println("Both USB stick audio and sound card audio configured successfully");
+			if (sampleRate < outSampleRate) {
+				System.out.println(String.format("SDR: sample rate must be %d or higher", outSampleRate));
+				return;
+			}
+			
+			int gcd = MathUtil.gcd(sampleRate, outSampleRate);
+			inRatio = sampleRate / gcd;
+			outRatio = outSampleRate / gcd;
+			
+			System.out.println(String.format("SDR audio output configured successfully, downsampling ratio %d:%d", inRatio, outRatio));
 		
 			audioCapable = true;
 			audioPlaying = true;
@@ -395,27 +375,57 @@ public class SdrGroupReader extends TunerGroupReader {
 		
 		@Override
 		public void run() {
-			byte[] data = new byte[24000];
+			byte[] inData = new byte[sampleRate / 2];
+			byte[] outData = new byte[outSampleRate / 2];
+			int inCount = 0;
+			int outCount = 0;
 			
-			inLine.start();
 			outLine.start();
+			reader.startPlaying();
 			
 			// simple audio pass through
 			while(true) {
-				inLine.read(data, 0, data.length);
-				outLine.write(data, 0, data.length);
+				try {
+					int len = audioStream.read(inData, 0, inData.length);
+					if (sampleRate == outSampleRate)
+						/* no resampling needed */
+						outLine.write(inData, 0, len);
+					else {
+						/* resample */
+						int o = 0;
+						for (int i = 0; i < len; i+=2) {
+							inCount += 2;
+							/* 
+							 * if the downsampling ratio has not been exceeded yet
+							 * (outCount * inRatio <= outRatio * inCount
+							 * is just an integer-friendly and div-by-zero-proof representation of 
+							 * outCount/inCount <= outRatio/inRatio)
+							 */
+							if (outCount * inRatio <= outRatio * inCount) {
+								outCount += 2;
+								outData[o] = inData[i];
+								outData[o+1] = inData[i+1];
+								o+=2;
+							}
+						}
+						if (o > 0)
+							outLine.write(outData, 0, o);
+						inCount %= inRatio;
+						outCount %= outRatio;
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 				
 				if(! audioPlaying) {
-					inLine.stop();
+					reader.stopPlaying();
 					outLine.stop();
-					inLine.flush();
 					outLine.flush();
 					resumePlaying.acquireUninterruptibly();
-					inLine.start();
 					outLine.start();
+					reader.startPlaying();
 				}
 			}
 		}
 	}
-	*/
 }
