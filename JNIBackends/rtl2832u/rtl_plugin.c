@@ -1222,7 +1222,7 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 
 	/* Fall back to auto gain if we can't get supported gain levels */
 	if (!dongle.gains_len)
-		dongle.gain == AUTO_GAIN;
+		dongle.gain = AUTO_GAIN;
 
 	/* Set the tuner gain */
 	if (dongle.gain == AUTO_GAIN) {
