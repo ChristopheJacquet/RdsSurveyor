@@ -123,9 +123,14 @@ struct dongle_state
 	int      dev_index;
 	uint32_t freq;       /**< The current frequency in Hz, corrected. */
 	uint32_t rate;
-	int      gain;
+	int      gain;       /**< Tuner gain, in multiples of 0.1 dB. If the tuner does not support
+	                          this level, it will be changed to the nearest supported level. */
+	int      *gains;     /**< Gain levels supported by the tuner. */
+	uint16_t gains_len;  /**< Number of supported gain levels. */
 	uint16_t buf16[MAXIMUM_BUF_LENGTH];
 	uint32_t buf_len;
+	uint8_t  minSample;  /**< Lowest-value sample encountered, used for gain control */
+	uint8_t  maxSample;  /**< Highest-value sample encountered, used for gain control */
 	int      ppm_error;
 	int      offset_tuning;
 	int      direct_sampling;
@@ -615,10 +620,6 @@ double dbm(int16_t *samples, int len, int step) {
 	dc = (double)(t*step) / (double)len;
 	err = t * 2 * dc - dc * dc * len;
 
-	/* FIXME: for some reason 10 * log10 is off by 20-22 compared to output from rtl_power, hence
-	 * the correction below - not sure if that is correct. If the offset is changed, the signal
-	 * level thresholds will have to be changed accordingly.
-	 */
 	return 10 * log10((p-err) / len) - 21;
 }
 
@@ -757,7 +758,13 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	}
 	if (!s->offset_tuning) {
 		rotate_90(buf, len);}
+	s->minSample = 255;
+	s->maxSample = 0;
 	for (i=0; i<(int)len; i++) {
+		if (buf[i] < s->minSample)
+			s->minSample = buf[i];
+		if (buf[i] > s->maxSample)
+			s->maxSample = buf[i];
 		s->buf16[i] = (int16_t)buf[i] - 127;}
 	pthread_rwlock_wrlock(&d->rw);
 	memcpy(d->lowpassed, s->buf16, 2*len);
@@ -973,6 +980,33 @@ static void *controller_thread_fn(void *arg)
 		pthread_rwlock_wrlock(&s->rw);
 		switch (s->retune) {
 		case TUNE_NONE:
+			if (dongle.gain != AUTO_GAIN) {
+				if (dongle.minSample == 0 || dongle.maxSample == 255) {
+					/* clipping detected, decrease gain */
+					int i = 0;
+					while ((i < dongle.gains_len - 1) && (dongle.gains[i+1] < dongle.gain))
+						i++;
+					if (dongle.gain != dongle.gains[i]) {
+						dongle.gain = dongle.gains[i];
+						verbose_gain_set(dongle.dev, dongle.gain);
+						fprintf(stderr, "\nAGC: gain lowered to %d\n", dongle.gain);
+					}
+				} else if (dongle.gain < dongle.gains[dongle.gains_len-1]) {
+					/* check if we can increase gain without causing clipping */
+					int i = 0;
+					do {
+						i++;
+					} while ((i < dongle.gains_len - 1) && (dongle.gains[i] <= dongle.gain));
+					float linGain = pow(10, (float)(dongle.gains[i] - dongle.gain) / 450);
+					int newMax = (float) dongle.maxSample * linGain;
+					int newMin = (float) dongle.minSample / linGain;
+					if (newMin >= 0 && newMax <= 255) {
+						dongle.gain = dongle.gains[i];
+						verbose_gain_set(dongle.dev, dongle.gain);
+						fprintf(stderr, "\nAGC: gain raised to %d\n", dongle.gain);
+					}
+				}
+			}
 			pthread_rwlock_unlock(&s->rw);
 			continue;
 		case TUNE_FREQ:
@@ -1070,7 +1104,9 @@ static void *controller_thread_fn(void *arg)
 void dongle_init(struct dongle_state *s)
 {
 	s->rate = DEFAULT_SAMPLE_RATE;
-	s->gain = AUTO_GAIN; // tenths of a dB
+	s->gain = 0; // tenths of a dB
+	s->gains = NULL;
+	s->gains_len = 0;
 	s->mute = 0;
 	s->direct_sampling = 0;
 	s->offset_tuning = 0;
@@ -1186,6 +1222,16 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 	if (demod.deemph) {
 		demod.deemph_a = (int)round(1.0/((1.0-exp(-1.0/(demod.rate_out * 75e-6)))));
 	}
+
+	dongle.gains_len = rtlsdr_get_tuner_gains(dongle.dev, NULL);
+	if (dongle.gains_len) {
+		dongle.gains = malloc(sizeof(int) * dongle.gains_len);
+		dongle.gains_len = rtlsdr_get_tuner_gains(dongle.dev, dongle.gains);
+	}
+
+	/* Fall back to auto gain if we can't get supported gain levels */
+	if (!dongle.gains_len)
+		dongle.gain == AUTO_GAIN;
 
 	/* Set the tuner gain */
 	if (dongle.gain == AUTO_GAIN) {
