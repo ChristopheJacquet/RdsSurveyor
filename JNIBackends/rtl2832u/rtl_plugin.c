@@ -691,7 +691,6 @@ void arbitrary_resample(int16_t *buf1, int16_t *buf2, int len1, int len2)
 void full_demod(struct demod_state *d)
 {
 	int i, ds_p;
-	int sr = 0;
 	double rssi;
 	ds_p = d->downsample_passes;
 	if (ds_p) {
@@ -776,9 +775,7 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = arg;
-	int ret = -255;
-	pthread_t tid = pthread_self();
-	ret = rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
+	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
 	return 0;
 }
 
@@ -787,7 +784,7 @@ static void *demod_thread_fn(void *arg)
 	struct demod_state *d = arg;
 	struct output_state *o = d->output_target;
 
-	(*(d->jvm))->AttachCurrentThread(d->jvm, &(d->env), NULL);
+	(*(d->jvm))->AttachCurrentThread(d->jvm, (void **)&(d->env), NULL);
 	jclass clsSelf = (*(d->env))->GetObjectClass(d->env, d->self);
 	d->onRssiChanged = (*(d->env))->GetMethodID(d->env, clsSelf, "onRssiChanged", "(F)V");
 
@@ -822,7 +819,7 @@ static void *output_thread_fn(void *arg)
 {
 	struct output_state *s = arg;
 
-	(*(s->jvm))->AttachCurrentThread(s->jvm, &(s->env), NULL);
+	(*(s->jvm))->AttachCurrentThread(s->jvm, (void **)&(s->env), NULL);
 	jclass clsSelf = (*(s->env))->GetObjectClass(s->env, s->self);
 	jfieldID fTunerOut = (*(s->env))->GetFieldID(s->env, clsSelf, "tunerOut", "Ljava/io/DataOutputStream;");
 	s->tunerOut = (*(s->env))->GetObjectField(s->env, s->self, fTunerOut);
@@ -848,7 +845,7 @@ static void *output_thread_fn(void *arg)
 	return 0;
 }
 
-static void optimal_settings(int freq, int rate)
+static void optimal_settings(int freq)
 {
 	// giant ball of hacks
 	// seems unable to do a single pass, 2:1
@@ -933,9 +930,6 @@ static void *controller_thread_fn(void *arg)
 	// might be no good using a controller thread if retune/rate blocks
 	struct controller_state *s = arg;
 	uint32_t freq;
-	void * samples;  // Buffer to receive samples for RSSI measurement
-	int samplesSize; // Size of samples buffer
-	int samplesRead = 0;
 	double rssi, lastRssi;
 	/* reference RSSI: when nearStart is true, the lowest one observed; else the highest one */
 	double refRssi;
@@ -943,7 +937,7 @@ static void *controller_thread_fn(void *arg)
 	/* Whether we are still near the frequency where seek started */
 	int nearStart;
 
-	(*(s->jvm))->AttachCurrentThread(s->jvm, &(s->env), NULL);
+	(*(s->jvm))->AttachCurrentThread(s->jvm, (void **)&(s->env), NULL);
 	jclass clsSelf = (*(s->env))->GetObjectClass(s->env, s->self);
 	s->onFrequencyChanged = (*(s->env))->GetMethodID(s->env, clsSelf, "onFrequencyChanged", "(I)V");
 
@@ -955,7 +949,7 @@ static void *controller_thread_fn(void *arg)
 
 	/* set up primary channel */
 	pthread_rwlock_wrlock(&s->rw);
-	optimal_settings(s->freq, demod.rate_in);
+	optimal_settings(s->freq);
 	s->retune = TUNE_NONE;
 	freq = s->freq;
 	pthread_rwlock_unlock(&s->rw);
@@ -1012,7 +1006,7 @@ static void *controller_thread_fn(void *arg)
 		case TUNE_FREQ:
 			/* hacky hopping */
 			freq = s->freq;
-			optimal_settings(freq, demod.rate_in);
+			optimal_settings(freq);
 			rtlsdr_cancel_async(dongle.dev);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			/* TODO should we allow the tuner to settle and flush the buffer before continuing? */
@@ -1021,8 +1015,6 @@ static void *controller_thread_fn(void *arg)
 			break;
 		case TUNE_SEEK_UP:
 		case TUNE_SEEK_DOWN:
-			samplesSize = MAXIMUM_BUF_LENGTH / 16;
-			samples = malloc(samplesSize * 2);
 			freq = s->freq;
 			refRssi = -RSSI_INVALID;
 			maxFreq = 0;
@@ -1041,7 +1033,7 @@ static void *controller_thread_fn(void *arg)
 					nearStart = 0;
 				}
 				rtlsdr_cancel_async(dongle.dev);
-				optimal_settings(freq, demod.rate_in);
+				optimal_settings(freq);
 				fprintf(stderr, "\nSeek: currently at %d Hz (optimized to %d).\n", freq, dongle.freq);
 				rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 				//TODO do we need to communicate each seek step?
@@ -1075,15 +1067,14 @@ static void *controller_thread_fn(void *arg)
 					freq = maxFreq;
 					s->freq = freq;
 					rtlsdr_cancel_async(dongle.dev);
-					optimal_settings(freq, demod.rate_in);
+					optimal_settings(freq);
 					fprintf(stderr, "\nSeek: stopped at %d Hz (optimized to %d).\n", freq, dongle.freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				} else if (freq == s->freq) {
 					/* We're back at the original frequency and didn't find any stations */
-					// TODO: should we run another round with RSSI_MIN_DX (DX mode)?
 					rtlsdr_cancel_async(dongle.dev);
-					optimal_settings(freq, demod.rate_in);
+					optimal_settings(freq);
 					fprintf(stderr, "\nSeek: aborted after one cycle at %d Hz, nearStart=%d, maxFreq=%d, refRssi=%.2f.\n", freq, nearStart, maxFreq, refRssi);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
@@ -1257,11 +1248,18 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 
 JNIEXPORT jstring JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_getDeviceName
   (JNIEnv *env, jobject self) {
+	/* Suppress compiler warnings */
+	(void) self;
+
     return (*env)->NewStringUTF(env, "rtl2832u");
 }
 
 JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_setFrequency
   (JNIEnv *env, jobject self, jint freq) {
+	/* Suppress compiler warnings */
+	(void) env;
+	(void) self;
+
 	pthread_rwlock_wrlock(&controller.rw);
 	controller.freq = freq * 1.0e+3;
 	controller.retune = TUNE_FREQ;
@@ -1272,6 +1270,10 @@ JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_setFrequency
 
 JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_seek
   (JNIEnv *env, jobject self, jboolean up) {
+	/* Suppress compiler warnings */
+	(void) env;
+	(void) self;
+
 	pthread_rwlock_wrlock(&controller.rw);
 	controller.retune = up ? TUNE_SEEK_UP : TUNE_SEEK_DOWN;
 	pthread_rwlock_unlock(&controller.rw);
