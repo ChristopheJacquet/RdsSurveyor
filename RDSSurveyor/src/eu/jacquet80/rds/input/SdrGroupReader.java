@@ -25,7 +25,7 @@ import eu.jacquet80.rds.util.MathUtil;
 
 public class SdrGroupReader extends TunerGroupReader {
 	/** The sample rate at which we receive data from the tuner. */
-	private static final int sampleRate = 250000;
+	private static final int sampleRate = 128000;
 	
 	/** The sample rate for audio output. */
 	private static final int outSampleRate = 48000;
