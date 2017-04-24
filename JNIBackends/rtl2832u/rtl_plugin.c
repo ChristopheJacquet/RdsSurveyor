@@ -94,6 +94,7 @@
 /* Minimum RSSI to stop during seek */
 #define RSSI_MIN            -7.5
 #define RSSI_MIN_DX         -10
+#define RSSI_INVALID        -100
 
 static volatile int do_exit = 0;
 static int lcm_post[17] = {1,1,1,3,1,5,3,7,1,9,5,11,3,13,7,15,1};
@@ -867,6 +868,58 @@ static void optimal_settings(int freq, int rate)
 	d->rate = (uint32_t)capture_rate;
 }
 
+/**
+ * @brief Waits for RSSI to stabilize, then returns the result.
+ *
+ * The RSSI is considered to have stabilized when two subsequent measurements differ by less than
+ * 1 dB, or when three subsequent measurements fail to form a monotonic sequence. In either case,
+ * the last RSSI measurement is returned.
+ */
+double get_stabilized_rssi() {
+	/* Size of samples buffer */
+	int samplesSize = MAXIMUM_BUF_LENGTH / 16;
+	/* Buffer to receive samples for RSSI measurement */
+	void * samples = malloc(samplesSize * 2);
+	int samplesRead = 0;
+	int rssiTrend = 0;
+	double rssi = RSSI_INVALID;
+	double lastRssi = RSSI_INVALID;
+
+	while (1) {
+		lastRssi = rssi;
+
+		/* get a burst of samples to measure RSSI */
+		if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0) {
+			fprintf(stderr, "\nget_stabilized_rssi: rtlsdr_read_sync failed\n");
+			return RSSI_INVALID;
+		}
+
+		rtlsdr_callback(samples, samplesRead, &dongle);
+		pthread_rwlock_rdlock(&demod.rw);
+		rssi = dongle.demod_target->rssi;
+		pthread_rwlock_unlock(&demod.rw);
+
+		//fprintf(stderr, "\nget_stabilized_rssi: rssi=%.2f", rssi);
+
+		if (lastRssi == RSSI_INVALID) {
+			/* nothing to compare to yet */
+		} else if (abs(rssi - lastRssi) < 1)
+			/* RSSI changed by less than 1 dB, assume stable state */
+			return rssi;
+		else if (!rssiTrend) {
+			if (rssi < lastRssi)
+				rssiTrend = -1;
+			else if (rssi > lastRssi)
+				rssiTrend = 1;
+		} else {
+			/* RSSI started oscillating, assume stable state */
+			if (((rssi < lastRssi) && rssiTrend == 1)
+					|| ((rssi > lastRssi) && rssiTrend == -1))
+				return rssi;
+		}
+	}
+}
+
 static void *controller_thread_fn(void *arg)
 {
 	// thoughts for multiple dongles
@@ -876,8 +929,11 @@ static void *controller_thread_fn(void *arg)
 	void * samples;  // Buffer to receive samples for RSSI measurement
 	int samplesSize; // Size of samples buffer
 	int samplesRead = 0;
-	double rssi, maxRssi;
+	double rssi, lastRssi;
+	/* reference RSSI: when nearStart is true, the lowest one observed; else the highest one */
+	double refRssi;
 	int maxFreq;
+	/* Whether we are still near the frequency where seek started */
 	int nearStart;
 
 	(*(s->jvm))->AttachCurrentThread(s->jvm, &(s->env), NULL);
@@ -925,6 +981,7 @@ static void *controller_thread_fn(void *arg)
 			optimal_settings(freq, demod.rate_in);
 			rtlsdr_cancel_async(dongle.dev);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			/* TODO should we allow the tuner to settle and flush the buffer before continuing? */
 			/* Start a new dongle thread */
 			pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void *)(&dongle));
 			break;
@@ -933,7 +990,7 @@ static void *controller_thread_fn(void *arg)
 			samplesSize = MAXIMUM_BUF_LENGTH / 16;
 			samples = malloc(samplesSize * 2);
 			freq = s->freq;
-			maxRssi = -30;
+			refRssi = -RSSI_INVALID;
 			maxFreq = 0;
 			nearStart = 1;
 			while (s->retune != TUNE_NONE) {
@@ -942,10 +999,13 @@ static void *controller_thread_fn(void *arg)
 				else
 					freq -= 0.1e+6;
 				pthread_rwlock_unlock(&s->rw);
-				if (freq > FREQ_MAX)
+				if (freq > FREQ_MAX) {
 					freq = FREQ_MIN;
-				else if (freq < FREQ_MIN)
+					nearStart = 0;
+				} else if (freq < FREQ_MIN) {
 					freq = FREQ_MAX;
+					nearStart = 0;
+				}
 				rtlsdr_cancel_async(dongle.dev);
 				optimal_settings(freq, demod.rate_in);
 				fprintf(stderr, "\nSeek: currently at %d Hz (optimized to %d).\n", freq, dongle.freq);
@@ -953,29 +1013,30 @@ static void *controller_thread_fn(void *arg)
 				//TODO do we need to communicate each seek step?
 				(*(s->env))->CallVoidMethod(s->env, s->self, s->onFrequencyChanged, (jint)(freq / 1.0e+3));
 
-				/* wait for tuner to settle and flush buffer */
+				/* wait for tuner to settle */
 				usleep(5000);
-				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
-					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
 
-				/* get a burst of samples to measure RSSI */
-				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
-					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
-				rtlsdr_callback(samples, samplesRead, &dongle);
+				lastRssi = rssi;
 
-				pthread_rwlock_rdlock(&demod.rw);
-				rssi = dongle.demod_target->rssi;
-				pthread_rwlock_unlock(&demod.rw);
+				/* measure RSSI */
+				rssi = get_stabilized_rssi();
+				fprintf(stderr, "\nSeek: rssi=%.2f\n", rssi);
 
 				pthread_rwlock_wrlock(&s->rw);
-				if (rssi < RSSI_MIN) { // or RSSI_MIN_DX, depending on desired scan sensitivity
-					nearStart = 0;
-				} else if (!nearStart && (rssi >= maxRssi)) {
-					/* store frequency and RSSI and see if the next frequency has a stronger signal */
-					maxRssi = rssi;
-					maxFreq = freq;
+				if (nearStart && (rssi < refRssi)) {
+					/* while we're near the start frequency, store lowest frequency observed */
+					refRssi = rssi;
+				} else if (rssi >= refRssi) {
+					if (rssi >= lastRssi + 1)
+						/* RSSI is increasing significantly (above 1 dB), we're no longer near the start */
+						nearStart = 0;
+					if (!nearStart) {
+						/* store frequency and RSSI and see if the next frequency has a stronger signal */
+						maxFreq = freq;
+						refRssi = rssi;
+					}
 				}
-				if (maxFreq && (rssi < maxRssi)) {
+				if (maxFreq && (rssi < refRssi)) {
 					/* we're past the peak, tune directly to the strongest frequency */
 					freq = maxFreq;
 					s->freq = freq;
@@ -989,7 +1050,7 @@ static void *controller_thread_fn(void *arg)
 					// TODO: should we run another round with RSSI_MIN_DX (DX mode)?
 					rtlsdr_cancel_async(dongle.dev);
 					optimal_settings(freq, demod.rate_in);
-					fprintf(stderr, "\nSeek: aborted after one cycle at %d Hz (optimized to %d).\n", freq, dongle.freq);
+					fprintf(stderr, "\nSeek: aborted after one cycle at %d Hz, nearStart=%d, maxFreq=%d, refRssi=%.2f.\n", freq, nearStart, maxFreq, refRssi);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				}
