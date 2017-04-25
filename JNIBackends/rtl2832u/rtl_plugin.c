@@ -1094,7 +1094,7 @@ static void *controller_thread_fn(void *arg)
 
 void dongle_init(struct dongle_state *s)
 {
-	s->rate = DEFAULT_SAMPLE_RATE;
+	s->rate = sampleRateOut;
 	s->gain = 0; // tenths of a dB
 	s->gains = NULL;
 	s->gains_len = 0;
@@ -1106,8 +1106,8 @@ void dongle_init(struct dongle_state *s)
 
 void demod_init(struct demod_state *s)
 {
-	s->rate_in = DEFAULT_SAMPLE_RATE;
-	s->rate_out = DEFAULT_SAMPLE_RATE;
+	s->rate_in = sampleRateOut;
+	s->rate_out = sampleRateOut;
 	s->downsample_passes = 1;  /* truthy placeholder */
 	s->comp_fir_size = 0;
 	s->prev_index = 0;
