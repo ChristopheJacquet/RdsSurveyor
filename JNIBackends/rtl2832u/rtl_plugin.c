@@ -1036,8 +1036,6 @@ static void *controller_thread_fn(void *arg)
 				optimal_settings(freq);
 				fprintf(stderr, "\nSeek: currently at %d Hz (optimized to %d).\n", freq, dongle.freq);
 				rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-				//TODO do we need to communicate each seek step?
-				(*(s->env))->CallVoidMethod(s->env, s->self, s->onFrequencyChanged, (jint)(freq / 1.0e+3));
 
 				/* wait for tuner to settle */
 				usleep(5000);
