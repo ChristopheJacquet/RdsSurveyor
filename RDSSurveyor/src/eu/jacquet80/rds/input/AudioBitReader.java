@@ -29,11 +29,13 @@ package eu.jacquet80.rds.input;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.PrintStream;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import biz.source_code.dsp.filter.FilterCharacteristicsType;
@@ -129,11 +131,11 @@ public class AudioBitReader extends BitReader {
 				IirFilter lpPllFilter = new IirFilter(lpPllCoeffs);
 				
 				// for debugging only
+				double t = 0;
 				short outbuf;
 				Process pU;
 				Process pIQ;
 				Process pRaw;
-				
 				String tempPath = "/tmp";
 				String pathSep ="/";
 				try {
@@ -146,13 +148,13 @@ public class AudioBitReader extends BitReader {
 				} catch (Exception e) {
 					// NOP
 				}
-				
 				String[] cmdU = {"sox", "-c", "5", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out.wav"};
 				String[] cmdIQ = {"sox", "-c", "2", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out-iq.wav"};
 				String[] cmdRaw = {"sox", "-c", "1", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out-raw.wav"};
 				DataOutputStream outU = null;
 				DataOutputStream outIQ = null;
 				DataOutputStream outRaw = null;
+				PrintStream stats = null;
 				
 				if (DEBUG) {
 					sbit = 0;
@@ -188,12 +190,13 @@ public class AudioBitReader extends BitReader {
 						e.printStackTrace();
 					}
 					
-					/* From Oona Räisänen's original code, not implemented here for the moment */
-					/*
-					FILE *STATS;
-					STATS = fopen("stats.csv", "w");
-					fprintf(STATS, "t,fp,d_phi_sc,clock_offset,qua\n");
-					*/
+					try {
+						stats = new PrintStream(new File(tempPath, "stats.csv"));
+						stats.print("t,fp,d_phi_sc,clock_offset\n");
+					} catch (FileNotFoundException e) {
+						e.printStackTrace();
+						stats = null;
+					}
 				}
 
 				while (true) {
@@ -340,13 +343,10 @@ public class AudioBitReader extends BitReader {
 									e.printStackTrace();
 								}
 							
-							/* From Oona Räisänen's original code, not implemented here for the moment */
-							/*
-							t += 1.0/FS;
-							if (numsamples % 125 == 0)
-								fprintf(STATS,"%f,%f,%f,%f,%f\n",
-										t,fsc,d_phi_sc,clock_offset,qua);
-							*/
+							t += 1.0/sampleRate;
+							if ((stats != null) && (numsamples % 125 == 0))
+								// qua (quality) is not implemented so far
+								stats.printf("%f,%f,%f,%f\n", t, fsc, d_phi_sc, clock_offset);
 						}
 
 						prev_bb = subcarr_bb[0];
