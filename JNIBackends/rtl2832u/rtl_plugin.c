@@ -1107,7 +1107,7 @@ void demod_init(struct demod_state *s)
 	s->rate_in = sampleRateOut;
 	s->rate_out = sampleRateOut;
 	s->downsample_passes = 1;  /* truthy placeholder */
-	s->comp_fir_size = 0;
+	s->comp_fir_size = 9;
 	s->prev_index = 0;
 	s->post_downsample = 1;  // once this works, default = 4
 	s->custom_atan = 0;
