@@ -133,9 +133,23 @@ public class AudioBitReader extends BitReader {
 				Process pU;
 				Process pIQ;
 				Process pRaw;
-				String[] cmdU = {"sox", "-c", "5", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", "dbg-out.wav"};
-				String[] cmdIQ = {"sox", "-c", "2", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", "dbg-out-iq.wav"};
-				String[] cmdRaw = {"sox", "-c", "1", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", "dbg-out-raw.wav"};
+				
+				String tempPath = "/tmp";
+				String pathSep ="/";
+				try {
+					tempPath = System.getProperty("java.io.tmpdir", tempPath);
+				} catch (Exception e) {
+					// NOP
+				}
+				try {
+					pathSep = System.getProperty("file.separator", pathSep);
+				} catch (Exception e) {
+					// NOP
+				}
+				
+				String[] cmdU = {"sox", "-c", "5", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out.wav"};
+				String[] cmdIQ = {"sox", "-c", "2", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out-iq.wav"};
+				String[] cmdRaw = {"sox", "-c", "1", "-r", Integer.toString(sampleRate), "-t", ".s16", "-", tempPath + pathSep + "dbg-out-raw.wav"};
 				DataOutputStream outU = null;
 				DataOutputStream outIQ = null;
 				DataOutputStream outRaw = null;
