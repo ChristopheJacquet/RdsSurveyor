@@ -1,0 +1,15 @@
+This Si470x userspace driver is available under the GNU Public License
+version 2 (GPLv2).
+
+Copyright (c) 2012 by Christophe Jacquet 
+    <Christophe (dot) Jacquet (at) gmail.com>
+
+
+It is derived from the si470x driver from the Linux kernel sources,
+available under the GPLv2
+    Linux si470x driver Copyright (c) 2009 Tobias Lorenz
+
+
+It uses the HIDAPI library (included herewith), used under the terms of
+the BSD license.
+    HIDAPI Copyright (c) by Alan Ott and Ludovic Rousseau
