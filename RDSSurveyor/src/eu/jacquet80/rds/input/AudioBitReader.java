@@ -192,7 +192,7 @@ public class AudioBitReader extends BitReader {
 					
 					try {
 						stats = new PrintStream(new File(tempPath, "stats.csv"));
-						stats.print("t,fp,d_phi_sc,clock_offset\n");
+						stats.print("t,fp,d_phi_sc,subcarr_bb_re,subcarr_bb_im,clock_offset\n");
 					} catch (FileNotFoundException e) {
 						e.printStackTrace();
 						stats = null;
@@ -346,7 +346,7 @@ public class AudioBitReader extends BitReader {
 							t += 1.0/sampleRate;
 							if ((stats != null) && (numsamples % 125 == 0))
 								// qua (quality) is not implemented so far
-								stats.printf("%f,%f,%f,%f\n", t, fsc, d_phi_sc, clock_offset);
+								stats.printf("%f,%f,%f,%f,%f,%f\n", t, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
 						}
 
 						prev_bb = subcarr_bb[0];
