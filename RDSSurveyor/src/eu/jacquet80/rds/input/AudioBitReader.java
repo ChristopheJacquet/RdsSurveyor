@@ -74,6 +74,9 @@ public class AudioBitReader extends BitReader {
 	/** Sample rate, or frames per second */
 	private final int sampleRate;
 	
+	/** Decimation factor, determined based on the sample rate */
+	private final int decimate;
+	
 	/** A queue for the bits decoded from the audio stream. */
 	private final ArrayBlockingQueue<Boolean> bits = new ArrayBlockingQueue<Boolean>(OBUFLEN);
 
@@ -97,6 +100,7 @@ public class AudioBitReader extends BitReader {
 	public AudioBitReader(DataInputStream stream, int srate) {
 		this.in = stream;
 		this.sampleRate = srate;
+		this.decimate = this.sampleRate / 7125;
 		this.audioMirrorSource = new PipedInputStream();
 		try {
 			this.audioMirrorSink = new DataOutputStream(new PipedOutputStream(audioMirrorSource));
@@ -301,7 +305,7 @@ public class AudioBitReader extends BitReader {
 						}
 						
 						/* Decimate band-limited signal */
-						if (numsamples % 8 == 0) {
+						if (numsamples % decimate == 0) {
 							/* 1187.5 Hz clock */
 
 							clock_phi = subcarr_phi / 48.0 + clock_offset;
@@ -396,7 +400,7 @@ public class AudioBitReader extends BitReader {
 									}
 
 								t += 1.0/sampleRate;
-								if ((stats != null) && (numsamples % 128 == 0))
+								if ((stats != null) && (numsamples % (decimate * 16) == 0))
 									// qua (quality) is not implemented so far
 									stats.printf("%f,%f,%f,%f,%f,%f,%f\n", t, hasPilot ? fp : 0, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
 							}
