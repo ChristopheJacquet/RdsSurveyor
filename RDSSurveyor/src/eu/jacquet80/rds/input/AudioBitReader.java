@@ -250,14 +250,6 @@ public class AudioBitReader extends BitReader {
 								} catch (IOException e) {
 									e.printStackTrace();
 								}
-						if (DEBUG) {
-							if (outRaw != null)
-								try {
-									outRaw.writeShort(Short.reverseBytes(sample[i]));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-						}
 
 						if (hasPilot) {
 							/* Pilot tone recovery */
@@ -292,71 +284,20 @@ public class AudioBitReader extends BitReader {
 							fsc         -= 0.5 * pll_beta * d_phi_sc;
 						}
 						
-						/* 1187.5 Hz clock */
-
-						clock_phi = subcarr_phi / 48.0 + clock_offset;
-						lo_clock  = ((clock_phi % (2 * Math.PI)) < Math.PI ? 1 : -1);
-
-						if (DEBUG) {
-							/* dbg-out.wav channel 1: d_phi_sc */
-							outbuf = (short) (d_phi_sc * 6000);
-							if (outU != null)
-								try {
-									outU.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							
-							/* dbg-out.wav channel 2: 1187.5 Hz clock */
-							outbuf = (short) (lo_clock * 16000);
-							if (outU != null)
-								try {
-									outU.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							
-							/* dbg-out-iq.wav channel 1 */
-							outbuf = (short) (subcarr_bb[0] * 32000);
-							if (outIQ != null)
-								try {
-									outIQ.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							
-							/* dbg-out-iq.wav channel 2 */
-							outbuf = (short) (subcarr_bb[1] * 32000);
-							if (outIQ != null)
-								try {
-									outIQ.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-						}
-
-						/* Clock phase recovery */
-
-						if (sign(prev_bb) != sign(subcarr_bb[0])) {
-							d_cphi = clock_phi % Math.PI;
-							if (d_cphi >= (Math.PI / 2)) d_cphi -= Math.PI;
-							clock_offset -= 0.005 * d_cphi;
-						}
-
-						if (DEBUG) {
-							/* dbg-out.wav channel 3: acc */
-							outbuf = (short) (acc * 800);
-							if (outU != null)
-								try {
-									outU.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							sbit = 0;
-						}
-
 						/* Decimate band-limited signal */
 						if (numsamples % 8 == 0) {
+							/* 1187.5 Hz clock */
+
+							clock_phi = subcarr_phi / 48.0 + clock_offset;
+							lo_clock  = ((clock_phi % (2 * Math.PI)) < Math.PI ? 1 : -1);
+
+							/* Clock phase recovery */
+
+							if (sign(prev_bb) != sign(subcarr_bb[0])) {
+								d_cphi = clock_phi % Math.PI;
+								if (d_cphi >= (Math.PI / 2)) d_cphi -= Math.PI;
+								clock_offset -= 0.005 * d_cphi;
+							}
 
 							/* biphase symbol integrate & dump */
 							acc += subcarr_bb[0] * lo_clock;
@@ -367,36 +308,85 @@ public class AudioBitReader extends BitReader {
 							}
 
 							prevclock = lo_clock;
+							prev_bb = subcarr_bb[0];
+
+							if (DEBUG) {
+								if (outRaw != null)
+									try {
+										outRaw.writeShort(Short.reverseBytes(sample[i]));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								/* dbg-out.wav channel 1: d_phi_sc */
+								outbuf = (short) (d_phi_sc * 6000);
+								if (outU != null)
+									try {
+										outU.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+
+								/* dbg-out.wav channel 2: 1187.5 Hz clock */
+								outbuf = (short) (lo_clock * 16000);
+								if (outU != null)
+									try {
+										outU.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+
+								/* dbg-out-iq.wav channel 1 */
+								outbuf = (short) (subcarr_bb[0] * 32000);
+								if (outIQ != null)
+									try {
+										outIQ.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+
+								/* dbg-out-iq.wav channel 2 */
+								outbuf = (short) (subcarr_bb[1] * 32000);
+								if (outIQ != null)
+									try {
+										outIQ.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								/* dbg-out.wav channel 3: acc */
+								outbuf = (short) (acc * 800);
+								if (outU != null)
+									try {
+										outU.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								sbit = 0;
+								/* dbg-out.wav channel 4: dbit (demodulated RDS stream) */
+								outbuf = (short) (dbit * 16000);
+								if (outU != null)
+									try {
+										outU.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+
+								/* dbg-out.wav channel 5: sbit (decoded RDS data stream) */
+								outbuf = (short) (sbit * 16000);
+								if (outU != null)
+									try {
+										outU.writeShort(Short.reverseBytes(outbuf));
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+
+								t += 1.0/sampleRate;
+								if ((stats != null) && (numsamples % 128 == 0))
+									// qua (quality) is not implemented so far
+									stats.printf("%f,%f,%f,%f,%f,%f,%f\n", t, hasPilot ? fp : 0, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
+							}
 						}
 						
 						numsamples++;
-
-						if (DEBUG) {
-							/* dbg-out.wav channel 4: dbit (demodulated RDS stream) */
-							outbuf = (short) (dbit * 16000);
-							if (outU != null)
-								try {
-									outU.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							
-							/* dbg-out.wav channel 5: sbit (decoded RDS data stream) */
-							outbuf = (short) (sbit * 16000);
-							if (outU != null)
-								try {
-									outU.writeShort(Short.reverseBytes(outbuf));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-							
-							t += 1.0/sampleRate;
-							if ((stats != null) && (numsamples % 125 == 0))
-								// qua (quality) is not implemented so far
-								stats.printf("%f,%f,%f,%f,%f,%f,%f\n", t, hasPilot ? fp : 0, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
-						}
-
-						prev_bb = subcarr_bb[0];
 					}
 				}
 			}
