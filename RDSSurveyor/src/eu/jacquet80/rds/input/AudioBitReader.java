@@ -105,24 +105,39 @@ public class AudioBitReader extends BitReader {
 		}
 		new Thread() {
 			public void run() {
-				// Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample
+				/* Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample */
 				short sample[]        = new short[IBUFLEN];
+				
+				/* Subcarrier frequency */
 				double fsc = FC_0;
 
+				/* Subcarrier phase */
 				double subcarr_phi    = 0;
+				
 				double subcarr_bb[]   = new double[] {0, 0};
+				
+				/* Clock phase offset */
 				double clock_offset   = 0;
+				
+				/* Clock phase */
 				double clock_phi      = 0;
+				
 				double lo_clock       = 0;
 				double prevclock      = 0;
 				double prev_bb        = 0;
+				
+				/* Subcarrier phase error */
 				double d_phi_sc       = 0;
 				
 				/* Subcarrier phase offset (relative to pilot tone) */
 				double sc_phi_offset  = 0;
 				
+				/* Pilot phase error */
 				double d_pphi         = 0;
+				
+				/* Clock phase error */
 				double d_cphi         = 0;
+				
 				double acc            = 0;
 				
 				/* Pilot tone frequency */
@@ -134,7 +149,8 @@ public class AudioBitReader extends BitReader {
 				double pilot_bb_i, pilot_bb_q;
 				double pll_beta       = 50;
 				
-				int bytesread; // note that this is really the number of samples (16-bit), not bytes
+				/* Number of samples (NOT bytes) read */
+				int bytesread;
 				
 				/* Whether a pilot tone has been detected (and will be used for tuning) */
 				boolean hasPilot;
