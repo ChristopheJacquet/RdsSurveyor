@@ -43,8 +43,6 @@ import biz.source_code.dsp.filter.FilterPassType;
 import biz.source_code.dsp.filter.IirFilter;
 import biz.source_code.dsp.filter.IirFilterCoefficients;
 import biz.source_code.dsp.filter.IirFilterDesignFisher;
-import biz.source_code.dsp.math.Complex;
-import biz.source_code.dsp.transform.Dft;
 
 public class AudioBitReader extends BitReader {
 	private static final boolean DEBUG = false; // set to true to enable debug output
@@ -111,14 +109,8 @@ public class AudioBitReader extends BitReader {
 		}
 		new Thread() {
 			public void run() {
-				/* Array of audio samples retrieved, 16 bits (2 bytes) per sample */
+				/* Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample */
 				short sample[]        = new short[IBUFLEN];
-				
-				/* Audio samples for DFT (responsiveness is controlled by array size) */
-				double dftIn[]        = new double[sampleRate * 2];
-				
-				/* Next index of dftIn to write to */
-				int dftInPos          = 0;
 				
 				/* Subcarrier frequency */
 				double fsc = FC_0;
@@ -164,14 +156,8 @@ public class AudioBitReader extends BitReader {
 				/* Number of samples (NOT bytes) read */
 				int bytesread;
 				
-				/* Whether a pilot tone has been detected */
-				boolean hasPilot      = false;
-				
-				/* Whether to use the pilot tone for tuning */
-				boolean usePilot      = false;
-				
-				/* Whether a RDS subcarrier has been detected */
-				boolean hasSubcarrier = false;
+				/* Whether a pilot tone has been detected (and will be used for tuning) */
+				boolean hasPilot;
 
 				int numsamples = 0;
 				
@@ -180,7 +166,7 @@ public class AudioBitReader extends BitReader {
 				
 				IirFilterCoefficients lpPllCoeffs = IirFilterDesignFisher.design(FilterPassType.lowpass,
 						FilterCharacteristicsType.butterworth, 1, 0, 2200.0 / sampleRate, 2200.0 / sampleRate);
-				
+
 				IirFilter lp2400iFilter = new IirFilter(lp2400Coeffs);
 				IirFilter lp2400qFilter = new IirFilter(lp2400Coeffs);
 				IirFilter lpPllScFilter = new IirFilter(lpPllCoeffs);
@@ -284,55 +270,8 @@ public class AudioBitReader extends BitReader {
 								} catch (IOException e) {
 									e.printStackTrace();
 								}
-						
-						/* collect samples for DFT */
-						if (i + dftInPos < dftIn.length)
-							dftIn[i + dftInPos] = sample[i];
-					}
-					
-					dftInPos += bytesread;
-					
-					if (dftInPos >= dftIn.length) {
-						/* We have enough samples to do a DFT */
-						dftInPos = 0;
-						
-						/* detect pilot tone */
-						double dft17k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 17000 * dftIn.length / sampleRate, true).abs();
-						double dft19k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 19000 * dftIn.length / sampleRate, true).abs();
-						double dft21k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 21000 * dftIn.length / sampleRate, true).abs();
 
-						if ((dft17k < dft19k) && (dft19k > dft21k)) {
-							if (!hasPilot)
-								System.err.println("\nPilot tone detected");
-							hasPilot = true;
-						} else {
-							if (hasPilot)
-								System.err.println("\nPilot tone lost");
-							hasPilot = false;
-						}
-
-						/* detect RDS subcarrier */
-						double dft54k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 54000 * dftIn.length / sampleRate, true).abs();
-						double dft56k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 56175 * dftIn.length / sampleRate, true).abs();
-						double dft57k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 57000 * dftIn.length / sampleRate, true).abs();
-						double dft58k = Dft.goertzelSingle(dftIn, 0, dftIn.length, 57825 * dftIn.length / sampleRate, true).abs();
-
-						if ((dft54k < dft56k) && (dft56k > dft57k) && (dft57k < dft58k)) {
-							if (!hasSubcarrier)
-								System.err.println("\nSubcarrier detected");
-							hasSubcarrier = true;
-							// TODO reset tuner
-						} else {
-							if (hasSubcarrier)
-								System.err.println("\nSubcarrier lost");
-							hasSubcarrier = false;
-						}
-					}
-					
-					// TODO break if no subcarrier present
-					
-					for (i = 0; i < bytesread; i++) {
-						if (hasPilot && usePilot) {
+						if (hasPilot) {
 							/* Pilot tone recovery */
 							pilot_phi  += 2 * Math.PI * fp * (1.0/sampleRate);
 							pilot_bb_i  = lpPllPIFilter.step(Math.cos(pilot_phi) * sample[i] / 32768.0);
