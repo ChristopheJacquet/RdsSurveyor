@@ -47,9 +47,6 @@ import biz.source_code.dsp.filter.IirFilterDesignFisher;
 public class AudioBitReader extends BitReader {
 	private static final boolean DEBUG = false; // set to true to enable debug output
 	
-	/** Pilot tone frequency */
-	private static final double FP_0 = 19000.0;
-	
 	/** RDS carrier frequency */
 	private static final double FC_0 = 57000.0;
 	
@@ -132,32 +129,14 @@ public class AudioBitReader extends BitReader {
 				
 				/* Subcarrier phase error */
 				double d_phi_sc       = 0;
-				
-				/* Subcarrier phase offset (relative to pilot tone) */
-				double sc_phi_offset  = 0;
-				
-				/* Pilot phase error */
-				double d_pphi         = 0;
-				
+
 				/* Clock phase error */
 				double d_cphi         = 0;
 				
 				double acc            = 0;
 				
-				/* Pilot tone frequency */
-				double fp = FP_0;
-				
-				/* Pilot phase */
-				double pilot_phi      = 0;
-				
-				double pilot_bb_i, pilot_bb_q;
-				double pll_beta       = 50;
-				
 				/* Number of samples (NOT bytes) read */
 				int bytesread;
-				
-				/* Whether a pilot tone has been detected (and will be used for tuning) */
-				boolean hasPilot;
 
 				int numsamples = 0;
 				
@@ -169,10 +148,7 @@ public class AudioBitReader extends BitReader {
 
 				IirFilter lp2400iFilter = new IirFilter(lp2400Coeffs);
 				IirFilter lp2400qFilter = new IirFilter(lp2400Coeffs);
-				IirFilter lpPllScFilter = new IirFilter(lpPllCoeffs);
-				IirFilter lpPllPIFilter = new IirFilter(lpPllCoeffs);
-				IirFilter lpPllPQFilter = new IirFilter(lpPllCoeffs);
-				IirFilter lpPllPPhiFilter = new IirFilter(lpPllCoeffs);
+				IirFilter lpPllFilter = new IirFilter(lpPllCoeffs);
 				
 				// for debugging only
 				double t = 0;
@@ -236,14 +212,12 @@ public class AudioBitReader extends BitReader {
 					
 					try {
 						stats = new PrintStream(new File(tempPath, "stats.csv"));
-						stats.print("t,fp,fsc,d_phi_sc,subcarr_bb_re,subcarr_bb_im,clock_offset\n");
+						stats.print("t,fsc,d_phi_sc,subcarr_bb_re,subcarr_bb_im,clock_offset\n");
 					} catch (FileNotFoundException e) {
 						e.printStackTrace();
 						stats = null;
 					}
 				}
-				
-				hasPilot = true; // TODO drop this once we can detect the presence of a pilot tone
 
 				while (true) {
 					bytesread = 0;
@@ -271,39 +245,18 @@ public class AudioBitReader extends BitReader {
 									e.printStackTrace();
 								}
 
-						if (hasPilot) {
-							/* Pilot tone recovery */
-							pilot_phi  += 2 * Math.PI * fp * (1.0/sampleRate);
-							pilot_bb_i  = lpPllPIFilter.step(Math.cos(pilot_phi) * sample[i] / 32768.0);
-							pilot_bb_q  = lpPllPQFilter.step(Math.sin(pilot_phi) * sample[i] / 32768.0);
-							
-							d_pphi      = lpPllPPhiFilter.step(pilot_bb_q * pilot_bb_i);
-							pilot_phi  -= pll_beta * d_pphi;
-							fp         -= pll_beta * d_pphi;
-							fsc         = fp * 3;
-							
-							/* Subcarrier downmix & phase recovery */
-							subcarr_phi    = pilot_phi * 3.0 + sc_phi_offset;
-							
-							subcarr_bb[0]  = lp2400iFilter.step(sample[i] / 32768.0 * Math.cos(subcarr_phi));
-							subcarr_bb[1]  = lp2400qFilter.step(sample[i] / 32768.0 * Math.sin(subcarr_phi));
+						/* Subcarrier downmix & phase recovery */
 
-							d_phi_sc = lpPllScFilter.step(subcarr_bb[1] * subcarr_bb[0]);
-							
-							sc_phi_offset -= pll_beta * d_phi_sc;
-						} else {
-							/* Subcarrier downmix & phase recovery */
-							subcarr_phi    += 2 * Math.PI * fsc * (1.0/sampleRate);
-							
-							subcarr_bb[0]  = lp2400iFilter.step(sample[i] / 32768.0 * Math.cos(subcarr_phi));
-							subcarr_bb[1]  = lp2400qFilter.step(sample[i] / 32768.0 * Math.sin(subcarr_phi));
+						subcarr_phi    += 2 * Math.PI * fsc * (1.0/sampleRate);
+						subcarr_bb[0]  = lp2400iFilter.step(sample[i] / 32768.0 * Math.cos(subcarr_phi));
+						subcarr_bb[1]  = lp2400qFilter.step(sample[i] / 32768.0 * Math.sin(subcarr_phi));
 
-							d_phi_sc = lpPllScFilter.step(subcarr_bb[1] * subcarr_bb[0]);
-							
-							subcarr_phi -= pll_beta * d_phi_sc;
-							fsc         -= 0.5 * pll_beta * d_phi_sc;
-						}
-						
+						double pll_beta = 50;
+
+						d_phi_sc = lpPllFilter.step(subcarr_bb[1] * subcarr_bb[0]);
+						subcarr_phi -= pll_beta * d_phi_sc;
+						fsc         -= 0.5 * pll_beta * d_phi_sc;
+
 						/* Decimate band-limited signal */
 						if (numsamples % decimate == 0) {
 							/* 1187.5 Hz clock */
@@ -402,7 +355,7 @@ public class AudioBitReader extends BitReader {
 								t += 1.0/sampleRate;
 								if ((stats != null) && (numsamples % (decimate * 16) == 0))
 									// qua (quality) is not implemented so far
-									stats.printf("%f,%f,%f,%f,%f,%f,%f\n", t, hasPilot ? fp : 0, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
+									stats.printf("%f,%f,%f,%f,%f,%f\n", t, fsc, d_phi_sc, subcarr_bb[0], subcarr_bb[1], clock_offset);
 							}
 						}
 						
