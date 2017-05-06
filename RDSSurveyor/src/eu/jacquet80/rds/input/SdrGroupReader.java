@@ -345,7 +345,7 @@ public class SdrGroupReader extends TunerGroupReader {
 			try {
 				AudioFormat outFormat =  
 						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, outSampleRate, 16, 1, 2, outSampleRate, false);
-				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4*250000);
+				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4 * outSampleRate);
 				outLine = (SourceDataLine) AudioSystem.getLine(outInfo);
 				outLine.open(outFormat);
 			} catch(Exception e) {
