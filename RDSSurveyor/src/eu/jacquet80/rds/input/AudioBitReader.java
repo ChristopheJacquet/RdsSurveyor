@@ -345,7 +345,6 @@ public class AudioBitReader extends BitReader {
 									} catch (IOException e) {
 										e.printStackTrace();
 									}
-								sbit = 0;
 								/* dbg-out.wav channel 4: dbit (demodulated RDS stream) */
 								outbuf = (short) (dbit * 16000);
 								if (outU != null)
