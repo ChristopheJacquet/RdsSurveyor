@@ -244,15 +244,14 @@ public class AudioBitReader extends BitReader {
 					}
 					
 					if (bytesread < 1) break;
-
+					
 					for (i = 0; i < bytesread; i++) {
-						if (isPlaying)
-							if (audioMirrorSink != null)
-								try {
-									audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
+						if (isPlaying && (audioMirrorSink != null))
+							try {
+								audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 
 						/* Subcarrier downmix & phase recovery */
 
@@ -264,13 +263,14 @@ public class AudioBitReader extends BitReader {
 						subcarr_phi -= pll_beta * d_phi_sc;
 						fsc         -= 0.5 * pll_beta * d_phi_sc;
 						
-						if ((fsc > FC_0 + FC_TOLERANCE) || (fsc < FC_0 - FC_TOLERANCE)) {
-							System.err.println("\nSubcarrier frequency outside tolerance range, resetting");
-							fsc = FC_0;
-						}
-
 						/* Decimate band-limited signal */
 						if (numsamples % decimate == 0) {
+							/* Reset subcarrier frequency if it is outside tolerance range */
+							if ((fsc > FC_0 + FC_TOLERANCE) || (fsc < FC_0 - FC_TOLERANCE)) {
+								System.err.println("\nSubcarrier frequency outside tolerance range, resetting");
+								fsc = FC_0;
+							}
+
 							/* 1187.5 Hz clock */
 
 							clock_phi = subcarr_phi / 48.0 + clock_offset;
