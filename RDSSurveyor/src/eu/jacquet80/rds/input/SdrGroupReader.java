@@ -21,7 +21,6 @@ import eu.jacquet80.rds.core.BitStreamSynchronizer.Status;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
-import eu.jacquet80.rds.util.MathUtil;
 
 public class SdrGroupReader extends TunerGroupReader {
 	/** The sample rate at which we receive data from the tuner. */
@@ -60,6 +59,7 @@ public class SdrGroupReader extends TunerGroupReader {
 		syncIn = new PipedInputStream();
 		tunerOut = new DataOutputStream(new PipedOutputStream(syncIn));
 		reader = new AudioBitReader(new DataInputStream(syncIn), sampleRate);
+		reader.setAudioSampleRate(outSampleRate);
 		audioStream = reader.getAudioMirrorStream();
 		synchronizer = new BitStreamSynchronizer(console, reader);
 		
@@ -340,13 +340,9 @@ public class SdrGroupReader extends TunerGroupReader {
 
 	private class SoundPlayer extends Thread {
 		private SourceDataLine outLine;
-		private int inRatio;
-		private int outRatio;
 
 		public SoundPlayer() {
 			try {
-				AudioFormat inFormat =  
-						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, sampleRate, 16, 1, 2, sampleRate, false);
 				AudioFormat outFormat =  
 						new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, outSampleRate, 16, 1, 2, outSampleRate, false);
 				DataLine.Info outInfo = new DataLine.Info(SourceDataLine.class, outFormat, 4*250000);
@@ -363,12 +359,6 @@ public class SdrGroupReader extends TunerGroupReader {
 				return;
 			}
 			
-			int gcd = MathUtil.gcd(sampleRate, outSampleRate);
-			inRatio = sampleRate / gcd;
-			outRatio = outSampleRate / gcd;
-			
-			System.out.println(String.format("SDR audio output configured successfully, downsampling ratio %d:%d", inRatio, outRatio));
-		
 			audioCapable = true;
 			audioPlaying = true;
 		}
@@ -376,9 +366,6 @@ public class SdrGroupReader extends TunerGroupReader {
 		@Override
 		public void run() {
 			byte[] inData = new byte[sampleRate / 2];
-			byte[] outData = new byte[outSampleRate / 2];
-			int inCount = 0;
-			int outCount = 0;
 			
 			outLine.start();
 			reader.startPlaying();
@@ -387,32 +374,7 @@ public class SdrGroupReader extends TunerGroupReader {
 			while(true) {
 				try {
 					int len = audioStream.read(inData, 0, inData.length);
-					if (sampleRate == outSampleRate)
-						/* no resampling needed */
-						outLine.write(inData, 0, len);
-					else {
-						/* resample */
-						int o = 0;
-						for (int i = 0; i < len; i+=2) {
-							inCount += 2;
-							/* 
-							 * if the downsampling ratio has not been exceeded yet
-							 * (outCount * inRatio <= outRatio * inCount
-							 * is just an integer-friendly and div-by-zero-proof representation of 
-							 * outCount/inCount <= outRatio/inRatio)
-							 */
-							if (outCount * inRatio <= outRatio * inCount) {
-								outCount += 2;
-								outData[o] = inData[i];
-								outData[o+1] = inData[i+1];
-								o+=2;
-							}
-						}
-						if (o > 0)
-							outLine.write(outData, 0, o);
-						inCount %= inRatio;
-						outCount %= outRatio;
-					}
+					outLine.write(inData, 0, len);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

@@ -38,6 +38,7 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import eu.jacquet80.rds.util.MathUtil;
 import biz.source_code.dsp.filter.FilterCharacteristicsType;
 import biz.source_code.dsp.filter.FilterPassType;
 import biz.source_code.dsp.filter.IirFilter;
@@ -75,7 +76,18 @@ public class AudioBitReader extends BitReader {
 	/** Whether audio is being mirrored */
 	private boolean isPlaying = false;
 	
-	/** Sample rate, or frames per second */
+	/** The sample rate for audio output (default 48k) */
+	private int outSampleRate = 48000;
+	
+	/* Audio downsampling ratio */
+	int inRatio;
+	int outRatio;
+	
+	/* Counter for audio samples received and written */
+	int inCount = 0;
+	int outCount = 0;
+	
+	/** Input sample rate, or frames per second */
 	private final int sampleRate;
 	
 	/** Decimation factor, determined based on the sample rate */
@@ -150,6 +162,8 @@ public class AudioBitReader extends BitReader {
 				int numsamples = 0;
 				int i;
 				
+				calculateResampleRatio();
+			
 				IirFilterCoefficients lp2400Coeffs = IirFilterDesignFisher.design(FilterPassType.lowpass,
 						FilterCharacteristicsType.butterworth, 5, 0, 2000.0 / sampleRate, 2000.0 / sampleRate);
 				
@@ -244,11 +258,26 @@ public class AudioBitReader extends BitReader {
 					}
 					
 					if (bytesread < 1) break;
+
+					/* Reset audio counters periodically to prevent overflow */
+					inCount %= inRatio;
+					outCount %= outRatio;
 					
 					for (i = 0; i < bytesread; i++) {
 						if (isPlaying && (audioMirrorSink != null))
 							try {
-								audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
+								/* resample */
+								inCount++;
+								/* 
+								 * if the downsampling ratio has not been exceeded yet
+								 * (outCount * inRatio <= outRatio * inCount
+								 * is just an integer-friendly and div-by-zero-proof representation of 
+								 * outCount/inCount <= outRatio/inRatio)
+								 */
+								if (outCount * inRatio <= outRatio * inCount) {
+									audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
+									outCount++;
+								}
 							} catch (IOException e) {
 								e.printStackTrace();
 							}
@@ -387,6 +416,14 @@ public class AudioBitReader extends BitReader {
 		return audioMirrorSource;
 	}
 
+	/**
+	 * @brief Returns the sample rate for audio output.
+	 * @return the outSampleRate
+	 */
+	public int getAudioSampleRate() {
+		return outSampleRate;
+	}
+
 	@Override
 	public boolean getBit() throws IOException {
 		boolean ret;
@@ -401,13 +438,31 @@ public class AudioBitReader extends BitReader {
 	}
 	
 	/**
+	 * @brief Sets the sample rate for audio output.
+	 * 
+	 * Changes take effect immediately, and audio will be briefly interrupted.
+	 *  
+	 * @param outSampleRate the outSampleRate to set
+	 */
+	public synchronized void setAudioSampleRate(int outSampleRate) {
+		boolean wasPlaying = isPlaying;
+		stopPlaying();
+		this.outSampleRate = outSampleRate;
+		calculateResampleRatio();
+		if (wasPlaying)
+			startPlaying();
+	}
+
+	/**
 	 * @brief Starts mirroring audio samples to the audio stream.
 	 * 
 	 * Consumers must call this method to receive audio data on the audio mirror stream.
 	 * 
 	 * The audio mirror stream can be obtained by calling {@link #getAudioMirrorStream()}.
 	 */
-	public void startPlaying() {
+	public synchronized void startPlaying() {
+		inCount = 0;
+		outCount = 0;
 		isPlaying = true;
 	}
 	
@@ -419,7 +474,7 @@ public class AudioBitReader extends BitReader {
 	 * 
 	 * The audio mirror stream can be obtained by calling {@link #getAudioMirrorStream()}.
 	 */
-	public void stopPlaying() {
+	public synchronized void stopPlaying() {
 		isPlaying = false;
 	}
 	
@@ -463,5 +518,14 @@ public class AudioBitReader extends BitReader {
 
 		prev_acc = acc;
 		counter = (counter + 1) % 800;
+	}
+
+	private void calculateResampleRatio() {
+		/* Set up audio downsampling */
+		int gcd = MathUtil.gcd(sampleRate, outSampleRate);
+		inRatio = sampleRate / gcd;
+		outRatio = outSampleRate / gcd;
+		
+		System.out.println(String.format("AudioBitReader: audio downsampling ratio set to %d:%d", inRatio, outRatio));
 	}
 }
