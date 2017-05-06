@@ -142,10 +142,13 @@ public class AudioBitReader extends BitReader {
 				
 				double acc            = 0;
 				
+				double pll_beta       = 50;
+
 				/* Number of samples (NOT bytes) read */
 				int bytesread;
 
 				int numsamples = 0;
+				int i;
 				
 				IirFilterCoefficients lp2400Coeffs = IirFilterDesignFisher.design(FilterPassType.lowpass,
 						FilterCharacteristicsType.butterworth, 5, 0, 2000.0 / sampleRate, 2000.0 / sampleRate);
@@ -242,7 +245,6 @@ public class AudioBitReader extends BitReader {
 					
 					if (bytesread < 1) break;
 
-					int i;
 					for (i = 0; i < bytesread; i++) {
 						if (isPlaying)
 							if (audioMirrorSink != null)
@@ -254,11 +256,9 @@ public class AudioBitReader extends BitReader {
 
 						/* Subcarrier downmix & phase recovery */
 
-						subcarr_phi    += 2 * Math.PI * fsc * (1.0/sampleRate);
+						subcarr_phi    += 2 * Math.PI * fsc / (double) sampleRate;
 						subcarr_bb[0]  = lp2400iFilter.step(sample[i] / 32768.0 * Math.cos(subcarr_phi));
 						subcarr_bb[1]  = lp2400qFilter.step(sample[i] / 32768.0 * Math.sin(subcarr_phi));
-
-						double pll_beta = 50;
 
 						d_phi_sc = lpPllFilter.step(subcarr_bb[1] * subcarr_bb[0]);
 						subcarr_phi -= pll_beta * d_phi_sc;
