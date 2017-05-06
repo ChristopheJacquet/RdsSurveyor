@@ -52,7 +52,7 @@ public class AudioBitReader extends BitReader {
 	
 	/** 
 	 * Tolerance of RDS subcarrier frequency.
-	 * As per the specs, tolerance is +/- 6 Hz. We use twice the value to allow for some toleranc
+	 * As per the specs, tolerance is +/- 6 Hz. We use twice the value to allow for some tolerance
 	 * in the processing chain.
 	 */
 	private static final double FC_TOLERANCE = 12.0;
