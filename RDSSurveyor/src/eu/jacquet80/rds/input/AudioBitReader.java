@@ -50,6 +50,13 @@ public class AudioBitReader extends BitReader {
 	/** RDS carrier frequency */
 	private static final double FC_0 = 57000.0;
 	
+	/** 
+	 * Tolerance of RDS subcarrier frequency.
+	 * As per the specs, tolerance is +/- 6 Hz. We use twice the value to allow for some toleranc
+	 * in the processing chain.
+	 */
+	private static final double FC_TOLERANCE = 12.0;
+	
 	/** Input buffer length, in samples */
 	private static final int IBUFLEN = 4096;
 	
@@ -256,6 +263,11 @@ public class AudioBitReader extends BitReader {
 						d_phi_sc = lpPllFilter.step(subcarr_bb[1] * subcarr_bb[0]);
 						subcarr_phi -= pll_beta * d_phi_sc;
 						fsc         -= 0.5 * pll_beta * d_phi_sc;
+						
+						if ((fsc > FC_0 + FC_TOLERANCE) || (fsc < FC_0 - FC_TOLERANCE)) {
+							System.err.println("\nSubcarrier frequency outside tolerance range, resetting");
+							fsc = FC_0;
+						}
 
 						/* Decimate band-limited signal */
 						if (numsamples % decimate == 0) {
