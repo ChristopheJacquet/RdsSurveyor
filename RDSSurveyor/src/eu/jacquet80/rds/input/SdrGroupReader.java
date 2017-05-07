@@ -53,7 +53,13 @@ public class SdrGroupReader extends TunerGroupReader {
 	private static final String dir, sep;
 	private boolean audioCapable = false;
 	private boolean audioPlaying = false;
+	
+	/* Whether audio was suspended (e.g. for a seek operation) and should resume once the operation
+	 * is complete */
+	private boolean wasPlaying = false;
+	
 	private final Semaphore resumePlaying = new Semaphore(0);
+
 
 	public SdrGroupReader(PrintStream console, String filename) throws UnavailableInputMethod, IOException {
 		syncIn = new PipedInputStream();
@@ -209,8 +215,24 @@ public class SdrGroupReader extends TunerGroupReader {
 		setFrequency(freq);
 	}
 
+	/**
+	 * @brief Seek to the next good station in the specified direction.
+	 * 
+	 * This method returns immediately, the actual seek operation typically has not completed by
+	 * that time.
+	 * 
+	 * @param up If {@code true}, seek up, else, seek down.
+	 * 
+	 * @return Always false
+	 */
 	@Override
-	public native boolean seek(boolean up);
+	public boolean seek(boolean up) {
+		wasPlaying = audioPlaying;
+		
+		if (wasPlaying)
+			mute();
+		return nativeSeek(up);
+	}
 
 	@Override
 	public native String getDeviceName();
@@ -279,6 +301,18 @@ public class SdrGroupReader extends TunerGroupReader {
 	}
 	
 	/**
+	 * @brief JNI wrapper for the native call which performs the actual seek operation.
+	 * 
+	 * This method is called by {@link #seek(boolean)}. No other code should ever need to call this
+	 * method directly.
+	 * 
+	 * @param up If {@code true}, seek up, else, seek down.
+	 * 
+	 * @return Always false
+	 */
+	private native boolean nativeSeek(boolean up);
+
+	/**
 	 * @brief Called when the tuner frequency has been changed successfully
 	 * 
 	 * This method notifies the {@code SdrGroupReader} about a successful frequency change.
@@ -294,6 +328,8 @@ public class SdrGroupReader extends TunerGroupReader {
 			this.mFrequencyChanged = true;
 		} finally {
 			frequencyLock.writeLock().unlock();
+			if (wasPlaying)
+				unmute();
 		}
 	}
 	
@@ -360,7 +396,8 @@ public class SdrGroupReader extends TunerGroupReader {
 			}
 			
 			audioCapable = true;
-			audioPlaying = true;
+			audioPlaying = false;
+			wasPlaying = true;
 		}
 		
 		@Override

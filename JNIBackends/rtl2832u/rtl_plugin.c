@@ -1433,7 +1433,7 @@ JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_setFrequency
 }
 
 
-JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_seek
+JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_nativeSeek
   (JNIEnv *env, jobject self, jboolean up) {
 	/* Suppress compiler warnings */
 	(void) env;
