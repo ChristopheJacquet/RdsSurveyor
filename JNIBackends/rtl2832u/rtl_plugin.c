@@ -138,7 +138,6 @@ struct dongle_state
 	int      direct_sampling;
 	int      mute;
 	struct demod_state *demod_target;
-	struct controller_state *controller;
 };
 
 struct demod_state
@@ -1257,7 +1256,6 @@ void dongle_init(struct dongle_state *s)
 	s->direct_sampling = 0;
 	s->offset_tuning = 0;
 	s->demod_target = &demod;
-	s->controller = &controller;
 }
 
 void demod_init(struct demod_state *s)
