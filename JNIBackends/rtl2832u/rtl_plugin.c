@@ -160,7 +160,6 @@ struct demod_state
 	int      prev_index;
 	int      downsample;    /* min 1, max 256 */
 	int      post_downsample;
-	int      output_scale;
 	int      downsample_passes;
 	int      comp_fir_size;
 	int      custom_atan;
@@ -168,7 +167,6 @@ struct demod_state
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
-	void     (*mode_demod)(struct demod_state*);
 	pthread_rwlock_t rw;
 	pthread_cond_t ready;                /**< Signals that samples are available for demodulation */
 	pthread_mutex_t ready_m;             /**< Mutex to control access to {@code ready} */
@@ -820,7 +818,7 @@ void full_demod(struct demod_state *d, JNIEnv *env)
 		d->rssi = rssi;
 		(*(env))->CallVoidMethod(env, d->self, d->onRssiChanged, (jfloat)rssi);
 	}
-	d->mode_demod(d);  /* lowpassed -> result */
+	fm_demod(d);  /* lowpassed -> result */
 	/* todo, fm noise squelch */
 	// use nicer filter here too?
 	if (d->post_downsample > 1) {
@@ -969,11 +967,6 @@ static void optimal_settings(int freq)
 	if (!d->offset_tuning) {
 		capture_freq = freq + capture_rate/4;}
 	capture_freq += cs->edge * dm->rate_in / 2;
-	dm->output_scale = (1<<15) / (128 * dm->downsample);
-	if (dm->output_scale < 1) {
-		dm->output_scale = 1;}
-	if (dm->mode_demod == &fm_demod) {
-		dm->output_scale = 1;}
 	d->freq = (uint32_t)capture_freq;
 	d->rate = (uint32_t)capture_rate;
 }
@@ -1269,7 +1262,6 @@ void demod_init(struct demod_state *s)
 	s->custom_atan = 0;
 	s->deemph = 0;
 	s->rate_out2 = sampleRateOut;
-	s->mode_demod = &fm_demod;
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
