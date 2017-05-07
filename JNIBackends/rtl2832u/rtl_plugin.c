@@ -654,7 +654,7 @@ double dbm(int16_t *samples, int len, int step) {
 	dc = (double)(t*step) / (double)len;
 	err = t * 2 * dc - dc * dc * len;
 
-	return 10 * log10((p-err) / len) - 21;
+	return 10 * log10((p-err) / len);
 }
 
 /**
