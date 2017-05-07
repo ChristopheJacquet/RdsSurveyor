@@ -1137,7 +1137,6 @@ static void *controller_thread_fn(void *arg)
 					if (dongle.gain != dongle.gains[i]) {
 						dongle.gain = dongle.gains[i];
 						verbose_gain_set(dongle.dev, dongle.gain);
-						fprintf(stderr, "\nAGC: gain lowered to %d\n", dongle.gain);
 					}
 				} else if (dongle.gain < dongle.gains[dongle.gains_len-1]) {
 					/* check if we can increase gain without causing clipping */
@@ -1151,7 +1150,6 @@ static void *controller_thread_fn(void *arg)
 					if (newMin >= 0 && newMax <= 255) {
 						dongle.gain = dongle.gains[i];
 						verbose_gain_set(dongle.dev, dongle.gain);
-						fprintf(stderr, "\nAGC: gain raised to %d\n", dongle.gain);
 					}
 				}
 			}
@@ -1188,7 +1186,6 @@ static void *controller_thread_fn(void *arg)
 				}
 				rtlsdr_cancel_async(dongle.dev);
 				optimal_settings(freq);
-				fprintf(stderr, "\nSeek: currently at %d Hz (optimized to %d).\n", freq, dongle.freq);
 				rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 
 				/* wait for tuner to settle */
@@ -1198,7 +1195,6 @@ static void *controller_thread_fn(void *arg)
 
 				/* measure RSSI */
 				rssi = get_stabilized_rssi();
-				fprintf(stderr, "\nSeek: rssi=%.2f\n", rssi);
 
 				pthread_rwlock_wrlock(&s->rw);
 				if (nearStart && (rssi < refRssi)) {
@@ -1223,7 +1219,6 @@ static void *controller_thread_fn(void *arg)
 						s->freq = freq;
 						rtlsdr_cancel_async(dongle.dev);
 						optimal_settings(freq);
-						fprintf(stderr, "\nSeek: stopped at %d Hz (optimized to %d).\n", freq, dongle.freq);
 						rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 						s->retune = TUNE_NONE;
 					} else {
@@ -1236,7 +1231,6 @@ static void *controller_thread_fn(void *arg)
 					/* We're back at the original frequency and didn't find any stations */
 					rtlsdr_cancel_async(dongle.dev);
 					optimal_settings(freq);
-					fprintf(stderr, "\nSeek: aborted after one cycle at %d Hz, nearStart=%d, maxFreq=%d, refRssi=%.2f.\n", freq, nearStart, maxFreq, refRssi);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				}
