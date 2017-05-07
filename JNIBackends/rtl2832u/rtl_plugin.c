@@ -75,6 +75,7 @@
 
 #include <rtl-sdr.h>
 #include "convenience/convenience.h"
+#include "kissfft/kiss_fftr.h"
 
 /* The default sample rate.
  * Samples will be collected at this rate and resampled if needed.
@@ -95,6 +96,7 @@
 #define RSSI_MIN            -7.5
 #define RSSI_MIN_DX         -10
 #define RSSI_INVALID        -100
+
 
 static volatile int do_exit = 0;
 static int lcm_post[17] = {1,1,1,3,1,5,3,7,1,9,5,11,3,13,7,15,1};
@@ -136,6 +138,7 @@ struct dongle_state
 	int      direct_sampling;
 	int      mute;
 	struct demod_state *demod_target;
+	struct controller_state *controller;
 };
 
 struct demod_state
@@ -255,6 +258,40 @@ double log2(double n)
 	return log(n) / log(2.0);
 }
 #endif
+
+/**
+ * @brief Calculates the base 2 logarithm, rounded to an adjacent integer.
+ *
+ * @param n The argument of the log function
+ * @param ceiling If true, round up, else round down; meaningless if {@code n} is a power of 2.
+ */
+int int_log2(int n, short ceiling) {
+	short rounded = 0;
+	int result = 0;
+	while (n > 1) {
+		rounded |= (n & 0x1);
+		n = n >> 1;
+		result++;
+	}
+	if (ceiling)
+		result += rounded;
+	return result;
+}
+
+/** FFT input buffer ({@code nfft} scalar points) */
+kiss_fft_scalar* fft_in;
+
+/** FFT output buffer ({@code nfft/2 + 1} complex points) */
+kiss_fft_cpx* fft_out;
+
+/** Spectrum of demodulated FM baseband, in multiples of .01 dB ({@code nfft/2 + 1} integer items) */
+int16_t* spectrum;
+
+/** FFT size (number of input samples), must be a power of two */
+int nfft;
+
+/** FFT configuration */
+kiss_fftr_cfg kiss_cfg;
 
 void rotate_90(unsigned char *buf, uint32_t len)
 /* 90 rotation is 1+0j, 0+1j, -1+0j, 0-1j
@@ -623,6 +660,76 @@ double dbm(int16_t *samples, int len, int step) {
 	return 10 * log10((p-err) / len) - 21;
 }
 
+/**
+ * @brief Determines signal quality to identify valid stations.
+ *
+ * Because RSSI is not sufficient to identify valid stations, as some frequencies have noise which
+ * is stronger than some valid stations, this function provides an additional tool to determine if
+ * the current station is valid.
+ *
+ * It works by doing an FFT across the demodulated FM baseband spectrum and analyzing both the
+ * average signal power and the mean average deviation.
+ *
+ * Noise typically has consistently high signal power across most of the spectrum, while a valid
+ * station presents more variation between frequencies and a lower average power level.
+ *
+ * This tool calculates a weighted difference between both, which can be used as a signal quality
+ * indicator: greater values indicate a better signal, 0 is an approximate acceptance threshold.
+ * Note that RDS reception may require the signal to be well above the acceptance threshold.
+ *
+ * Demodulated audio samples are taken from {@code demod}.
+ *
+ * @param out_avg Address which will receive the measured average signal power, can be NULL
+ * @param out_mad Address which will receive the mean average deviation, can be NULL
+ *
+ * @return Signal quality, with greater values indicating a better signal.
+ */
+double qual(double *out_avg, int *out_mad) {
+	double ret;         // return value
+	int lbound, ubound; // lower and upper boundary for frequency bins to analyze
+	int i;              // iterator
+	double avg;         // average power level across all frequency bins
+	int fft_mad;        // power level mean average deviation
+
+	/* if we need to pad FFT input data, low frequencies are not reliable */
+	lbound = 1 / (demod.result_len * nfft) + 1;
+
+	/* Stop at upper boundary of RDS subcarrier spectrum (58.65 kHz) */
+	ubound = nfft / 2 + 1;
+	if (ubound > (58650 * nfft / sampleRateOut - 1))
+		ubound = 58650 * nfft / sampleRateOut - 1;
+
+	for (i = 0; i < nfft; i++) {
+		fft_in[i] = demod.result[i % demod.result_len];
+	}
+	kiss_fftr(kiss_cfg, fft_in, fft_out);
+
+	avg = 0;
+	for (i = lbound; i < ubound; i++) {
+		spectrum[i] = round(500 * log10(fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i));
+		avg += spectrum[i];
+	}
+	avg /= ubound - lbound;
+	if (out_avg)
+		*out_avg = avg;
+	fft_mad = mad(spectrum + lbound * sizeof(int16_t), ubound - lbound, 1);
+	if (out_mad)
+		*out_mad = fft_mad;
+
+	ret = 21 * fft_mad - avg;
+
+#if 0
+	if (ret >= 0) {
+		fprintf(stderr, "\n+++++ GOOD SIGNAL (avg %.0f, mad %d) +++++\n", avg, fft_mad);
+	}
+	else {
+		fprintf(stderr, "\n----- bad signal (avg %.0f, mad %d) -----\n", avg, fft_mad);
+	}
+#endif
+
+	return ret;
+}
+
 void arbitrary_upsample(int16_t *buf1, int16_t *buf2, int len1, int len2)
 /* linear interpolation, len1 < len2 */
 {
@@ -873,6 +980,51 @@ static void optimal_settings(int freq)
 }
 
 /**
+ * @brief Waits for signal quality to stabilize, then returns the result.
+ *
+ * Signal quality is considered to have stabilized when the average power level reaches 2500
+ * (25 dB).
+ *
+ * Other criteria (trend/stability of the quality indicator, monotonic sequence formed by quality
+ * indicator and/or its constituents) were not considered as average power level was considered
+ * sufficient.
+ *
+ * See {@code qual()} on how to interpret the result.
+ */
+double get_stabilized_qual() {
+	/* Size of samples buffer */
+	int samplesSize = MAXIMUM_BUF_LENGTH;
+
+	/* Buffer to receive samples for quality measurement */
+	int16_t samples[samplesSize];
+
+	/* Samples actually read */
+	int samplesRead = 0;
+
+	/* Average and mean average deviation of FFT */
+	double fft_avg;
+	int fft_mad;
+
+	double ret;
+
+	while (1) {
+		/* get a burst of samples to measure quality */
+		if (rtlsdr_read_sync(dongle.dev, &samples, samplesSize, &samplesRead) < 0) {
+			fprintf(stderr, "\nget_stabilized_qual: rtlsdr_read_sync failed\n");
+			return 0;
+		}
+
+		rtlsdr_callback((unsigned char *)&samples, samplesRead, &dongle);
+		pthread_rwlock_wrlock(&demod.rw);
+		full_demod(&demod);
+		ret = qual(&fft_avg, &fft_mad);
+		pthread_rwlock_unlock(&demod.rw);
+		if (fft_avg > 2500)
+			return ret;
+	}
+}
+
+/**
  * @brief Waits for RSSI to stabilize, then returns the result.
  *
  * The RSSI is considered to have stabilized when two subsequent measurements differ by less than
@@ -934,7 +1086,9 @@ static void *controller_thread_fn(void *arg)
 	/* reference RSSI: when nearStart is true, the lowest one observed; else the highest one */
 	double refRssi;
 	int maxFreq;
-	/* Whether we are still near the frequency where seek started */
+	/* signal quality at maxFreq */
+	double maxQual;
+	/* Whether we are still near the frequency where seek started (or near an invalid station) */
 	int nearStart;
 
 	(*(s->jvm))->AttachCurrentThread(s->jvm, (void **)&(s->env), NULL);
@@ -1057,18 +1211,27 @@ static void *controller_thread_fn(void *arg)
 					if (!nearStart) {
 						/* store frequency and RSSI and see if the next frequency has a stronger signal */
 						maxFreq = freq;
+						maxQual = get_stabilized_qual();
 						refRssi = rssi;
 					}
 				}
 				if (maxFreq && (rssi < refRssi)) {
-					/* we're past the peak, tune directly to the strongest frequency */
-					freq = maxFreq;
-					s->freq = freq;
-					rtlsdr_cancel_async(dongle.dev);
-					optimal_settings(freq);
-					fprintf(stderr, "\nSeek: stopped at %d Hz (optimized to %d).\n", freq, dongle.freq);
-					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-					s->retune = TUNE_NONE;
+					/* we're past the peak, examine if the peak is a good station */
+					if (maxQual >= 0) {
+						/* we've found a good station, tune into it */
+						freq = maxFreq;
+						s->freq = freq;
+						rtlsdr_cancel_async(dongle.dev);
+						optimal_settings(freq);
+						fprintf(stderr, "\nSeek: stopped at %d Hz (optimized to %d).\n", freq, dongle.freq);
+						rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+						s->retune = TUNE_NONE;
+					} else {
+						/* we've found a peak but it is just noise, continue searching */
+						nearStart = 1;
+						refRssi = rssi;
+						maxFreq = 0;
+					}
 				} else if (freq == s->freq) {
 					/* We're back at the original frequency and didn't find any stations */
 					rtlsdr_cancel_async(dongle.dev);
@@ -1100,6 +1263,7 @@ void dongle_init(struct dongle_state *s)
 	s->direct_sampling = 0;
 	s->offset_tuning = 0;
 	s->demod_target = &demod;
+	s->controller = &controller;
 }
 
 void demod_init(struct demod_state *s)
@@ -1181,6 +1345,17 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 	demod_init(&demod);
 	output_init(&output);
 	controller_init(&controller);
+
+	/*
+	 * To get a maximum bin width of 20 Hz, nfft must be at least 1/20 of the sample rate.
+	 * The log and shifting operation ensure nfft is a power of 2.
+	 */
+	nfft = 1 << int_log2(sampleRateOut / 20, 1);
+	kiss_cfg = kiss_fftr_alloc(nfft, 0, 0, 0); // not inverse, no memory allocation
+	fft_in = malloc(sizeof(kiss_fft_scalar) * nfft);
+	fft_out = malloc(sizeof(kiss_fft_cpx) * (nfft / 2 + 1));
+	spectrum = malloc(sizeof(int16_t) * (nfft / 2 + 1));
+	fprintf(stderr, "Initialized FFT with size %d (%d bins, %.3f Hz bin width).\n", nfft, nfft/2 + 1, (float)sampleRateOut / (float)nfft);
 
 	controller.self = (*env)->NewGlobalRef(env, self);
 	(*env)->GetJavaVM(env, &(controller.jvm));
