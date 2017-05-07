@@ -170,8 +170,8 @@ struct demod_state
 	int      dc_block, dc_avg;
 	void     (*mode_demod)(struct demod_state*);
 	pthread_rwlock_t rw;
-	pthread_cond_t ready;
-	pthread_mutex_t ready_m;
+	pthread_cond_t ready;                /**< Signals that samples are available for demodulation */
+	pthread_mutex_t ready_m;             /**< Mutex to control access to {@code ready} */
 	struct output_state *output_target;
 	double   rssi;  /**< signal strength in dBm */
 
@@ -794,7 +794,7 @@ void arbitrary_resample(int16_t *buf1, int16_t *buf2, int len1, int len2)
 	}
 }
 
-void full_demod(struct demod_state *d)
+void full_demod(struct demod_state *d, JNIEnv *env)
 {
 	int i, ds_p;
 	double rssi;
@@ -818,7 +818,7 @@ void full_demod(struct demod_state *d)
 	rssi = dbm(d->lowpassed, d->lp_len, 1);
 	if (rssi != d->rssi) {
 		d->rssi = rssi;
-		(*(d->env))->CallVoidMethod(d->env, d->self, d->onRssiChanged, (jfloat)rssi);
+		(*(env))->CallVoidMethod(env, d->self, d->onRssiChanged, (jfloat)rssi);
 	}
 	d->mode_demod(d);  /* lowpassed -> result */
 	/* todo, fm noise squelch */
@@ -897,7 +897,7 @@ static void *demod_thread_fn(void *arg)
 	while (!do_exit) {
 		safe_cond_wait(&d->ready, &d->ready_m);
 		pthread_rwlock_wrlock(&d->rw);
-		full_demod(d);
+		full_demod(d, d->env);
 		pthread_rwlock_unlock(&d->rw);
 		if (d->exit_flag) {
 			do_exit = 1;
@@ -1015,7 +1015,7 @@ double get_stabilized_qual() {
 
 		rtlsdr_callback((unsigned char *)&samples, samplesRead, &dongle);
 		pthread_rwlock_wrlock(&demod.rw);
-		full_demod(&demod);
+		full_demod(&demod, controller.env);
 		ret = qual(&fft_avg, &fft_mad);
 		pthread_rwlock_unlock(&demod.rw);
 		if (fft_avg > 2500)
