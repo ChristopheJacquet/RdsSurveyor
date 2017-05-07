@@ -296,7 +296,6 @@ public class AudioBitReader extends BitReader {
 						if (numsamples % decimate == 0) {
 							/* Reset subcarrier frequency if it is outside tolerance range */
 							if ((fsc > FC_0 + FC_TOLERANCE) || (fsc < FC_0 - FC_TOLERANCE)) {
-								System.err.println("\nSubcarrier frequency outside tolerance range, resetting");
 								fsc = FC_0;
 							}
 
