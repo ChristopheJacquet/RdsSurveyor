@@ -1034,7 +1034,7 @@ double get_stabilized_rssi() {
 	/* Size of samples buffer */
 	int samplesSize = MAXIMUM_BUF_LENGTH / 16;
 	/* Buffer to receive samples for RSSI measurement */
-	void * samples = malloc(samplesSize * 2);
+	int16_t samples[samplesSize];
 	int samplesRead = 0;
 	int rssiTrend = 0;
 	double rssi = RSSI_INVALID;
@@ -1044,12 +1044,12 @@ double get_stabilized_rssi() {
 		lastRssi = rssi;
 
 		/* get a burst of samples to measure RSSI */
-		if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0) {
+		if (rtlsdr_read_sync(dongle.dev, &samples, samplesSize, &samplesRead) < 0) {
 			fprintf(stderr, "\nget_stabilized_rssi: rtlsdr_read_sync failed\n");
 			return RSSI_INVALID;
 		}
 
-		rtlsdr_callback(samples, samplesRead, &dongle);
+		rtlsdr_callback((unsigned char *)&samples, samplesRead, &dongle);
 		pthread_rwlock_rdlock(&demod.rw);
 		rssi = dongle.demod_target->rssi;
 		pthread_rwlock_unlock(&demod.rw);
