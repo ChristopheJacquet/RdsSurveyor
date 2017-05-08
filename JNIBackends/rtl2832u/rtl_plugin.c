@@ -1019,9 +1019,11 @@ double get_stabilized_qual() {
 /**
  * @brief Waits for RSSI to stabilize, then returns the result.
  *
- * The RSSI is considered to have stabilized when two subsequent measurements differ by less than
- * 1 dB, or when three subsequent measurements fail to form a monotonic sequence. In either case,
- * the last RSSI measurement is returned.
+ * The RSSI is considered to have stabilized when three subsequent measurements fail to form a
+ * monotonic sequence. In that case, the last RSSI measurement is returned.
+ *
+ * A previous stabilization criterion of two subsequent measurements differing by less than 1 dB
+ * was dropped as it gave frequent false positives, resulting in good stations being skipped.
  */
 double get_stabilized_rssi() {
 	/* Size of samples buffer */
@@ -1051,10 +1053,7 @@ double get_stabilized_rssi() {
 
 		if (lastRssi == RSSI_INVALID) {
 			/* nothing to compare to yet */
-		} else if (abs(rssi - lastRssi) < 1)
-			/* RSSI changed by less than 1 dB, assume stable state */
-			return rssi;
-		else if (!rssiTrend) {
+		} else if (!rssiTrend) {
 			if (rssi < lastRssi)
 				rssiTrend = -1;
 			else if (rssi > lastRssi)
