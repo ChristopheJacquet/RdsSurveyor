@@ -25,6 +25,7 @@
 
 package eu.jacquet80.rds;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,14 +45,17 @@ import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.core.DecoderShell;
 import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.img.Image;
+import eu.jacquet80.rds.input.AudioBitReader;
 import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
+import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
@@ -165,6 +169,9 @@ public class RDSSurveyor {
 					bitStreamSynchronizer = new BitStreamSynchronizer(console, binReader);
 					reader = bitStreamSynchronizer;
 					liveInput = true;
+				} else if("-inaudiopipe".equals(args[i])) {
+					reader = new BitStreamSynchronizer(console, new AudioBitReader(new DataInputStream(System.in), Integer.parseInt(getParam("inaudiopipe", args, ++i))));
+					liveInput = true;
 				} else if("-inbinfile".equals(args[i])) {
 					reader = new BitStreamSynchronizer(console, new BinaryFileBitReader(new File(getParam("inbinfile", args, ++i))));
 				} else if("-insyncbinfile".equals(args[i])) {
@@ -173,6 +180,8 @@ public class RDSSurveyor {
 					reader = new BitStreamSynchronizer(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 				} else if("-ingrouphexfile".equals(args[i])) {
 					reader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
+				} else if("-infile".equals(args[i])) {
+					reader = FileFormatGuesser.createReader(new File(getParam("infile", args, ++i)));
 				} else if("-intcp".equals(args[i])) {
 					reader = new TCPTunerGroupReader(getParam("intcp", args, ++i), 8750);
 				} else if("-inusbkey".equals(args[i])) {
@@ -183,6 +192,9 @@ public class RDSSurveyor {
 					liveGroupInput = true;
 				} else if("-intuner".equals(args[i])) {
 					reader = new NativeTunerGroupReader(getParam("intuner", args, ++i));
+					liveGroupInput = true;
+				} else if("-insdr".equals(args[i])) {
+					reader = new SdrGroupReader(console, getParam("insdr", args, ++i));
 					liveGroupInput = true;
 				} else if("-invert".equals(args[i])) {
 					inversion = BitInversion.INVERT;
@@ -242,12 +254,16 @@ public class RDSSurveyor {
 					
 					System.out.println("Arguments:");
 					System.out.println("  -inaudio                 Use sound card audio as input");
+					System.out.println("  -inaudiopipe             Use raw audio from stdin as input");
 					System.out.println("  -inbinfile <file>        Use the given binary file as input");
+					System.out.println("  -insyncbinfile <file>    Use the given synchronized binary file as input");
 					System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 					System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 					System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
+					System.out.println("  -infile <file>           Use the given file as input (autodetect format)");
 					System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 					System.out.println("  -intuner <driver>        Reads from a native tuner, specify driver (.so, .dll, .dylib)");
+					System.out.println("  -insdr <driver>          Reads from an SDR, specify driver (.so, .dll, .dylib)");
 					System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 					System.out.println("  -outbinfile <file>       Write bitstream to binary file (if applicable)");
 					System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
