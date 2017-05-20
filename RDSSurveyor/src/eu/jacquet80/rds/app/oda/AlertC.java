@@ -452,6 +452,16 @@ public class AlertC extends ODA {
 	 * (description of "where").
 	 */
 	public static class Message {
+		/** Special location code for messages intended for all listeners */
+		public static final int LOCATION_ALL_LISTENERS = 65533;
+		/** Special location code for silent location (do not present a location) */
+		public static final int LOCATION_SILENT = 65534;
+		/** 
+		 * Special location code for location-independent update/cancellation of messages.
+		 * When comparing locations, this code will match any location.
+		 */
+		public static final int LOCATION_INDEPENDENT = 65535;
+		
 		// basic information
 		/** Direction of queue growth (0 for positive, 1 for negative). */
 		private final int direction;
@@ -711,7 +721,7 @@ public class AlertC extends ODA {
 		
 		public boolean overrides(Message m) {
 			return // FIXME: check cc and ltn
-				(location == m.location || location == 65535) &&
+				(location == m.location || location == LOCATION_INDEPENDENT) &&
 				(direction == m.direction) &&
 				hasAnEventFromTheSameUpdateClassAs(m) &&
 				(!isForecastMessage() || duration == m.duration);
@@ -1357,7 +1367,8 @@ public class AlertC extends ODA {
 		 * This method currently checks for a valid CC and LTN and a fully resolved location.
 		 */
 		public boolean isComplete() {
-			return ((cc >= 0) && (ltn >= 0) && (sid >= 0) && (locationInfo != null));
+			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
+					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
 		}
 		
 		/**
