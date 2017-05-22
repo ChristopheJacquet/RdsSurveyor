@@ -1225,12 +1225,28 @@ public class AlertC extends ODA {
 		}
 		
 		/**
-		 * @brief Returns the PID country code for the event (single hex digit).
+		 * @brief Returns the PID country code for this event (single hex digit).
+		 * 
+		 * This is the country code of the service which sent this event. For an INTER-ROAD
+		 * message, the country code of the location may differ and can be retrieved using
+		 * {@link #getForeignCountryCode()}.
 		 * 
 		 * @return the country code, or -1 if unknown
 		 */
 		public int getCountryCode() {
 			return cc;
+		}
+		
+		/**
+		 * @brief Returns the country code for the location of this event (single hex digit).
+		 * 
+		 * For an INTER-ROAD message, the country code of the service which sent this event may
+		 * differ and can be retrieved using {@link #getCountryCode()}.
+		 * 
+		 * @return the country code, or -1 if unknown
+		 */
+		public int getForeignCountryCode() {
+			return fcc;
 		}
 		
 		/**
@@ -1432,7 +1448,22 @@ public class AlertC extends ODA {
 		}
 		
 		/**
+		 * @brief Returns the Location Table Number (LTN) for the location of this event.
+		 * 
+		 * This is the LTN of the location table in which the location is defined. For an
+		 * INTER-ROAD message, the LTN of the service which sent this event may differ and can be
+		 * retrieved using {@link #getLocationTableNumber()}.
+		 */
+		public int getForeignLocationTableNumber() {
+			return fltn;
+		}
+		
+		/**
 		 * @brief Returns the Location Table Number (LTN) for this event.
+		 * 
+		 * This is the LTN of the service which sent this event. For an INTER-ROAD message, the
+		 * location may refer to a different location table, which can be retrieved using
+		 * {@link #getForeignLocationTableNumber()}.
 		 */
 		public int getLocationTableNumber() {
 			return ltn;
