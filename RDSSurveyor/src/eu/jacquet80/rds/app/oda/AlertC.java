@@ -209,6 +209,19 @@ public class AlertC extends ODA {
 									console.print("  ");
 
 									console.print(" [" + multiGroupBits + "] ");
+									
+									if ((second == 1) && (currentMessage.interroad)) {
+										/* 
+										 * Second group of an INTER-ROAD message.
+										 * Free bits are preceded by 16 bits location code.
+										 * Early documents on TMC mention the EUROAD format with
+										 * three DP bits after the location code (with free format
+										 * bits starting at Z8), but later documents explicitly
+										 * state that free format bits start at Z11, immediately
+										 * after the location code. 
+										 */
+										currentMessage.setLocation(multiGroupBits.take(16));
+									}
 
 									while(multiGroupBits.count() >= 4) {
 										int label = multiGroupBits.peek(4);
@@ -452,6 +465,8 @@ public class AlertC extends ODA {
 	 * (description of "where").
 	 */
 	public static class Message {
+		/** Flags to denote an INTER-ROAD location code */
+		public static final int LOCATION_INTER_ROAD = 0xFC00;
 		/** Special location code for messages intended for all listeners */
 		public static final int LOCATION_ALL_LISTENERS = 65533;
 		/** Special location code for silent location (do not present a location) */
@@ -472,16 +487,22 @@ public class AlertC extends ODA {
 		private Date date = null;
 		/** The time zone to be used for persistence times based on "midnight". */
 		private TimeZone timeZone;
-		/** The country code from RDS PI. */
+		/** The country code of the service that sent the message (from RDS PI). */
 		private final int cc;
-		/** The Location Table Number (LTN). */
+		/** The Location Table Number (LTN) of the service that sent the message. */
 		private final int ltn;
 		/** The Service ID (SID). */
 		private final int sid;
+		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
+		private final boolean interroad;
+		/** The country code of the location. */
+		private int fcc = -1;
+		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
+		private int fltn = -1;
 		/** The raw location code. */
-		private final int location;
+		private int location;
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
-		private final TMCLocation locationInfo;
+		private TMCLocation locationInfo;
 		/** Whether the default directionality of the message should be reversed. */
 		private boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
@@ -573,8 +594,16 @@ public class AlertC extends ODA {
 			this.cc = cc;
 			this.ltn = ltn;
 			this.sid = sid;
-			this.location = location;
-			this.locationInfo = TMC.getLocation(String.format("%X", cc), ltn, location);
+			if ((location < LOCATION_INTER_ROAD) || (location >= LOCATION_ALL_LISTENERS)) {
+				interroad = false;
+				fcc = cc;
+				fltn = ltn;
+			} else {
+				interroad = true;
+				fcc = (location >> 6) & 0xF;
+				fltn = location & 0x3F;
+			}
+			this.setLocation(location);
 			addInformationBlock(eventCode);
 		}
 		
@@ -811,8 +840,10 @@ public class AlertC extends ODA {
 				}
 				res.append("\n");
 			}
-			res.append("CC: ").append(String.format("%X", cc));
-			res.append(", LTN: ").append(ltn);
+			if (interroad)
+				res.append("Inter-Road, ");
+			res.append("CC: ").append(String.format("%X", fcc));
+			res.append(", LTN: ").append(fltn);
 			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
@@ -899,8 +930,10 @@ public class AlertC extends ODA {
 				res.append("</b>");
 				res.append("<br/>");
 			}
-			res.append("CC: ").append(String.format("%X", cc));
-			res.append(", LTN: ").append(ltn);
+			if (interroad)
+				res.append("Inter-Road, ");
+			res.append("CC: ").append(String.format("%X", fcc));
+			res.append(", LTN: ").append(fltn);
 			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
@@ -1376,6 +1409,11 @@ public class AlertC extends ODA {
 		 */
 		public boolean isDiversionAvailable() {
 			return diversion;
+		}
+		
+		private void setLocation(int location) {
+			this.location = location;
+			this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
 		}
 	}
 	
