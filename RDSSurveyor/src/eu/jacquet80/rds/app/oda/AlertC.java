@@ -868,7 +868,7 @@ public class AlertC extends ODA {
 		 * Tells whether it is a cancellation message.
 		 * @return
 		 */
-		private boolean isCancellation() {
+		public boolean isCancellation() {
 			if(this.informationBlocks.size() > 0) {
 				InformationBlock ib1 = this.informationBlocks.get(0);
 				if(ib1.events.size() > 0) {
@@ -1499,6 +1499,10 @@ public class AlertC extends ODA {
 		 */
 		public boolean isDiversionAvailable() {
 			return diversion;
+		}
+		
+		public void setUpdateCount(int newCount) {
+			updateCount = newCount;
 		}
 		
 		/**
