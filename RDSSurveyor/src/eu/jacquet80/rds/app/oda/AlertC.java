@@ -490,9 +490,9 @@ public class AlertC extends ODA {
 		/** The country code of the service that sent the message (from RDS PI). */
 		private final int cc;
 		/** The Location Table Number (LTN) of the service that sent the message. */
-		private final int ltn;
+		private int ltn;
 		/** The Service ID (SID). */
-		private final int sid;
+		private int sid;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
 		private final boolean interroad;
 		/** The country code of the location. */
@@ -1513,6 +1513,30 @@ public class AlertC extends ODA {
 		public boolean isFullyResolved() {
 			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
 					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
+		}
+		
+		/**
+		 * @brief Sets the LocationTable Number (LTN) and Service Identifier (SID).
+		 * 
+		 * This sets the LTN and SID for the originating service. This method is intended for
+		 * situations in which the LTN and/or SID have not yet been received since the last station
+		 * change, but cached values are available.
+		 * 
+		 * Attempting to change a valid LTN or SID to a different value will result in an
+		 * {@link IllegalArgumentException}. Changing an LTN or SID to the same value is a no-op.
+		 * 
+		 * @param ltn The Location Table Number (LTN)
+		 * @param sid The Service Identifier (SID)
+		 */
+		public void setService(int ltn, int sid) {
+			if ((this.ltn == -1 || this.ltn == ltn)
+					&& (this.sid == -1 || this.sid == sid)) {
+				this.ltn = ltn;
+				if (!interroad)
+					this.fltn = ltn;
+				this.sid = sid;
+			} else
+				throw new IllegalArgumentException("LTN and SID cannot be changed after being set");
 		}
 
 		private void setLocation(int location) {
