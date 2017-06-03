@@ -513,7 +513,9 @@ public class AlertC extends ODA {
 				break;
 				
 			case 6:
-				currentInformationBlock.currentEvent.suppInfo.add(TMC.SUPP_INFOS.get(value));
+				SupplementaryInfo si = TMC.SUPP_INFOS.get(value);
+				if (si != null)
+					currentInformationBlock.currentEvent.suppInfo.add(si);
 				break;
 				
 			case 7:
