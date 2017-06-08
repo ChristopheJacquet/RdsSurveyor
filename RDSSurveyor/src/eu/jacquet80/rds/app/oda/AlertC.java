@@ -1471,6 +1471,18 @@ public class AlertC extends ODA {
 			return ltn;
 		}
 		
+		/**
+		 * @brief Returns a list of all {@link InformationBlock}s in this message.
+		 */
+		public List<InformationBlock> getInformationBlocks() {
+			List<InformationBlock> result = new ArrayList<InformationBlock>();
+			
+			for(InformationBlock ib : informationBlocks)
+				result.add(ib);
+			
+			return result;
+		}
+
 		public List<Integer> getEvents() {
 			List<Integer> result = new ArrayList<Integer>();
 			
@@ -1706,6 +1718,38 @@ public class AlertC extends ODA {
 			this.currentEvent = null;
 		}
 		
+		/**
+		 * @brief Returns a list of all events in this information block.
+		 */
+		public List<Event> getEvents() {
+			List<Event> result = new ArrayList<Event>();
+			
+			for(Event e : events) {
+				result.add(e);
+			}
+			
+			return result;
+		}
+		
+		/**
+		 * @brief Returns the length of the route affected.
+		 * 
+		 * @return The length of the route affected in km, -1 if unknown. Return values greater
+		 * than 100 are to be interpreted as "100 km or more" rather than literally.
+		 */
+		public int getLength() {
+			return length;
+		}
+		
+		/**
+		 * @brief Returns the speed limit.
+		 * 
+		 * @return The speed limit in km/h, or -1 if unknown.
+		 */
+		public int getSpeed() {
+			return speed;
+		}
+		
 		private void addEvent(int eventCode) {
 			this.currentEvent = new Event(eventCode);
 			events.add(this.currentEvent);		
@@ -1782,19 +1826,39 @@ public class AlertC extends ODA {
 		}
 		
 
-		public int getQuantifier() {
-			return quantifier;
+		/**
+		 * @brief Returns the supplementary information phrases associated with this event.
+		 */
+		public List<SupplementaryInfo> getSupplementaryInfo() {
+			List<SupplementaryInfo> result = new ArrayList<SupplementaryInfo>();
+			
+			for(SupplementaryInfo si : suppInfo)
+				result.add(si);
+			
+			return result;
 		}
 
 
-		@Override
-		public String toString() {
+		/**
+		 * @brief Generates a formatted event description.
+		 * 
+		 * If the event has a quantifier, this method returns the quantifier string for the event
+		 * with the quantifier parsed and inserted. Otherwise, the generic description is returned.
+		 */
+		public String getText() {
 			String text;
 			if(quantifier != -1) {
 				text = tmcEvent.textQ.replace("$Q", tmcEvent.formatQuantifier(quantifier));
 			} else {
 				text = tmcEvent.text;
 			}
+			return text;
+		}
+
+
+		@Override
+		public String toString() {
+			String text = getText();
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
 			res.append(", nature=").append(nature);
@@ -1806,12 +1870,7 @@ public class AlertC extends ODA {
 		}
 		
 		public String html() {
-			String text;
-			if(quantifier != -1) {
-				text = tmcEvent.textQ.replace("$Q", tmcEvent.formatQuantifier(quantifier));
-			} else {
-				text = tmcEvent.text;
-			}
+			String text = getText();
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] <b>").append(text).append("</b/>");
 			res.append(", urgency=").append(urgency);
 			res.append(", nature=").append(nature);
@@ -1826,7 +1885,8 @@ public class AlertC extends ODA {
 			}
 			return res.toString();
 		}
-		
+
+
 		private void invertDurationType() {
 			if (this.durationType == EventDurationType.DYNAMIC)
 				this.durationType = EventDurationType.LONGER_LASTING;
