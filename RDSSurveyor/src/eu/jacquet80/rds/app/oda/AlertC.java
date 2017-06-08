@@ -1782,6 +1782,11 @@ public class AlertC extends ODA {
 		}
 		
 
+		public int getQuantifier() {
+			return quantifier;
+		}
+
+
 		@Override
 		public String toString() {
 			String text;
