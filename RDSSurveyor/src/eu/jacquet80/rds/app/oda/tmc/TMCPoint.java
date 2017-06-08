@@ -181,16 +181,16 @@ public class TMCPoint extends TMCLocation {
 	}
 
 	@Override
-	public String getDisplayName(TMCLocation secondary, int direction) {
+	public String getDisplayName(TMCLocation secondary, int direction, boolean bidirectional) {
 		if ((secondary == null) || (this.equals(secondary))) {
 			if (segment != null)
-				return segment.getDisplayName(null, direction);
+				return segment.getDisplayName(null, direction, bidirectional);
 			else if (road != null)
-				return road.getDisplayName(null, direction);
+				return road.getDisplayName(null, direction, bidirectional);
 			else
 				return null;
 		} else
-			return super.getDisplayName(secondary, direction);
+			return super.getDisplayName(secondary, direction, bidirectional);
 	}
 	
 	@Override

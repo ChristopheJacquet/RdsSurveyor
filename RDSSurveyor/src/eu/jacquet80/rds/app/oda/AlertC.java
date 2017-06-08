@@ -1221,7 +1221,7 @@ public class AlertC extends ODA {
 			if (locationInfo == null)
 				return null;
 			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-			return locationInfo.getDisplayName(secondary, this.direction);
+			return locationInfo.getDisplayName(secondary, this.direction, this.bidirectional);
 		}
 		
 		/**

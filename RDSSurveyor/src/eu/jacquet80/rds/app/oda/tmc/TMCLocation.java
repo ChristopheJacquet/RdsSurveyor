@@ -141,16 +141,22 @@ public abstract class TMCLocation {
 	 * @param secondary The secondary location. If supplied, this method will try to return the names
 	 * for the lowest-order segment or road which spans both locations.
 	 * @param direction The direction of queue growth (0 for positive), used to order names correctly.
+	 * @param bidirectional Whether the message applies to one or both directions.
 	 * @return A user-friendly string describing the location of the event.
 	 */
-	public String getDisplayName(TMCLocation secondary, int direction) {
+	public String getDisplayName(TMCLocation secondary, int direction, boolean bidirectional) {
 		if ((secondary == null) || (this.equals(secondary))) {
 			String n1n2 = null; // endpoint names, ordered
 			if ((name1 != null) && (name2 != null)) {
-				if (direction != 0)
-					n1n2 = String.format("%s – %s", name1.name, name2.name);
+				if (bidirectional)
+					/* bidirectional */
+					n1n2 = String.format("%s ↔ %s", name2.name, name1.name);
+				else if (direction != 0)
+					/* negative */
+					n1n2 = String.format("%s → %s", name1.name, name2.name);
 				else
-					n1n2 = String.format("%s – %s", name2.name, name1.name);
+					/* positive */
+					n1n2 = String.format("%s → %s", name2.name, name1.name);
 			}
 			
 			String lname = null; // location name (roadName or name1)
@@ -177,7 +183,7 @@ public abstract class TMCLocation {
 		TMCLocation loc = this.getEnclosingLocation(secondary);
 		if (loc == null)
 			return null;
-		return loc.getDisplayName(null, direction);
+		return loc.getDisplayName(null, direction, bidirectional);
 	}
 	
 	/**
