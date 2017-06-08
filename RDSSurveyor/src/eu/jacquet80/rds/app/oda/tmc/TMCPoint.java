@@ -99,6 +99,8 @@ public class TMCPoint extends TMCLocation {
 		this.tcd = rset.getInt("TCD");
 		this.stcd = rset.getInt("STCD");
 		this.junctionNumber = rset.getString("JUNCTIONNUMBER");
+		if (rset.wasNull())
+			this.junctionNumber = null;
 		int rnid = rset.getInt("RNID");
 		if (!rset.wasNull()) {
 			this.rnid = rnid;
