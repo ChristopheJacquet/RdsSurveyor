@@ -27,6 +27,10 @@ package eu.jacquet80.rds.log;
 
 import eu.jacquet80.rds.app.Application;
 
+/**
+ * Reported when a new app has been encountered for the first time in the RDS data stream of the
+ * tuned station and a handler for it has been registered.
+ */
 public class ApplicationChanged extends LogMessage {
 	private final Application oldApp, newApp;
 
@@ -41,10 +45,16 @@ public class ApplicationChanged extends LogMessage {
 		visitor.visit(this);
 	}
 
+	/**
+	 * @brief Reserved, currently returns null.
+	 */
 	public Application getOldApplication() {
 		return oldApp;
 	}
 	
+	/**
+	 * @brief Returns an instance to the newly discovered application.
+	 */
 	public Application getNewApplication() {
 		return newApp;
 	}
