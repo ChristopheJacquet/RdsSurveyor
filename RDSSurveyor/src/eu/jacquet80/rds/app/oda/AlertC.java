@@ -71,7 +71,7 @@ public class AlertC extends ODA {
 	private int mode = 0;			// mode (basic or enhanced)
 	private int sid = -1;			// Service ID
 	
-	private Map<Integer, TMCOtherNetwork> otherNetworks = new HashMap<Integer, TMCOtherNetwork>();
+	private Map<Integer, TMCOtherNetwork> otherNetworks = Collections.synchronizedMap(new HashMap<Integer, TMCOtherNetwork>());
 	private List<Message> messages = new ArrayList<Message>();
 	private Comparator<Message> messageComparator = new DefaultComparator();
 	private Message currentMessage;
@@ -263,12 +263,13 @@ public class AlertC extends ODA {
 				console.print("Tuning Info: ");
 				
 				TMCOtherNetwork on = null;
-				if(addr >= 6 && addr <= 9){
-					on = otherNetworks.get(blocks[3]);
-					if (on == null)
-						on = new TMCOtherNetwork(blocks[3]);
-					otherNetworks.put(blocks[3], on);
-				}
+				if (addr >= 6 && addr <= 9)
+					synchronized(otherNetworks) {
+						on = otherNetworks.get(blocks[3]);
+						if (on == null)
+							on = new TMCOtherNetwork(blocks[3]);
+						otherNetworks.put(blocks[3], on);
+					}
 				
 				String newOnInfo = null;
 
@@ -294,10 +295,12 @@ public class AlertC extends ODA {
 					
 				case 8:
 					newOnInfo = String.format("ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
-					on = otherNetworks.get(blocks[2]);
-					if (on == null)
-						on = new TMCOtherNetwork(blocks[2]);
-					otherNetworks.put(blocks[2], on);
+					synchronized(otherNetworks) {
+						on = otherNetworks.get(blocks[2]);
+						if (on == null)
+							on = new TMCOtherNetwork(blocks[2]);
+						otherNetworks.put(blocks[2], on);
+					}
 					break;
 					
 				case 9:

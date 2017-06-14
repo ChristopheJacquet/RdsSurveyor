@@ -40,7 +40,7 @@ import java.util.Set;
  */
 public class OtherNetwork extends Station {
 	private Map<Integer, Set<Integer>> mappedAFs = Collections.synchronizedMap(new HashMap<Integer, Set<Integer>>());
-	private Set<Integer> pseudoMethodAAFs = new HashSet<Integer>();
+	private Set<Integer> pseudoMethodAAFs = Collections.synchronizedSet(new HashSet<Integer>());
 	
 	/**
 	 * @brief Adds a mapped frequency.
