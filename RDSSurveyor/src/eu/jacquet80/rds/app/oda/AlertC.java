@@ -1493,22 +1493,22 @@ public class AlertC extends ODA {
 		}
 		
 		/**
-		 * @brief Returns whether message information is complete.
-		 * 
-		 * This method currently checks for a valid CC and LTN and a fully resolved location.
-		 */
-		public boolean isComplete() {
-			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
-					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
-		}
-		
-		/**
 		 * @brief Returns whether a diversion route is available.
 		 */
 		public boolean isDiversionAvailable() {
 			return diversion;
 		}
 		
+		/**
+		 * @brief Returns whether message information has been fully resolved.
+		 * 
+		 * This method currently checks for a valid CC and LTN and a fully resolved location.
+		 */
+		public boolean isFullyResolved() {
+			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
+					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
+		}
+
 		private void setLocation(int location) {
 			this.location = location;
 			this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
