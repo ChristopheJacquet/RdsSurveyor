@@ -48,8 +48,8 @@ import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventNature;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
 import eu.jacquet80.rds.app.oda.tmc.TMCLocation;
 import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
-import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
+import eu.jacquet80.rds.core.TMCOtherNetwork;
 import eu.jacquet80.rds.log.RDSTime;
 
 public class AlertC extends ODA {
@@ -71,7 +71,7 @@ public class AlertC extends ODA {
 	private int mode = 0;			// mode (basic or enhanced)
 	private int sid = -1;			// Service ID
 	
-	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
+	private Map<Integer, TMCOtherNetwork> otherNetworks = new HashMap<Integer, TMCOtherNetwork>();
 	private List<Message> messages = new ArrayList<Message>();
 	private Comparator<Message> messageComparator = new DefaultComparator();
 	private Message currentMessage;
@@ -262,10 +262,11 @@ public class AlertC extends ODA {
 				int addr = blocks[1] & 0xF;
 				console.print("Tuning Info: ");
 				
-				OtherNetwork on = null;
+				TMCOtherNetwork on = null;
 				if(addr >= 6 && addr <= 9){
 					on = otherNetworks.get(blocks[3]);
-					if(on == null) on = new OtherNetwork(blocks[3]);
+					if (on == null)
+						on = new TMCOtherNetwork(blocks[3]);
 					otherNetworks.put(blocks[3], on);
 				}
 				
@@ -293,6 +294,10 @@ public class AlertC extends ODA {
 					
 				case 8:
 					newOnInfo = String.format("ON.PI=%04X, ON.PI=%04X", blocks[2], blocks[3]);
+					on = otherNetworks.get(blocks[2]);
+					if (on == null)
+						on = new TMCOtherNetwork(blocks[2]);
+					otherNetworks.put(blocks[2], on);
 					break;
 					
 				case 9:
@@ -300,7 +305,7 @@ public class AlertC extends ODA {
 					int ltn = (blocks[2]>>10) & 0x3F;
 					int mgs = (blocks[2]>>6) & 0xF;
 					int sid = blocks[2] & 0x3F;
-					newOnInfo += ", ON.LTN=" + ltn + ", ON.MGS=" + decodeMGS(mgs) + ", ON.SID=" + sid;
+					newOnInfo += " (" + on.setService(ltn, mgs, sid) + ")";
 					break;
 					
 				default: console.print("addr=" + addr);
@@ -350,7 +355,7 @@ public class AlertC extends ODA {
 		fireChangeListeners();
 	}
 
-	private static String decodeMGS(int mgs) {
+	public static String decodeMGS(int mgs) {
 		if(mgs < 0) return "";
 		return
 			((mgs&8) != 0 ? "I" : "") +
@@ -391,6 +396,10 @@ public class AlertC extends ODA {
 	
 	public int getMode() {
 		return mode;
+	}
+	
+	public Map<Integer, TMCOtherNetwork> getOtherNetworks() {
+		return otherNetworks;
 	}
 	
 	public int getSID() {

@@ -34,10 +34,22 @@ import java.util.Map;
 import java.util.Set;
 
 
+/**
+ * Represents an Other Network, as transmitted in Extended Other Network (EON) information or by
+ * some ODA applications.
+ */
 public class OtherNetwork extends Station {
 	private Map<Integer, Set<Integer>> mappedAFs = Collections.synchronizedMap(new HashMap<Integer, Set<Integer>>());
 	private Set<Integer> pseudoMethodAAFs = new HashSet<Integer>();
 	
+	/**
+	 * @brief Adds a mapped frequency.
+	 * 
+	 * @param channel The tuned (current) frequency, represented as a channel number
+	 * @param mappedChannel The mapped (other) frequency, represented as a channel number
+	 * 
+	 * @return A textual representation of the mapping
+	 */
 	@Override
 	public String addMappedFreq(int channel, int mappedChannel) {
 		int freq = channelToFrequency(channel);
@@ -58,6 +70,16 @@ public class OtherNetwork extends Station {
 		return frequencyToString(freq) + " -> " + frequencyToString(mappedFreq);
 	}
 	
+	/**
+	 * @brief Adds a pair of alternate frequencies.
+	 * 
+	 * If the first frequency is a list length indicator, it will be ignored.
+	 * 
+	 * @param a The first alternate frequency, represented as a channel number
+	 * @param b The second alternate frequency, represented as a channel number
+	 * 
+	 * @return A textual representation of the two frequencies
+	 */
 	@Override
 	public synchronized String addAFPair(int a, int b) {
 		StringBuffer res = new StringBuffer("Pseudo-method A: ");
@@ -105,6 +127,14 @@ public class OtherNetwork extends Station {
 			}
 		}
 		return res;
+	}
+	
+	public Map<Integer, Set<Integer>> getMappedAFs() {
+		return mappedAFs;
+	}
+	
+	public Set<Integer> getPseudoMethodAAFs() {
+		return pseudoMethodAAFs;
 	}
 	
 	public String toString() {
