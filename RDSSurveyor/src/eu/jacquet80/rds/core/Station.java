@@ -78,7 +78,14 @@ public abstract class Station {
 		this.timeOfLastPI = time;
 	}
 
-	protected static int channelToFrequency(int channel) {
+	/**
+	 * @brief Converts an RDS channel code to a frequency.
+	 * 
+	 * @param channel The RDS channel (an integer in the 0–205 range, 205 being the filler code)
+	 * @return The frequency in multiples of 100 kHz, or -1 for the filler code, or 0 if an invalid
+	 * code was supplied
+	 */
+	public static int channelToFrequency(int channel) {
 		if(channel >= 0 && channel <= 204) return 875 + channel;
 		else if(channel == 205) return -1;		// -1 = filler code
 		else return 0;
