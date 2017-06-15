@@ -1519,6 +1519,32 @@ public class AlertC extends ODA {
 		}
 		
 		/**
+		 * @brief Whether the message has a secondary location.
+		 * 
+		 * If {@code checkValidity} is false, this method will simply look at the extent and return
+		 * true if the extent is greater than zero, false otherwise.
+		 * 
+		 * If {@code checkValidity} is true, this method will try to resolve the secondary location
+		 * and return true only if the combination of primary location, direction and extent
+		 * resolve to a valid location which is different from the primary location. It will also
+		 * return false if no location table is present to resolve the primary location.
+		 * 
+		 * @param checkValidity
+		 * 
+		 * @return
+		 */
+		public boolean hasSecondaryLocation(boolean checkValidity) {
+			if (extent <= 0)
+				return false;
+			if (!checkValidity)
+				return true;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return false;
+			return true;
+		}
+		
+		/**
 		 * @brief Returns whether the message affects both directions.
 		 */
 		public boolean isBidirectional() {
