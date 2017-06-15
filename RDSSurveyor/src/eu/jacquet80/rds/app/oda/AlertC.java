@@ -75,6 +75,7 @@ public class AlertC extends ODA {
 	private List<Message> messages = new ArrayList<Message>();
 	private Comparator<Message> messageComparator = new DefaultComparator();
 	private Message currentMessage;
+	private boolean storeCancellationMessages = false;
 	private Bitstream multiGroupBits;
 
 	private int currentContIndex = -1;
@@ -340,7 +341,7 @@ public class AlertC extends ODA {
 			
 			// 2) second we just need to add the current message
 			// (unless it is a cancellation message)
-			if(! currentMessage.isCancellation()) {
+			if(storeCancellationMessages || !currentMessage.isCancellation()) {
 				messages.add(currentMessage);
 				Collections.sort(messages, messageComparator);
 			}
@@ -413,6 +414,15 @@ public class AlertC extends ODA {
 		return onInfo;
 	}
 	
+	
+	/**
+	 * @brief Returns whether this instance stores cancellation messages in its list of messages,
+	 * rather than discarding them after all matching messages have been deleted from the list.
+	 */
+	public boolean isStoreCancellationMessages() {
+		return storeCancellationMessages;
+	}
+	
 	/**
 	 * @brief Sets a new comparator, which will be used to sort the list of messages.
 	 * 
@@ -428,6 +438,21 @@ public class AlertC extends ODA {
 			fireChangeListeners();
 		}
 	}
+	
+	
+	/**
+	 * @brief Specifies whether cancellation messages will be stored.
+	 * 
+	 * If true, cancellation messages will be stored in the list of messages just like any other
+	 * message. If false, cancellation messages will be discarded after all matching messages have
+	 * been deleted from the list. Default is false.
+	 * 
+	 * @param value
+	 */
+	public void storeCancellationMessages(boolean value) {
+		storeCancellationMessages = value;
+	}
+	
 	
 	private static class Bitstream {
 		private long bits;
