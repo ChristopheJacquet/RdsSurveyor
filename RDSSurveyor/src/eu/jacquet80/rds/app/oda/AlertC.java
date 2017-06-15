@@ -1222,6 +1222,19 @@ public class AlertC extends ODA {
 		
 		
 		/**
+		 * @brief Returns the direction of the message.
+		 * 
+		 * In most cases, the return value should be evaluated together with
+		 * {@link #isBidirectional()}.
+		 * 
+		 * @return 0 for positive, 1 for negative
+		 */
+		public int getDirection() {
+			return direction;
+		}
+		
+		
+		/**
 		 * @brief Returns a name for the location which can be displayed to the user.
 		 * 
 		 * The display name, together with the road number (if any), identifies the location of the event.
@@ -1546,6 +1559,8 @@ public class AlertC extends ODA {
 		
 		/**
 		 * @brief Returns whether the message affects both directions.
+		 * 
+		 * To get the direction, call {@link #getDirection()}.
 		 */
 		public boolean isBidirectional() {
 			return bidirectional;
