@@ -70,6 +70,7 @@ public class AlertC extends ODA {
 	private int mgs = -1;			// message geographical scope
 	private int mode = 0;			// mode (basic or enhanced)
 	private int sid = -1;			// Service ID
+	private Boolean encrypted = false; // whether the service is encrypted
 	
 	private Map<Integer, TMCOtherNetwork> otherNetworks = Collections.synchronizedMap(new HashMap<Integer, TMCOtherNetwork>());
 	private List<Message> messages = new ArrayList<Message>();
@@ -103,7 +104,10 @@ public class AlertC extends ODA {
 			console.print("Sys.Info v=" + var+ ", ");
 			
 			if(var == 0) {
-				ltn = (blocks[2]>>6) & 0x3F;
+				int ltnae = (blocks[2]>>6) & 0x3F;
+				if (ltnae != 0)
+					ltn = ltnae;
+				encrypted = (ltnae == 0);
 				afi = (blocks[2]>>5) & 1;
 				mode = (blocks[2]>>4) & 1;
 				mgs = blocks[2] & 0xF;
@@ -115,7 +119,7 @@ public class AlertC extends ODA {
 				int scopeU = (blocks[2]) & 1;
 				*/
 				
-				console.printf("LTN=%d, AFI=%d, Mode=%d, MGS=%s ", ltn, afi, mode, decodeMGS(mgs));
+				console.printf("LTN=%d, encrypted=%b, AFI=%d, Mode=%d, MGS=%s ", ltn, encrypted, afi, mode, decodeMGS(mgs));
 			} else if(var == 1) {
 				int gap = codesGap[(blocks[2]>>12) & 3];
 				sid = (blocks[2]>>6) & 0x3F;
@@ -148,7 +152,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone(), div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone(), Boolean.TRUE.equals(encrypted), div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -161,7 +165,11 @@ public class AlertC extends ODA {
 				else {
 					int idx = blocks[1] & 7;
 					
-					if(idx == 0 || idx == 7) {
+					if(idx == 0) {
+						encrypted = true;
+						ltn = blocks[3] >> 10;
+						console.printf("encryption administration group, LTN=%d", ltn);
+					} else if (idx == 7) {
 						console.printf("non-standard message [F=0, CI=%d]: %04X-%04X", idx, blocks[2], blocks[3]);
 					} else {
 
@@ -176,7 +184,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone());
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone(), Boolean.TRUE.equals(encrypted));
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -416,6 +424,17 @@ public class AlertC extends ODA {
 	
 	
 	/**
+	 * @brief Returns whether this service uses encrypted location codes.
+	 * 
+	 * @return true if the service is encrypted, false if not, null if no information has been
+	 * transmitted yet
+	 */
+	public Boolean isEncrypted() {
+		return encrypted;
+	}
+	
+	
+	/**
 	 * @brief Returns whether this instance stores cancellation messages in its list of messages,
 	 * rather than discarding them after all matching messages have been deleted from the list.
 	 */
@@ -530,6 +549,8 @@ public class AlertC extends ODA {
 		private int ltn;
 		/** The Service ID (SID). */
 		private int sid;
+		/** Whether the location code is encrypted. */
+		private boolean encrypted;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
 		private final boolean interroad;
 		/** The country code of the location. */
@@ -623,11 +644,12 @@ public class AlertC extends ODA {
 		 * @param ltn
 		 * @param sid
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz) {
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz, boolean encrypted) {
 			this.direction = direction;
 			this.extent = extent;
 			this.date = date;
 			this.timeZone = tz;
+			this.encrypted = encrypted;
 			this.cc = cc;
 			this.ltn = ltn;
 			this.sid = sid;
@@ -659,8 +681,8 @@ public class AlertC extends ODA {
 		 * @param diversion
 		 * @param duration
 		 */
-		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location, cc, ltn, sid, date, tz);
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz, boolean encrypted, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, sid, date, tz, encrypted);
 			this.diversion = diversion;
 			this.duration = duration;
 			this.eventForDuration = this.currentInformationBlock.currentEvent;
@@ -1598,6 +1620,13 @@ public class AlertC extends ODA {
 			return diversion;
 		}
 		
+		/**
+		 * @brief Returns whether the location is encrypted.
+		 */
+		public boolean isEncrypted() {
+			return encrypted;
+		}
+		
 		public void setUpdateCount(int newCount) {
 			updateCount = newCount;
 		}
@@ -1638,7 +1667,8 @@ public class AlertC extends ODA {
 
 		private void setLocation(int location) {
 			this.location = location;
-			this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
+			if (!encrypted)
+				this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
 		}
 	}
 	
