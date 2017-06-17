@@ -59,6 +59,7 @@ import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
+import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
@@ -117,6 +118,7 @@ public class RDSSurveyor {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2014.");
 		
 		GroupReader reader = null;
+		GroupReader teeReader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		boolean liveGroupInput = false;
@@ -303,6 +305,11 @@ public class RDSSurveyor {
 			if (reader == null)
 				System.exit(0);
 		}
+				
+		if (outGroupFile == null)
+			teeReader = reader;
+		else
+			teeReader = new TeeGroupReader(reader, outGroupFile);
 		
 		// Create a decoder "shell"
 		final PrintStream fConsole = console == null ? nullConsole : console;
@@ -338,9 +345,9 @@ public class RDSSurveyor {
 		}
 
 		if(showGui) {
-			DecoderShell.instance.process(reader, liveGroupInput);
+			DecoderShell.instance.process(teeReader, liveGroupInput);
 		} else {
-			DecoderShell.instance.processAndQuit(reader, liveGroupInput);
+			DecoderShell.instance.processAndQuit(teeReader, liveGroupInput);
 		}
 		
 		
