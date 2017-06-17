@@ -1,4 +1,4 @@
-FLAGS=-Wall -W -Wfatal-errors -wunused -pedantic -std=c99 -I hidapi/hidapi
+FLAGS=-Wall -W -Wfatal-errors -Wunused -pedantic -std=c99 -I hidapi/hidapi
 LINKFLAGS=-framework IOKit -framework CoreFoundation
 
 all: si470x_hidapi si470x_plugin si470x_test

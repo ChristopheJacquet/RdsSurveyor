@@ -1,4 +1,4 @@
-FLAGS=-Wall -W -Wfatal-errors -wunused -pedantic -std=gnu99 `pkg-config libusb-1.0 --cflags` -fPIC
+FLAGS=-Wall -W -Wfatal-errors -Wunused -pedantic -std=gnu99 `pkg-config libusb-1.0 --cflags` -fPIC
 LINKFLAGS=`pkg-config librtlsdr --libs` -framework IOKit -framework CoreFoundation
 
 all: rtl_plugin
