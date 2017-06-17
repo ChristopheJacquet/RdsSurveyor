@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib"/>
 	<classpathentry kind="lib" path="lib/dsp-collection.jar"/>
+	<classpathentry kind="lib" path="lib/hsqldb-2.3.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

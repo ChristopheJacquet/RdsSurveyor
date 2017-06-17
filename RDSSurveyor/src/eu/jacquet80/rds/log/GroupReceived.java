@@ -2,6 +2,9 @@ package eu.jacquet80.rds.log;
 
 
 
+/**
+ * Reported when a RDS group has been received from the tuned station.
+ */
 public class GroupReceived extends LogMessage {
 	private final int[] blocks;
 	private final String analysis;
@@ -20,14 +23,26 @@ public class GroupReceived extends LogMessage {
 		visitor.visit(this);
 	}
 	
+	/**
+	 * @brief Returns the blocks in the group.
+	 */
 	public int[] getBlocks() {
 		return blocks;
 	}
 	
+	/**
+	 * @brief Returns the number of correctly received blocks in the group.
+	 */
 	public int getNbOk() {
 		return nbOk;
 	}
 	
+	/**
+	 * @brief Returns a bit field indicating which blocks were received correctly.
+	 * 
+	 * If a block was discarded due to transmission errors, its corresponding bit is set to 1,
+	 * otherwise it is 0. Block 0 is indicated by the least-significant bit.
+	 */
 	public int getOKMask() {
 		return (blocks[0] != -1 ? 1 : 0) |
 				(blocks[1] != -1 ? 2 : 0) |

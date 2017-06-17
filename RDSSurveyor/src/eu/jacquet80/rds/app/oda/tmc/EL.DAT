@@ -878,7 +878,7 @@ CODE;TEXT;TEXT_Q0;TEXT_Q1;TEXT_QN;N;Q;T;D;U;C;R;COMMENT
 824;$Q sets of road marking work. Danger;road marking work. Danger;;;;0;D;1;U;13;E6.Z91;
 1771;warning cleared;;;;;;(D);1;;13;F99;
 857;$Q unprotected accident area(s);unprotected accident area(s);;;;0;D;1;;13;B30;
-858;danger of $Q unprotected accident area(s);danger ofunprotected accident area(s);;;;0;D;1;U;13;B30D;
+858;danger of $Q unprotected accident area(s);danger of unprotected accident area(s);;;;0;D;1;U;13;B30D;
 859;$Q unlit vehicle(s) on the road;unlit vehicle(s) on the road;;;;0;D;1;;13;R10;
 860;danger of $Q unlit vehicle(s) on the road;danger of unlit vehicle(s) on the road;;;;0;D;1;U;13;R10D;
 861;snow and ice debris;;;;;;L;2;;13;G29;
@@ -1419,7 +1419,7 @@ CODE;TEXT;TEXT_Q0;TEXT_Q1;TEXT_QN;N;Q;T;D;U;C;R;COMMENT
 1930;this TMC-service is not active until $Q;this TMC-service is not active;;;;7;D;2;;30;Y13;
 1914;no information available until $Q;no information available;;;;7;D;2;;30;Y2;
 1916;no information available until $Q due to technical problems;no information available due to technical problems;;;;7;D;2;;30;Y2.Z175;
-1939;travel information telephone service availiable;;;;;;D;2;;30;;
+1939;travel information telephone service available;;;;;;D;2;;30;;
 1956;reference to other TMC services no longer valid;;;;;;(D);2;;30;Y96;
 1957;previous announcement about this or other TMC services no longer valid;;;;;;(D);2;;30;Y97;
 1964;rail information service not available;;;;;;D;2;;30;Y4;

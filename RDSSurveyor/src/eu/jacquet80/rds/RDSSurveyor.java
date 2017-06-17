@@ -39,6 +39,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import eu.jacquet80.rds.app.oda.TDC;
+import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.core.DecoderShell;
@@ -129,6 +130,8 @@ public class RDSSurveyor {
 		PrintStream console = System.out;
 		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
 		BitStreamSynchronizer bitStreamSynchronizer = null;
+		String inLtPath = null;
+		String dbUrl = "jdbc:hsqldb:mem:.";
 		
 		// RDS Surveyor is non-localized for the time being
 		Locale.setDefault(Locale.US);
@@ -244,6 +247,10 @@ public class RDSSurveyor {
 						System.out.println("Malformed -force option");
 						System.exit(1);
 					}
+				} else if("-lt".equals(args[i])) {
+					inLtPath = getParam("lt", args, ++i);
+				} else if("-ltdb".equals(args[i])) {
+					dbUrl = String.format("jdbc:hsqldb:file:%s", getParam("ltdb", args, ++i));
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -268,19 +275,35 @@ public class RDSSurveyor {
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
+					System.out.println("  -lt <path>               Read TMC location tables found at the given path (or subdirs)");
+					System.out.println("  -ltdb <path>             Use TMC location database at the given path");
 					System.exit(1);
 				}
 			}
-		} else if(showGui) {
-			console = null;
-			InputSelectionDialog dialog = new InputSelectionDialog();
-			reader = dialog.makeChoice();
-			liveGroupInput = dialog.live;
 		}
 
-		if(reader == null) {
-			System.out.println("No source provided, aborting. A source must be provided.");
-			System.exit(0);
+		if ((reader == null) && (inLtPath == null)) {
+			if(showGui) {
+				console = null;
+				InputSelectionDialog dialog = new InputSelectionDialog();
+				reader = dialog.makeChoice();
+				liveGroupInput = dialog.live;
+			}
+			if (reader == null) {
+				System.out.println("A source or a set of TMC location tables must be provided. Aborting.");
+				System.exit(0);
+			}
+		}
+		
+		TMC.setDbUrl(dbUrl);
+		
+		// Build db if needed
+		if (inLtPath != null) {
+			System.out.println("Processing TMC location tables...");
+			TMC.readLocationTables(new File(inLtPath));
+			System.out.println("Done processing TMC location tables.");
+			if (reader == null)
+				System.exit(0);
 		}
 				
 		if (outGroupFile == null)

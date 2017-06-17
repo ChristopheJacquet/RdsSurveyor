@@ -27,14 +27,18 @@ package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -42,9 +46,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.html.HTMLDocument;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.AlertC;
@@ -58,6 +66,7 @@ public class AlertCPanel extends AppPanel {
 	private AlertC app;
 	private final MessageTableModel model = new MessageTableModel();
 	private final JTable tblList;
+	private boolean freezeDetails = false;
 	private int latestSelectedLocation = -1;
 
 	private final JLabel 
@@ -109,17 +118,38 @@ public class AlertCPanel extends AppPanel {
 		final JPanel pnlMain = new JPanel(new GridLayout(1, 2, 6, 6));
 		
 		tblList = new JTable(model);
-		final JLabel txtDetails = new JLabel();
-		txtDetails.setVerticalAlignment(JLabel.TOP);
+		final JEditorPane txtDetails = new JEditorPane("text/html", null);
+		txtDetails.setEditable(false);
+		String bodyRule = "body { font-family: Sans-Serif; }";
+		((HTMLDocument) txtDetails.getDocument()).getStyleSheet().addRule(bodyRule);
+		((DefaultCaret) txtDetails.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+		txtDetails.addHyperlinkListener(new HyperlinkListener() {
+
+			@Override
+			public void hyperlinkUpdate(HyperlinkEvent event) {
+				if (event.getEventType()==HyperlinkEvent.EventType.ACTIVATED)
+					try {
+						Desktop.getDesktop().browse(event.getURL().toURI());
+					} catch (URISyntaxException e) {
+						// bad URI
+					} catch (IOException e) {
+						System.err.println("Failed to launch browser.");
+					}
+			}
+			
+		});
 		
 		pnlMain.add(new JScrollPane(tblList));
-		pnlMain.add(new JScrollPane(txtDetails));
+		final JScrollPane scrDetails = new JScrollPane(txtDetails);
+		pnlMain.add(scrDetails);
 		
 		tblList.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tblList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			
 			@Override
 			public void valueChanged(ListSelectionEvent evt) {
+				if (freezeDetails)
+					return;
 				int row = tblList.getSelectedRow();
 				if(row >= 0) {
 					Message msg = app.getMessages().get(row);
@@ -172,6 +202,7 @@ public class AlertCPanel extends AppPanel {
 		lblSID.setText(app.getSID() >= 0 ? Integer.toString(app.getSID()) : "");
 		lblMessageCount.setText(Integer.toString(app.getMessages().size()));
 
+		freezeDetails = true;
 		model.fireTableDataChanged();
 		
 		// try to restore selection
@@ -180,6 +211,7 @@ public class AlertCPanel extends AppPanel {
 			tblList.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
 		}
 		Util.packColumns(tblList);
+		freezeDetails = false;
 	}
 	
 	private class MessageTableModel extends AbstractTableModel {
@@ -209,7 +241,11 @@ public class AlertCPanel extends AppPanel {
 			if(msg == null) return null;
 			
 			switch(column) {
-			case 0: return msg.getLocation();
+			case 0:
+				String ret = msg.getShortDisplayName();
+				if (ret == null)
+					ret = "#" + msg.getLocation();
+				return ret;
 			case 1:
 				StringBuffer buf = new StringBuffer();
 				for(int event : msg.getEvents()) {
