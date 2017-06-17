@@ -4,5 +4,5 @@ LINKFLAGS=`pkg-config librtlsdr --libs` -framework IOKit -framework CoreFoundati
 all: rtl_plugin
 
 rtl_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h rtl_plugin.c convenience/convenience.c
-	gcc -shared -o rtl.dylib rtl_plugin.c convenience/convenience.c -I /System/Library/Frameworks/JavaVM.framework/Headers $(FLAGS) $(LINKFLAGS)
+	gcc -shared -o rtl.dylib rtl_plugin.c convenience/convenience.c kissfft/kiss_fft.c kissfft/kiss_fftr.c -I /System/Library/Frameworks/JavaVM.framework/Headers $(FLAGS) $(LINKFLAGS)
 	

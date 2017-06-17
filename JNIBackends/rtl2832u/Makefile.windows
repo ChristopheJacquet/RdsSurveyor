@@ -6,7 +6,7 @@ JAVADIR=C:/Program\ Files/Java/jdk1.7.0_07
 all: rtl_plugin
 
 rtl_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h rtl_plugin.c convenience/convenience.c dllinfo
-	gcc -D_JNI_IMPLEMENTATION_ -Wl,--kill-at -static -shared -o rtl.dll dllinfo.o rtl_plugin.c convenience/convenience.c -I $(JAVADIR)/include -I $(JAVADIR)/include/win32 -Wl,--subsystem,windows -s $(FLAGS) $(LINKFLAGS)
+	gcc -D_JNI_IMPLEMENTATION_ -Wl,--kill-at -static -shared -o rtl.dll dllinfo.o rtl_plugin.c convenience/convenience.c kissfft/kiss_fft.c kissfft/kiss_fftr.c -I $(JAVADIR)/include -I $(JAVADIR)/include/win32 -Wl,--subsystem,windows -s $(FLAGS) $(LINKFLAGS)
 
 dllinfo: dllinfo.rc
 	windres -i dllinfo.rc -o dllinfo.o
