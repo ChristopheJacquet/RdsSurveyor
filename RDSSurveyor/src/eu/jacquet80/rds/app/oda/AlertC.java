@@ -26,18 +26,28 @@
 package eu.jacquet80.rds.app.oda;
 
 import java.io.PrintWriter;
-import java.text.Format;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.app.oda.tmc.TMCEvent;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventDurationType;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventNature;
+import eu.jacquet80.rds.app.oda.tmc.TMCEvent.EventUrgency;
+import eu.jacquet80.rds.app.oda.tmc.TMCLocation;
+import eu.jacquet80.rds.app.oda.tmc.TMCPoint;
 import eu.jacquet80.rds.core.OtherNetwork;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
@@ -54,6 +64,7 @@ public class AlertC extends ODA {
 	private String[] providerName = {"????", "????"};
 	
 	// basic parameters
+	private int cc = -1;			// country code (CC) from PID
 	private int ltn = -1;			// location table number
 	private int afi = -1;			// AF indicator
 	private int mgs = -1;			// message geographical scope
@@ -62,6 +73,7 @@ public class AlertC extends ODA {
 	
 	private Map<Integer, OtherNetwork> otherNetworks = new HashMap<Integer, OtherNetwork>();
 	private List<Message> messages = new ArrayList<Message>();
+	private Comparator<Message> messageComparator = new DefaultComparator();
 	private Message currentMessage;
 	private Bitstream multiGroupBits;
 
@@ -80,6 +92,10 @@ public class AlertC extends ODA {
 		
 		// in all cases, we need all blocks to proceed
 		if(!blocksOk[2] || !blocksOk[3]) return;
+		
+		// get CC so that we can decode locations
+		if (blocksOk[0])
+			cc = blocks[0] >> 12;
 		
 		if(type == 3 && version == 0) {
 			int var = (blocks[2]>>14) & 0x3;
@@ -118,6 +134,9 @@ public class AlertC extends ODA {
 			console.print("T=" + x4 + " ");
 			
 			if(x4 == 0) {
+				Date date = station.getRealTimeForStreamTime(time);
+				if (date == null)
+					date = new Date();
 				int single_group = (blocks[1] & 0x8)>>3;
 				if(single_group == 1) {
 					console.print("single-group: ");
@@ -128,7 +147,7 @@ public class AlertC extends ODA {
 					int event = blocks[2] & 0x7FF;
 					int location = blocks[3];
 					console.print("DP=" + dp + ", DIV=" + div + ", DIR=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
-					currentMessage = new Message(dir, extent, event, location, div == 1, dp);
+					currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone(), div == 1, dp);
 					
 					// single-group message is complete
 					currentMessage.complete();
@@ -156,7 +175,7 @@ public class AlertC extends ODA {
 							int location = blocks[3];
 							console.print("dir=" + dir + ", ext=" + extent + ", evt=" + event + ", loc=" + location);
 
-							currentMessage = new Message(dir, extent, event, location);
+							currentMessage = new Message(dir, extent, event, location, cc, ltn, sid, date, station.getTimeZone());
 							multiGroupBits = new Bitstream();
 							currentContIndex = idx;
 							nextGroupExpected = 2;
@@ -190,6 +209,19 @@ public class AlertC extends ODA {
 									console.print("  ");
 
 									console.print(" [" + multiGroupBits + "] ");
+									
+									if ((second == 1) && (currentMessage.interroad)) {
+										/* 
+										 * Second group of an INTER-ROAD message.
+										 * Free bits are preceded by 16 bits location code.
+										 * Early documents on TMC mention the EUROAD format with
+										 * three DP bits after the location code (with free format
+										 * bits starting at Z8), but later documents explicitly
+										 * state that free format bits start at Z11, immediately
+										 * after the location code. 
+										 */
+										currentMessage.setLocation(multiGroupBits.take(16));
+									}
 
 									while(multiGroupBits.count() >= 4) {
 										int label = multiGroupBits.peek(4);
@@ -302,6 +334,7 @@ public class AlertC extends ODA {
 			// (unless it is a cancellation message)
 			if(! currentMessage.isCancellation()) {
 				messages.add(currentMessage);
+				Collections.sort(messages, messageComparator);
 			}
 			
 			currentMessage.updateCount = oldUpdate + 1;
@@ -368,6 +401,22 @@ public class AlertC extends ODA {
 		return onInfo;
 	}
 	
+	/**
+	 * @brief Sets a new comparator, which will be used to sort the list of messages.
+	 * 
+	 * Setting a new comparator causes the list to be sorted with the new comparator and registered
+	 * change listeners to fire.
+	 * 
+	 * @param comparator The new comparator
+	 */
+	public void setComparator(Comparator<Message> comparator) {
+		if (comparator != messageComparator) {
+			messageComparator = comparator;
+			Collections.sort(messages, messageComparator);
+			fireChangeListeners();
+		}
+	}
+	
 	private static class Bitstream {
 		private long bits;
 		private int count;
@@ -408,24 +457,84 @@ public class AlertC extends ODA {
 		}
 	}
 	
+	/**
+	 * @brief Represents a TMC message.
+	 * 
+	 * A TMC message is a single report about an event at a particular location. It contains one or
+	 * more event codes (description of "what"), a primary location and an optional secondary location
+	 * (description of "where").
+	 */
 	public static class Message {
+		/** Flags to denote an INTER-ROAD location code */
+		public static final int LOCATION_INTER_ROAD = 0xFC00;
+		/** Special location code for messages intended for all listeners */
+		public static final int LOCATION_ALL_LISTENERS = 65533;
+		/** Special location code for silent location (do not present a location) */
+		public static final int LOCATION_SILENT = 65534;
+		/** 
+		 * Special location code for location-independent update/cancellation of messages.
+		 * When comparing locations, this code will match any location.
+		 */
+		public static final int LOCATION_INDEPENDENT = 65535;
+		
 		// basic information
+		/** Direction of queue growth (0 for positive, 1 for negative). */
 		private final int direction;
+		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		private int extent;		
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
-		private final int location;
+		/** The time at which the message was received. */
+		private Date date = null;
+		/** The time zone to be used for persistence times based on "midnight". */
+		private TimeZone timeZone;
+		/** The country code of the service that sent the message (from RDS PI). */
+		private final int cc;
+		/** The Location Table Number (LTN) of the service that sent the message. */
+		private final int ltn;
+		/** The Service ID (SID). */
+		private final int sid;
+		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
+		private final boolean interroad;
+		/** The country code of the location. */
+		private int fcc = -1;
+		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
+		private int fltn = -1;
+		/** The raw location code. */
+		private int location;
+		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
+		private TMCLocation locationInfo;
+		/** Whether the default directionality of the message should be reversed. */
 		private boolean reversedDirectionality = false;
+		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
+		/** The coordinates of the event. */
+		private float[] coords = null;
+		/** The auxiliary coordinates of the event. */
+		private float[] auxCoords = null;
 
+		private boolean reversedDurationType = false;
 		
-		private int duration = -1;		// 0- duration 
+		private int duration = 0;		// 0- duration (0 if not set)
 		private int startTime = -1;		// 7- start time
 		private int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
 
-		// urgency: that of 1st event?   // 1.0, 1.1
-		// directionality: that of 1st event?    // 1.2
-		private boolean dynamic = true;      // TODO default   // 1.3
+		/** Number of levels by which to increase or decrease default urgency. */
+		private int increasedUrgency = 0;
+		/** The urgency of the message. */
+		private EventUrgency urgency;
+		
+		/*
+		 * The TMC event which was followed by the duration.
+		 * 
+		 * Duration and expiration of a message is represented by a duration code. How this code
+		 * maps to actual times is governed by the event nature and duration type. The latter two
+		 * values are specific to an event and may differ between multiple events of a multi-event
+		 * message. In this case, the nature and duration type of the last event received before the
+		 * duration field apply (the last event may be the first group event).
+		 */
+		private AlertC.Event eventForDuration = null;
+		
 		private boolean spoken = false;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
 		
@@ -461,33 +570,80 @@ public class AlertC extends ODA {
 			}
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location) {
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for multi-group messages, which have no fixed fields for
+		 * diversion and duration. Instead, default values (duration 0, no diversion) are assumed
+		 * unless one of the optional fields in the subsequent messages of the group sets a
+		 * different value.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 * @param sid
+		 */
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz) {
 			this.direction = direction;
 			this.extent = extent;
-			this.location = location;
+			this.date = date;
+			this.timeZone = tz;
+			this.cc = cc;
+			this.ltn = ltn;
+			this.sid = sid;
+			if ((location < LOCATION_INTER_ROAD) || (location >= LOCATION_ALL_LISTENERS)) {
+				interroad = false;
+				fcc = cc;
+				fltn = ltn;
+			} else {
+				interroad = true;
+				fcc = (location >> 6) & 0xF;
+				fltn = location & 0x3F;
+			}
+			this.setLocation(location);
 			addInformationBlock(eventCode);
 		}
 		
-		public Message(int direction, int extent, int eventCode, int location, boolean diversion, int duration) {
-			this(direction, extent, eventCode, location);
+		/**
+		 * @brief Creates a new TMC/ALERT-C message.
+		 * 
+		 * This constructor is intended for single-group messages, which have fields for diversion and duration.
+		 * 
+		 * @param direction
+		 * @param extent
+		 * @param eventCode
+		 * @param location
+		 * @param cc
+		 * @param ltn
+		 * @param sid
+		 * @param diversion
+		 * @param duration
+		 */
+		public Message(int direction, int extent, int eventCode, int location, int cc, int ltn, int sid, Date date, TimeZone tz, boolean diversion, int duration) {
+			this(direction, extent, eventCode, location, cc, ltn, sid, date, tz);
 			this.diversion = diversion;
 			this.duration = duration;
+			this.eventForDuration = this.currentInformationBlock.currentEvent;
 		}
 		
 		public void addField(int label, int value) {
 			switch(label) {
 			// duration
-			case 0: duration = value;
-			break;
+			case 0:
+				duration = value;
+				this.eventForDuration = this.currentInformationBlock.currentEvent;
+				break;
 			
 			// control code
 			case 1:
-				Event evt = this.informationBlocks.get(0).events.get(0);
 				switch(value) {
-				case 0: evt.urgency = evt.urgency.next(); break;
-				case 1: evt.urgency = evt.urgency.prev(); break;
+				case 0: increasedUrgency++; break;
+				case 1: increasedUrgency--; break;
 				case 2: reversedDirectionality = true; break;
-				case 3: dynamic = !dynamic; break;
+				case 3: reversedDurationType = true; break;
 				case 4: spoken = !spoken; break;
 				case 5: diversion = true; break;
 				case 6: extent += 8; break;			// extent == number of steps
@@ -560,36 +716,100 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				for(Event e : ib.events) {
 					this.bidirectional &= e.tmcEvent.bidirectional;
+					if (urgency == null)
+						urgency = e.urgency;
+					else
+						urgency = EventUrgency.max(urgency, e.urgency);
 				}
 			}
 			
 			if(reversedDirectionality) this.bidirectional = !this.bidirectional;
 			
+			if (increasedUrgency > 0)
+				for (int i = 0; i < increasedUrgency; i++)
+					urgency.next();
+			else if (increasedUrgency < 0)
+				for (int i = 0; i > increasedUrgency; i--)
+					urgency.prev();
+			
+			/*
+			 * TODO: what if we have a multi-event message with different duration types and no
+			 * duration set explicitly? As per the spec, duration would be assumed to be 0, which
+			 * means the event is expected to last for an unspecified time. Even then, persistence
+			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
+			 * we use? (Nature is not relevant for persistence.)
+			 */
+			if (eventForDuration == null)
+				eventForDuration = this.informationBlocks.get(0).events.get(0);
+			
+			if (reversedDurationType)
+				eventForDuration.invertDurationType(); 
+			
 			this.complete = true;
 		}
 		
+		/**
+		 * @brief Whether this message overrides another message.
+		 * 
+		 * A message overrides another if the following are true:
+		 * <ul>
+		 * <li>Both messages refer to the same location, from the same location table for the same
+		 * country</li>
+		 * <li>The directions of both messages match</li>
+		 * <li>At least one update class is shared by events from both messages</li>
+		 * <li>For forecast messages, the forecast duration matches</li>
+		 * <li>The new message is complete</li>
+		 * </ul>
+		 * 
+		 * Special rules apply to the {@link #LOCATION_INDEPENDENT} location code, which matches
+		 * any location code for the purpose of message updating. A regular (non-INTER-ROAD)
+		 * message with this location code will replace all otherwise matching messages, including
+		 * those referring to an INTER-ROAD location. An INTER-ROAD message with this location code
+		 * will only replace messages referring to locations from the same location table and
+		 * country, even if they are non-INTER-ROAD messages.
+		 * 
+		 * These checks are implemented here.
+		 * 
+		 * In addition to the above, both messages must either originate from the same TMC service
+		 * (identified by CC, LTN and SID) or from two different TMC services which explicitly
+		 * allow overriding each other's messages via variant 9 tuning information messages. This
+		 * check is not implemented here; callers who receive messages from multiple services must
+		 * implement this check separately.
+		 * 
+		 * @param m A previously received message
+		 * 
+		 * @return True if the message can be overridden (save for the aforementioned service constraints not being met), false if not
+		 */
 		public boolean overrides(Message m) {
 			return
-				(location == m.location || location == 65535) &&
+				complete &&
+				hasLocationMatching(m) && 
 				(direction == m.direction) &&
 				hasAnEventFromTheSameUpdateClassAs(m) &&
-				(!isForecastMessage() || duration == m.duration);
+				((!isForecastMessage() && !m.isForecastMessage()) || duration == m.duration);
 				// is forecast message => same duration
 		}
 		
 		/**
 		 * As per TMC/Alert-C standard, "contains an event that belongs to the
 		 * same update class as any event (a multi-group message may have more
-		 * than one event) in the existing message)"
+		 * than one event) in the existing message)".
 		 * 
-		 * @param m
+		 * If the class for which this method is called has event 2047 (null message), this method
+		 * will also return true. However, the opposite is not true: if the message passed as
+		 * {@code m} has event 2047, it will be treated like any other event.
+		 * 
+		 * @param m The message to override in case of a match
+		 * 
 		 * @return
 		 */
 		private boolean hasAnEventFromTheSameUpdateClassAs(Message m) {
-			for(InformationBlock mib : m.informationBlocks) {
-				for(Event me : mib.events) {
-					for(InformationBlock ib : this.informationBlocks) {
-						for(Event e : ib.events) {
+			for(InformationBlock ib : this.informationBlocks) {
+				for(Event e : ib.events) {
+					if (e.tmcEvent.code == 2047)
+						return true;
+					for(InformationBlock mib : m.informationBlocks) {
+						for(Event me : mib.events) {
 							if(me.tmcEvent.updateClass == e.tmcEvent.updateClass) {
 								return true;
 							}
@@ -598,6 +818,33 @@ public class AlertC extends ODA {
 				}
 			}
 			return false;
+		}
+		
+		/**
+		 * @brief Whether the location of this message matches that of another for the purpose of message updating
+		 * 
+		 * @param m The message to override in case of a match
+		 * 
+		 * @return
+		 */
+		private boolean hasLocationMatching(Message m) {
+			if ((location == LOCATION_INDEPENDENT) && (!interroad))
+					return true;
+			/* 
+			 * Messages received before we had full service info may have -1 as CC and/or LTN
+			 * (FCC and FLTN only if they are not INTER-ROAD messages).
+			 * We consider these equal to the main CC/LTN of the service.
+			 */
+			int mfcc = m.fcc;
+			int mfltn = m.fltn;
+			if (!interroad) {
+				if (mfcc < 0)
+					mfcc = fcc;
+				if (mfltn < 0)
+					mfltn = fltn;
+			}
+			return ((fcc == mfcc) && (fltn == mfltn) &&
+					((location == m.location) || (location == LOCATION_INDEPENDENT)));
 		}
 		
 		/**
@@ -636,16 +883,85 @@ public class AlertC extends ODA {
 			if(! complete) {
 				return "Incomplete!";
 			}
-			StringBuilder res = new StringBuilder("Location: ").append(location);
+			StringBuilder res = new StringBuilder("");
+			if (locationInfo != null) {
+				String tmp = this.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				String name = this.getDisplayName();
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("\n");
+			}
+			if (interroad)
+				res.append("Inter-Road, ");
+			res.append("CC: ").append(String.format("%X", fcc));
+			res.append(", LTN: ").append(fltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append('\n');
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
+			res.append('\n');
+			if (locationInfo != null) {
+				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
+				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+				float[] c = this.getCoordinates();
+				if ((c != null) && (c.length >= 2)) {
+					if (c.length >= 4)
+						res.append("Link: http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ "\n");
+					else
+						res.append("Link: http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q\n");
+				}
+			}
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
+			}
+			if (locationInfo != null) {
+				res.append("-------------\n").append(locationInfo).append("\n");
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo)
+					res.append("-------------\nExtent:\n").append(secondary);
 			}
 			
 			return res.toString();
@@ -653,26 +969,504 @@ public class AlertC extends ODA {
 		
 		public String html() {
 			if(! complete) {
-				return "Incomplete!";
+				return "<html><b>Incomplete!</b><html>";
 			}
-			StringBuilder res = new StringBuilder("<html>Location: ").append(location);
+			StringBuilder res = new StringBuilder("<html>");
+			if (locationInfo != null) {
+				res.append("<b>");
+				String tmp = this.getRoadNumber();
+				if (tmp != null)
+					res.append(tmp);
+				String name = this.getDisplayName();
+				if (name != null) {
+					if (tmp != null)
+						res.append(" ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				if (name != null) {
+					if (tmp != null)
+						res.append(", ");
+					else
+						tmp = name;
+					res.append(name);
+				}
+				res.append("</b>");
+				res.append("<br/>");
+			}
+			if (interroad)
+				res.append("Inter-Road, ");
+			res.append("CC: ").append(String.format("%X", fcc));
+			res.append(", LTN: ").append(fltn);
+			res.append(", Location: ").append(location);
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
+			res.append("<br/>");
+			res.append("urgency=").append(urgency);
+			res.append(", nature=").append(eventForDuration.nature);
+			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			res.append("<br/>");
+			res.append("received=").append(date);
+			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
+			if (locationInfo != null) {
+				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
+				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
+				float[] c = this.getCoordinates();
+				if ((c != null) && (c.length >= 2)) {
+					if (c.length >= 4) {
+						res.append("<a href=\"http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ "\">");
+						res.append("http://www.openstreetmap.org/directions?engine=mapquest_car&route=" 
+								+ c[3]
+								+ "%2C" 
+								+ c[2]
+								+ "%3B" 
+								+ c[1]
+								+ "%2C" 
+								+ c[0]
+								+ " ");
+						res.append("</a>");
+					} else {
+						res.append("<a href=\"http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q\">");
+						res.append("http://www.openstreetmap.org/?mlat=" 
+								+ c[1]
+								+ "&mlon=" 
+								+ c[0]
+								+ "#map=9/" 
+								+ c[1]
+								+ "/" 
+								+ c[0]
+								+ "&layers=Q");
+						res.append("</a>");
+					}
+				}
+			}
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
+			}
+			if (locationInfo != null) {
+				res.append("<hr>").append(locationInfo.html());
+				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+				if (secondary != locationInfo)
+					res.append("<hr>Extent:<br>").append(secondary.html());
 			}
 			res.append("</html>");
 			
 			return res.toString();			
 		}
 		
+		
+		/**
+		 * @brief Returns the name of the area surrounding the location.
+		 * 
+		 * For formatting of the area name, see
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCLocation#getAreaName()}.
+		 * 
+		 * @return The area name, or {@code null} if the location of the message could not be
+		 * resolved.
+		 */
+		public String getAreaName() {
+			if (locationInfo == null)
+				return null;
+			return locationInfo.getAreaName();
+		}
+		
+		/**
+		 * @brief Returns the auxiliary coordinates of the message location.
+		 * 
+		 * Auxiliary coordinates are needed in cases in which {@link #getCoordinates()} returns a
+		 * two-element array, i.e. a single point which carries no direction information.
+		 * 
+		 * For all other types of locations, this function returns the same result as
+		 * {@link #getCoordinates()}.
+		 * 
+		 * Apart from obtaining direction information, they can also be used to infer the road
+		 * which is affected by the message. While the design of TMC considers the road to be
+		 * unambiguously identified by the primary coordinates, along with the road name or number,
+		 * matching these values to map material may be difficult in practice: due to precision
+		 * constraints, TMC coordinates can never be expected to precisely match those on map data,
+		 * road names may have alternate spellings (via Verdi vs. via Giuseppe Verdi vs. via Verdi
+		 * Giuseppe) and even road numbers may differ (most notoriously, German location tables
+		 * prefix district roads in Bavaria with the letter K, which is not part of their official
+		 * number and thus likely to not match the numbers used in maps).
+		 * 
+		 * Auxiliary coordinates for single-point locations are generally obtained by "stretching"
+		 * the location beyond that single point to its immediate neighbors. For example, if a
+		 * segment contains points 1–2–3 (in that order) and an event is signalled for point 2,
+		 * this function will return the coordinates of point 1 and 3. The order of the points
+		 * depends on the direction of the event, similar to primary and secondary locations in a
+		 * TMC message: the first pair of coordinates refers to a point which is ahead of the
+		 * obstacle, the second pair refers to a point which is behind the end of the queue. In
+		 * other words, drivers traveling through the location in the affected direction will first
+		 * pass the second pair of coordinates, then the first.
+		 * 
+		 * If the location does not have neighbors in both directions, the location itself is used
+		 * in place of any missing neighbors.
+		 * 
+		 * @return The auxiliary coordinates of the message location (see description).
+		 */
+		public float[] getAuxCoordinates() {
+			if (auxCoords == null) {
+				float[] c = getCoordinates();
+				if ((c == null) || (c.length == 4))
+					auxCoords = c;
+				// TODO get coordinates
+			}
+			if ((auxCoords == null) || (auxCoords.length == 0))
+				return null;
+			else
+				return auxCoords.clone();
+		}
+		
+		
+		/**
+		 * @brief Returns the coordinates of the message location.
+		 * 
+		 * The coordinates can take the following form:
+		 * <ul>
+		 * <li>{@code null} if no coordinates can be established (e.g. location of type AREA or
+		 * unknown location code)</li>
+		 * <li>A two-element array, representing longitude and latitude, for single-point locations
+		 * (location of type POINT and extent 0)</li>
+		 * <li>A four-element array, representing longitude and latitude of the primary location,
+		 * followed by those of the secondary location, for multi-point locations (location of type
+		 * POINT and nonzero extent, or location of type SEGMENT or ROAD)</li>
+		 * </ul>
+		 * 
+		 * If the message location is of type POINT, this function will simply return its
+		 * coordinates and, if present, those of the secondary location.
+		 * 
+		 * Message locations of type SEGMENT or ROAD will be "translated" into a pair of points in
+		 * the following way: For a SEGMENT with zero extent or a ROAD, its start and end points
+		 * are determined. For a SEGMENT with a nonzero extent, the outer end point of each segment
+		 * (pointing away from the other segment) is used. Then the coordinates of these two points
+		 * are returned.
+		 * 
+		 * Directionality is always preserved: queue growth is from the first to the second pair of
+		 * coordinates. In other words, drivers traveling through the location in the affected
+		 * direction will first pass the second pair of coordinates, then the first.
+		 * 
+		 * @return The coordinates of the message location (see description).
+		 */
+		public float[] getCoordinates() {
+			float[] c1, c2;
+			// TODO do we need to deal with extent changes?
+			if (locationInfo == null)
+				return null;
+			if (coords == null) {
+				if (direction == 0)
+					c1 = locationInfo.getFirstCoordinates();
+				else
+					c1 = locationInfo.getLastCoordinates();
+				if ((c1 == null) || (c1.length < 2))
+					coords = new float[] {};
+				else {
+					TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+					if ((locationInfo.equals(secondary)) && (locationInfo instanceof TMCPoint))
+						coords = c1;
+					else {
+						if (direction == 0)
+							c2 = secondary.getLastCoordinates();
+						else
+							c2 = secondary.getFirstCoordinates();
+						if ((c2 == null) || (c2.length < 2))
+							coords = c1;
+						else
+							coords = new float[] {c1[0], c1[1], c2[0], c2[1]};
+					}
+				}
+			}
+			if ((coords == null) || (coords.length == 0))
+				return null;
+			else
+				return coords.clone();
+		}
+		
+		
+		/**
+		 * @brief Returns a name for the location which can be displayed to the user.
+		 * 
+		 * The display name, together with the road number (if any), identifies the location of the event.
+		 * For formatting of the display name, see
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCLocation#getDisplayName(TMCLocation, int)}.
+		 * 
+		 * @return A user-friendly string describing the location of the event, or {@code null} if
+		 * the location of the message could not be resolved.
+		 */
+		public String getDisplayName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			return locationInfo.getDisplayName(secondary, this.direction, this.bidirectional);
+		}
+		
+		/**
+		 * @brief Returns the PID country code for this event (single hex digit).
+		 * 
+		 * This is the country code of the service which sent this event. For an INTER-ROAD
+		 * message, the country code of the location may differ and can be retrieved using
+		 * {@link #getForeignCountryCode()}.
+		 * 
+		 * @return the country code, or -1 if unknown
+		 */
+		public int getCountryCode() {
+			return cc;
+		}
+		
+		/**
+		 * @brief Returns the country code for the location of this event (single hex digit).
+		 * 
+		 * For an INTER-ROAD message, the country code of the service which sent this event may
+		 * differ and can be retrieved using {@link #getCountryCode()}.
+		 * 
+		 * @return the country code, or -1 if unknown
+		 */
+		public int getForeignCountryCode() {
+			return fcc;
+		}
+		
+		/**
+		 * @brief Returns the time until which receivers should store the message.
+		 * 
+		 * Persistence is determined by three factors: the date and time at which the message was
+		 * last received, its duration type.
+		 * 
+		 * @return The date and time at which the message expires.
+		 */
+		public Date getPersistence() {
+			/* 15 min, 30 min, 1 h, 2 h, 3 h, 4 h and 24 h in milliseconds, respectively */
+			long MS_15_MIN  = 900000;
+			long MS_30_MIN = 1800000;
+			long MS_1_H    = 3600000;
+			long MS_2_H    = 7200000;
+			long MS_3_H   = 10800000;
+			long MS_4_H   = 14400000;
+			long MS_24_H =  86400000;
+			
+			/* Calculate midnight (end of current day) in current time zone */
+			Calendar cal = new GregorianCalendar(this.timeZone);
+			cal.setTime(this.date);
+			cal.setLenient(true);
+			cal.set(Calendar.HOUR_OF_DAY, 24);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			cal.set(Calendar.MILLISECOND, 0);
+			Date midnight = cal.getTime();
+			
+			switch (duration) {
+			case 0:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_1_H);
+			case 1:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_15_MIN);
+				else
+					return new Date(date.getTime() + MS_2_H);
+			case 2:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_30_MIN);
+				else
+					return new Date(midnight.getTime());
+			case 3:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_1_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 4:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_2_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 5:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_3_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 6:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(date.getTime() + MS_4_H);
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			case 7:
+				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+					return new Date(midnight.getTime());
+				else
+					return new Date(midnight.getTime() + MS_24_H);
+			}
+			return null;
+		}
+		
+		/**
+		 * @brief Returns the junction number of the primary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the primary location is not a
+		 * {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no junction number or could not be
+		 * resolved.
+		 */
+		public String getPrimaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) locationInfo;
+			if ((loc.junctionNumber != null) && !loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the primary location, if any.
+		 * 
+		 * @return The name of the primary location, or {@code null} if the primary location is not
+		 * a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no name or could not be resolved.
+		 */
+		public String getPrimaryName() {
+			if (locationInfo == null)
+				return null;
+			if (!(locationInfo instanceof TMCPoint))
+				return null;
+			if ((locationInfo.name1.name == null) || (locationInfo.name1.name.isEmpty()))
+				return null;
+			else
+				return locationInfo.name1.name;
+		}
+		
+		/**
+		 * @brief Returns the road number for the message, if any.
+		 * 
+		 * @return The road number, or {@code null} if the message does not have a corresponding road number,
+		 * or if the location of the message could not be resolved.
+		 */
+		public String getRoadNumber() {
+			if (locationInfo == null)
+				return null;
+			return locationInfo.getRoadNumber();
+		}
+		
+		/**
+		 * @brief Returns the junction number of the secondary location, if any.
+		 * 
+		 * @return The junction number, or {@code null} if the message has no secondary location,
+		 * the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no
+		 * junction number or could not be resolved.
+		 */
+		public String getSecondaryJunctionNumber() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			TMCPoint loc = (TMCPoint) secondary;
+			if ((loc.junctionNumber != null) && !loc.junctionNumber.isEmpty())
+				return loc.junctionNumber;
+			else
+				return null;
+		}
+		
+		/**
+		 * @brief Returns the name of the secondary location, if any.
+		 * 
+		 * @return The name of the secondary location, or {@code null} if the message has no secondary
+		 * location, the secondary location is not a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint},
+		 * has no name or could not be resolved.
+		 */
+		public String getSecondaryName() {
+			if (locationInfo == null)
+				return null;
+			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (locationInfo.equals(secondary)))
+				return null;
+			if (!(secondary instanceof TMCPoint))
+				return null;
+			if ((secondary.name1.name == null) || (secondary.name1.name.isEmpty()))
+				return null;
+			else
+				return secondary.name1.name;
+		}
+		
+		/**
+		 * @brief Returns a short display name for the location.
+		 * 
+		 * The short display name is intended for use in list views. It identifies the approximate
+		 * location of the event. It can take one of the following forms (the first non-empty item
+		 * is returned):
+		 * <ol>
+		 * <li>Road number</li>
+		 * <li>Area name (for roads without a number)</li>
+		 * <li>The value returned by {@link #getDisplayName()}</li>
+		 * </ol>
+		 * 
+		 * @return The short display name, or {@code null} if the location of the message could not
+		 * be resolved.
+		 */
+		public String getShortDisplayName() {
+			if (locationInfo == null)
+				return null;
+			String ret = locationInfo.getRoadNumber();
+			if (ret == null)
+				ret = locationInfo.getAreaName();
+			if (ret == null)
+				ret = getDisplayName();
+			return ret;
+		}
+		
+		public int getSid() {
+			return sid;
+		}
+		
 		public int getLocation() {
 			return location;
+		}
+		
+		/**
+		 * @brief Returns the Location Table Number (LTN) for the location of this event.
+		 * 
+		 * This is the LTN of the location table in which the location is defined. For an
+		 * INTER-ROAD message, the LTN of the service which sent this event may differ and can be
+		 * retrieved using {@link #getLocationTableNumber()}.
+		 */
+		public int getForeignLocationTableNumber() {
+			return fltn;
+		}
+		
+		/**
+		 * @brief Returns the Location Table Number (LTN) for this event.
+		 * 
+		 * This is the LTN of the service which sent this event. For an INTER-ROAD message, the
+		 * location may refer to a different location table, which can be retrieved using
+		 * {@link #getForeignLocationTableNumber()}.
+		 */
+		public int getLocationTableNumber() {
+			return ltn;
 		}
 		
 		public List<Integer> getEvents() {
@@ -689,6 +1483,35 @@ public class AlertC extends ODA {
 		
 		public int getUpdateCount() {
 			return updateCount;
+		}
+		
+		/**
+		 * @brief Returns whether the message affects both directions.
+		 */
+		public boolean isBidirectional() {
+			return bidirectional;
+		}
+		
+		/**
+		 * @brief Returns whether a diversion route is available.
+		 */
+		public boolean isDiversionAvailable() {
+			return diversion;
+		}
+		
+		/**
+		 * @brief Returns whether message information has been fully resolved.
+		 * 
+		 * This method currently checks for a valid CC and LTN and a fully resolved location.
+		 */
+		public boolean isFullyResolved() {
+			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
+					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
+		}
+
+		private void setLocation(int location) {
+			this.location = location;
+			this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
 		}
 	}
 	
@@ -901,7 +1724,9 @@ public class AlertC extends ODA {
 	
 	public static class Event {
 		private TMCEvent tmcEvent;
-		private TMCEvent.EventUrgency urgency;
+		private EventUrgency urgency;
+		private EventNature nature;
+		private EventDurationType durationType;
 		private int sourceLocation = -1;
 
 		private int quantifier = -1;
@@ -915,6 +1740,8 @@ public class AlertC extends ODA {
 			}
 			
 			this.urgency = this.tmcEvent.urgency;
+			this.nature = this.tmcEvent.nature;
+			this.durationType = this.tmcEvent.durationType;
 		}
 		
 
@@ -928,6 +1755,8 @@ public class AlertC extends ODA {
 			}
 			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
 			if(this.suppInfo.size() > 0) res.append("\nSupplementary information: ").append(this.suppInfo);
@@ -941,8 +1770,10 @@ public class AlertC extends ODA {
 			} else {
 				text = tmcEvent.text;
 			}
-			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] ").append(text);
+			StringBuffer res = new StringBuffer("[").append(tmcEvent.code).append("] <b>").append(text).append("</b/>");
 			res.append(", urgency=").append(urgency);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
 			if(this.suppInfo.size() > 0) {
 				res.append("<font color='#555555'><br>Supplementary information: <br>");
@@ -954,5 +1785,65 @@ public class AlertC extends ODA {
 			return res.toString();
 		}
 		
+		private void invertDurationType() {
+			if (this.durationType == EventDurationType.DYNAMIC)
+				this.durationType = EventDurationType.LONGER_LASTING;
+			else
+				this.durationType = EventDurationType.DYNAMIC;
+		}
+	}
+	
+	/**
+	 * @brief The default comparator for sorting TMC messages.
+	 * 
+	 * This comparator compares events, using the following items of information in the order
+	 * shown, until a difference is found:
+	 * <ol>
+	 * <li>Road numbers</li>
+	 * <li>Area names</li>
+	 * <li>Location IDs</li>
+	 * <li>Extents</li>
+	 * </ol>
+	 * 
+	 * Road numbers and area names are sorted lexicographically. Null values are placed at the end,
+	 * two null values are considered equal (causing the next items in the above list to be
+	 * examined). Location IDs and extents are sorted numerically. 
+	 */
+	public static class DefaultComparator implements Comparator<Message> {
+		@Override
+		public int compare(Message lhs, Message rhs) {
+			int res = 0;
+			/* First compare by a road numbers (if only one location has a road number, it is first) */
+			String lrn = lhs.getRoadNumber();
+			String rrn = rhs.getRoadNumber();
+			if ((lrn != null) && (rrn != null)) {
+				res = lrn.compareTo(rrn);
+				if (res != 0)
+					return res;
+			} else if (lrn != null)
+				return -1;
+			else if (rrn != null)
+				return 1;
+			
+			/* Then compare by area names (if only one location has an area name, it is first) */
+			String lan = lhs.getAreaName();
+			String ran = rhs.getAreaName();
+			if ((lan != null) && (ran != null)) {
+				res = lan.compareTo(ran);
+				if (res != 0)
+					return res;
+			} else if (lan != null)
+				return -1;
+			else if (ran != null)
+				return 1;
+			
+			/* Then compare by primary location codes */
+			res = lhs.location - rhs.location;
+			if (res != 0)
+				return res;
+			
+			/* Finally compare by extent */
+			return lhs.extent - rhs.extent;
+		}
 	}
 }

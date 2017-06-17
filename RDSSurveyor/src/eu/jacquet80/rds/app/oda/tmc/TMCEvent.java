@@ -7,11 +7,32 @@ public class TMCEvent {
 	public String textQ;
 	public EventNature nature; // N (blank, F, S)
 	public int quantifierType; // Q
-	// T duration type (TODO)
+	public EventDurationType durationType; // T duration type (D=Dynamic, L=Longer lasting)
 	public boolean bidirectional; // D directionality (1=unidirectional, 2=bidirectional)
 	public EventUrgency urgency; // U (blank, U, X)
 	public int updateClass;  // C
 	// R phrasal code (NOT TO BE IMPLEMENTED HERE)
+	
+	public static enum EventDurationType {
+		DYNAMIC, LONGER_LASTING;
+		
+		static EventDurationType forCode(String s) {
+			if ("L".equals(s)) {
+				return LONGER_LASTING;
+			} else {
+				return DYNAMIC;
+			}
+		}
+
+		@Override
+		public String toString() {
+			switch(this) {
+			case LONGER_LASTING: return "Longer Lasting";
+			case DYNAMIC: return "Dynamic";
+			default: return "ERR";
+			}
+		}
+	}
 	
 	public static enum EventNature {
 		INFO, FORECAST, SILENT;
@@ -23,6 +44,16 @@ public class TMCEvent {
 				return SILENT;
 			} else {
 				return INFO;
+			}
+		}
+
+		@Override
+		public String toString() {
+			switch(this) {
+			case FORECAST: return "Forecast";
+			case SILENT: return "Silent";
+			case INFO: return "Info";
+			default: return "ERR";
 			}
 		}
 	}
@@ -38,6 +69,28 @@ public class TMCEvent {
 			} else {
 				return NORMAL;
 			}
+		}
+		
+		public static final EventUrgency max(EventUrgency a, EventUrgency b) {
+			if (a == XURGENT) {
+				if ((b == XURGENT) || (b == URGENT) || (b == NORMAL))
+					return a;
+				else
+					return null;
+			} else if (a == URGENT) {
+				if (b == XURGENT)
+					return b;
+				else if ((b == URGENT) || (b == NORMAL))
+					return a;
+				else
+					return null;
+			} else if (a == NORMAL) {
+				if ((b == XURGENT) || (b == URGENT) || (b == NORMAL))
+					return b;
+				else
+					return null;
+			} else
+				return null;
 		}
 		
 		public final EventUrgency prev() {
@@ -84,8 +137,7 @@ public class TMCEvent {
 			this.quantifierType = Integer.parseInt(comp[6]);
 		}
 		
-		// index 7: T (TODO)
-		
+		this.durationType = EventDurationType.forCode(comp[7]);
 		this.bidirectional = "2".equals(comp[8]);
 		this.urgency = EventUrgency.forCode(comp[9]);
 		this.updateClass = Integer.parseInt(comp[10]);
