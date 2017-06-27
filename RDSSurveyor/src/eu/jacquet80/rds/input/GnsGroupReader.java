@@ -233,10 +233,19 @@ public class GnsGroupReader extends TunerGroupReader {
 	}
 
 	@Override
-	public synchronized boolean seek(boolean up) {
+	public boolean seek(boolean up) {
+		Long response;
 		try {
-			sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01: 0x00);
-			processResponse();
+			synchronized(this) {
+				sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01 : 0x00);
+				rdsSynchronized = false;
+				do {
+					response = processResponse();
+				} while (!hasOpcode(response, OPCODE_SEEK[cmdSet]));
+			}
+			do {
+				response = processResponse();
+			} while (!rdsSynchronized);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -249,7 +258,9 @@ public class GnsGroupReader extends TunerGroupReader {
 		Long response;
 		try {
 			sendCommand(OPCODE_TUNE[cmdSet], getChannelFromFrequency(frequency), 0x05);
-			response = processResponse();
+			do {
+				response = processResponse();
+			} while (!hasOpcode(response, OPCODE_TUNE[cmdSet]));
 		} catch (IOException e) {
 			e.printStackTrace();
 			return 0;
