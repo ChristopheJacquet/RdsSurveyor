@@ -106,6 +106,12 @@ public class GnsGroupReader extends TunerGroupReader {
 
 	private boolean rdsSynchronized;
 
+	/** Last response received from device */
+	private byte[] responseData = new byte[10];
+
+	/** Next response byte to be read */
+	private int responseStart = 0;
+
 	/** Received Signal Strength Indicator, 0..65535 */
 	private int rssi;
 
@@ -341,46 +347,48 @@ public class GnsGroupReader extends TunerGroupReader {
 	 */
 	private Long processResponse() throws IOException {
 		long res;
-		byte[] byteData = new byte[10];
 		int[] data = new int[10];
-		int start = 0;
 		int len = -1;
+		
+		if (responseStart == 10) {
+			responseStart = 0;
+			responseData = new byte[10];
+		}
 
-		while ((start < 10) && ((len = in.read(byteData, start, byteData.length - start)) > 0)) {
+		while ((responseStart < 10) && ((len = in.read(responseData, responseStart, responseData.length - responseStart)) > 0)) {
 			System.out.printf("Read %d bytes\n", len);
-			start += len;
-		}
-
-		if (start == 0) {
-			return null;
-		} else if (start < 10) {
-			System.err.printf("Bad response length (%d)\n", start);
-			return null;
-		}
-
-		if (((byteData[0] & 0xFF) != DELIM_RESPONSE) || ((byteData[9] & 0xFF) != DELIM_RESPONSE)) {
-			System.err.printf("Malformed response (does not start and end with 0x%02X):", DELIM_RESPONSE);
-			for (int i = 0; i < len; i++)
-				System.err.printf(" %02X", byteData[i]);
-			System.err.print("\n");
-			return null;
-		}
-
-		/* we now have a complete response, convert it */
-
-		res = 0;
-		for (int i = 0; i < 10; i++) {
-			data[i] = byteData[i] & 0xFF;
-			if ((i >= 1) && (i <= 8))
-				res |= ((long) data[i]) << (64 - (i * 8));
+			responseStart += len;
 		}
 
 		/* set groupReady to false until we know better */
 		groupReady = false;
 
+		if (responseStart == 0) {
+			return null;
+		} else if (responseStart < 10) {
+			System.out.printf("Incomplete response (%d bytes)\n", responseStart);
+			return null;
+		}
+
+		if (((responseData[0] & 0xFF) != DELIM_RESPONSE) || ((responseData[9] & 0xFF) != DELIM_RESPONSE)) {
+			System.err.printf("Malformed response (does not start and end with 0x%02X):", DELIM_RESPONSE);
+			for (int i = 0; i < len; i++)
+				System.err.printf(" %02X", responseData[i]);
+			System.err.print("\n");
+			return null;
+		}
+
+		/* we now have a complete response, convert it */
+		res = 0;
+		for (int i = 0; i < 10; i++) {
+			data[i] = responseData[i] & 0xFF;
+			if ((i >= 1) && (i <= 8))
+				res |= ((long) data[i]) << (64 - (i * 8));
+		}
+
 		if (opcode == OPCODE_IDENTIFICATION[cmdSet]) {
 			/* we requested an identification */
-			deviceName = new String(byteData, 1, 8);
+			deviceName = new String(responseData, 1, 8);
 			opcode = -1;
 			System.out.printf("Identification: %s\n", deviceName);
 			return res;
