@@ -205,11 +205,14 @@ public class RDSSurveyor {
 				} else if("-ingns".equals(args[i])) {
 					int baudRate = 38400;
 					String port = getParam("ingns", args, ++i);
-					System.out.printf("Using device on port %s", port);
+					System.out.printf("Using device on port %s\n", port);
 					SerialPort comPort = SerialPort.getCommPort(port);
 					comPort.setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
 					comPort.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
-					comPort.openPort();
+					if (!comPort.openPort()) {
+						System.err.println("Could not open port for input. Aborting.");
+						System.exit(1);
+					}
 					comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
 					InputStream in = comPort.getInputStream();
 					OutputStream out = comPort.getOutputStream();
