@@ -142,7 +142,7 @@ public class GnsGroupReader extends TunerGroupReader {
 			sendCommand(OPCODE_ENABLE[0], 0x78, 0x78);
 			do {
 			response = processResponse();
-			} while (!((response == null) || (((response & 0xFFFFFF0000000000L) >> 40)) == OPCODE_ENABLE[0]));
+			} while (!((response == null) || hasOpcode(response, OPCODE_ENABLE[0])));
 			if (response == null)
 				throw new UnavailableInputMethod("No response to enable command");
 			else
@@ -302,6 +302,23 @@ public class GnsGroupReader extends TunerGroupReader {
 		return channel * 100 + 87500;
 	}
 
+	
+	/**
+	 * @brief Whether a response is a status response to a particular opcode
+	 * 
+	 * @param response The response, as obtained from {@link #processResponse()}
+	 * @param opcode The opcode
+	 * 
+	 * @return True if the response starts with two null bytes followed by the opcode, false if not
+	 * (including if the response is null)
+	 */
+	private static boolean hasOpcode(Long response, int opcode) {
+		if (response == null)
+			return false;
+		int first3 = (int) (response >> 40);
+		return (((first3 & 0xFF) == first3) && (first3 == opcode));
+	}
+	
 
 	/**
 	 * @brief Reads and processes a response from the device.
