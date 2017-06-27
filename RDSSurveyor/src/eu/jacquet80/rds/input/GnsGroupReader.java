@@ -399,11 +399,13 @@ public class GnsGroupReader extends TunerGroupReader {
 				return res;
 			} else if (data[3] == opcode) {
 				/* this is the response to a previously issued command */
-				/* OPCODE_DISABLE has no response */
 				/* OPCODE_IDENTIFICATION is not repeated in the response */
 				/* OPCODE_SEEK_STATUS is not a valid command opcode */
 				/* OPCODE_TUNE is already handled above */
-				if (opcode == OPCODE_ENABLE[cmdSet]) {
+				if (opcode == OPCODE_DISABLE[cmdSet]) {
+					/* nothing to do */
+					System.out.println("Disable response received");
+				} else if (opcode == OPCODE_ENABLE[cmdSet]) {
 					/* nothing to do yet, as we don't know what the response means */
 					System.out.println("Enable response received");
 				} else if (opcode == OPCODE_SEEK[cmdSet]) {
