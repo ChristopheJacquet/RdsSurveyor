@@ -81,8 +81,6 @@ public class GnsGroupReader extends TunerGroupReader {
 	/** Opcode to tune to a specified frequency. */
 	private static final int[] OPCODE_TUNE = {0x73, 0x46};
 
-	private boolean newGroups;
-
 	/** The command set used by this device */
 	private int cmdSet = -1;
 
@@ -97,6 +95,8 @@ public class GnsGroupReader extends TunerGroupReader {
 
 	/** Stream which receives status and RDS data coming from the device */
 	private InputStream in;
+
+	private boolean newGroups;
 
 	/** Last opcode sent to the device */
 	private int opcode = -1;
