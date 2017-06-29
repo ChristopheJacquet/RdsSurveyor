@@ -109,6 +109,9 @@ public class GnsGroupReader extends TunerGroupReader {
 	/** Last response received from device */
 	private byte[] responseData = new byte[10];
 
+	/** Lock for all response processing */
+	private Object responseLock = new Object();
+
 	/** Next response byte to be read */
 	private int responseStart = 0;
 
@@ -179,26 +182,29 @@ public class GnsGroupReader extends TunerGroupReader {
 	}
 
 	@Override
-	public synchronized GroupReaderEvent getGroup() throws IOException {
+	public GroupReaderEvent getGroup() throws IOException {
 		Long response;
 		
-		if (frequencyChanged) {
-			// if frequency has just been changed, must report an event
-			frequencyChanged = false;
-			return new FrequencyChangeEvent(new RealTime(), frequency);
+		synchronized(responseLock) {
+			if (frequencyChanged) {
+				// if frequency has just been changed, must report an event
+				frequencyChanged = false;
+				return new FrequencyChangeEvent(new RealTime(), frequency);
+			}
+
+			response = processResponse();
+
+			if ((response == null) || !groupReady) return null;
+
+			int[] res = new int[4];
+			for (int i = 0; i < 4; i++) {
+				res[i] = (int) ((response >> (48 - i * 16)) & 0xFFFF);
+			}
+
+			newGroups = true;
+			System.out.println("getGroup(): releasing lock");
+			return new GroupEvent(new RealTime(), res, false);
 		}
-
-		response = processResponse();
-
-		if ((response == null) || !groupReady) return null;
-
-		int[] res = new int[4];
-		for (int i = 0; i < 4; i++) {
-			res[i] = (int) ((response >> (48 - i * 16)) & 0xFFFF);
-		}
-
-		newGroups = true;
-		return new GroupEvent(new RealTime(), res, false);
 	}
 
 	@Override
@@ -241,16 +247,23 @@ public class GnsGroupReader extends TunerGroupReader {
 	@Override
 	public boolean seek(boolean up) {
 		Long response;
+		System.out.println("seek(): enter");
 		try {
-			synchronized(this) {
+			synchronized(responseLock) {
+				System.out.println("seek():1: lock acquired");
 				sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01 : 0x00);
 				rdsSynchronized = false;
 				do {
 					response = processResponse();
 				} while (!hasOpcode(response, OPCODE_SEEK[cmdSet]));
+				System.out.println("seek():1: releasing lock");
 			}
 			do {
-				response = processResponse();
+				synchronized(responseLock) {
+					System.out.println("seek():2: lock acquired");
+					response = processResponse();
+					System.out.println("seek():2: releasing lock");
+				}
 			} while (!rdsSynchronized);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -260,20 +273,25 @@ public class GnsGroupReader extends TunerGroupReader {
 	}
 
 	@Override
-	public synchronized int setFrequency(int frequency) {
+	public int setFrequency(int frequency) {
 		Long response;
-		try {
-			sendCommand(OPCODE_TUNE[cmdSet], getChannelFromFrequency(frequency), 0x05);
-			do {
-				response = processResponse();
-			} while (!hasOpcode(response, OPCODE_TUNE[cmdSet]));
-		} catch (IOException e) {
-			e.printStackTrace();
-			return 0;
+		System.out.println("setFrequency(): enter");
+		synchronized(responseLock) {
+			System.out.println("setFrequency(): lock acquired");
+			try {
+				sendCommand(OPCODE_TUNE[cmdSet], getChannelFromFrequency(frequency), 0x05);
+				do {
+					response = processResponse();
+				} while (!hasOpcode(response, OPCODE_TUNE[cmdSet]));
+			} catch (IOException e) {
+				e.printStackTrace();
+				return 0;
+			}
+			System.out.println("setFrequency(): releasing lock");
+			if (response == null)
+				return 0;
+			return frequency;
 		}
-		if (response == null)
-			return 0;
-		return frequency;
 	}
 
 	@Override
@@ -440,8 +458,8 @@ public class GnsGroupReader extends TunerGroupReader {
 	/**
 	 * @brief Sends a command to the device.
 	 * 
-	 * Calls to this method must be followed by a call to {@link #processResponse()} and synced to
-	 * the class instance to ensure they are processed in an atomic manner.
+	 * Calls to this method must be followed by a call to {@link #processResponse()}, and both must
+	 * be synced to {@link #responseLock} to ensure they are processed in an atomic manner.
 	 * 
 	 * @param opcode The opcode for the command.
 	 * @param aParam The first parameter byte
