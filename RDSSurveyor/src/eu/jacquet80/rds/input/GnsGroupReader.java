@@ -442,7 +442,7 @@ public class GnsGroupReader extends TunerGroupReader {
 						}
 						opcodes.remove(Integer.valueOf(intData[3]));
 						continue;
-					} else if (res == 0x45727200) {
+					} else if (res == 0x4572720000l) {
 						/* Error */
 						System.err.println("Error");
 						try {
