@@ -75,8 +75,11 @@ public class GnsGroupReader extends TunerGroupReader {
 	/** Opcode to request an identification string. */
 	private static final int[] OPCODE_IDENTIFICATION = {0x43, 0x43};
 
-	/** Opcode to seek to the next valid station. */
-	private static final int[] OPCODE_SEEK = {0x59, 0x79};
+	/** Opcode to seek forward to the next valid station. */
+	private static final int[] OPCODE_SEEK_UP = {0x59, 0x79};
+
+	/** Opcode to seek backward to the next valid station. */
+	private static final int[] OPCODE_SEEK_DOWN = {0x58, 0x78};
 
 	/** Opcode to report seek status. */
 	private static final int[] OPCODE_SEEK_STATUS = {0x66, 0x66};
@@ -224,7 +227,8 @@ public class GnsGroupReader extends TunerGroupReader {
 			frequency = gnsData.frequency;
 		}
 		try {
-			sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01 : 0x00);
+			sendCommand(up ? OPCODE_SEEK_UP[cmdSet] : OPCODE_SEEK_DOWN[cmdSet],
+					getChannelFromFrequency(frequency), 0x00);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -429,7 +433,8 @@ public class GnsGroupReader extends TunerGroupReader {
 						} else if (intData[3] == OPCODE_ENABLE[cmdSet]) {
 							/* nothing to do yet, as we don't know what the response means */
 							System.out.printf("Enable response received: %016X\n", res);
-						} else if (intData[3] == OPCODE_SEEK[cmdSet]) {
+						} else if ((intData[3] == OPCODE_SEEK_UP[cmdSet])
+								|| (intData[3] == OPCODE_SEEK_DOWN[cmdSet])) {
 							if ("ok".equals(new String(intData, 5, 2)))
 								System.out.println("Starting seek operation");
 							else
