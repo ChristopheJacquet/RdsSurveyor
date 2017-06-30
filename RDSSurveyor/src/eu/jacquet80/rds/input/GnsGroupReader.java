@@ -29,6 +29,9 @@ package eu.jacquet80.rds.input;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
@@ -84,36 +87,22 @@ public class GnsGroupReader extends TunerGroupReader {
 	/** The command set used by this device */
 	private int cmdSet = -1;
 
-	private String deviceName = "GNS (not initialized)";
-
-	/** Frequency in kHz */
-	private int frequency;
-
-	private boolean frequencyChanged = true;
-
-	private boolean groupReady;
+	private GnsData gnsData = new GnsData();
 
 	/** Stream which receives status and RDS data coming from the device */
 	private InputStream in;
 
 	private boolean newGroups;
 
-	/** Last opcode sent to the device */
-	private int opcode = -1;
+	/** Opcodes sent to the device for which we are awaiting a response */
+	private List<Integer> opcodes = Collections.synchronizedList(new LinkedList<Integer>());
 
 	/** Stream used to send commands to the device */
 	private OutputStream out;
 
-	private boolean rdsSynchronized;
+	/** Response reader thread */
+	private ResponseReader responseReader;
 
-	/** Last response received from device */
-	private byte[] responseData = new byte[10];
-
-	/** Next response byte to be read */
-	private int responseStart = 0;
-
-	/** Received Signal Strength Indicator, 0..65535 */
-	private int rssi;
 
 	/**
 	 * @brief Instantiates a new {@code GnsGroupReader}.
@@ -128,8 +117,6 @@ public class GnsGroupReader extends TunerGroupReader {
 	 * @throws UnavailableInputMethod if the device cannot be initialized
 	 */
 	public GnsGroupReader(InputStream in, OutputStream out) throws UnavailableInputMethod {
-		Long response;
-		
 		byte[] buffer = new byte[1024];
 
 		this.in = in;
@@ -144,66 +131,56 @@ public class GnsGroupReader extends TunerGroupReader {
 			/* Discard any leftover data in the buffer */
 			while (in.read(buffer) > 0) { }
 
+			responseReader = new ResponseReader();
+			responseReader.start();
+
 			System.out.println("\nSending enable command");
 			sendCommand(OPCODE_ENABLE[0], 0x78, 0x78);
-			do {
-			response = processResponse();
-			} while (!((response == null) || hasOpcode(response, OPCODE_ENABLE[0])));
-			if (response == null)
-				throw new UnavailableInputMethod("No response to enable command");
-			else
-				System.out.printf("Response: %016X\n", response);
 
 			System.out.println("\nRequesting identification");
 			sendCommand(OPCODE_IDENTIFICATION[0], 0x00, 0x00);
-			response = processResponse();
-			if (response == null)
-				throw new UnavailableInputMethod("No response to identification command");
-			else
-				System.out.printf("Response: %016X\n", response);
 		} catch (IOException e) {
 			throw new UnavailableInputMethod("I/O exception");
 		}
-		System.out.print("\n");
+
 		setFrequency(87500);
 	}
 
 	@Override
 	public String getDeviceName() {
-		return deviceName;
+		synchronized(gnsData) {
+			return gnsData.deviceName;
+		}
 	}
 
 	@Override
 	public int getFrequency() {
-		return frequency;
+		synchronized(gnsData) {
+			return gnsData.frequency;
+		}
 	}
 
 	@Override
-	public synchronized GroupReaderEvent getGroup() throws IOException {
-		Long response;
-		
-		if (frequencyChanged) {
-			// if frequency has just been changed, must report an event
-			frequencyChanged = false;
-			return new FrequencyChangeEvent(new RealTime(), frequency);
+	public GroupReaderEvent getGroup() throws IOException {
+		synchronized(gnsData) {
+			if (gnsData.frequencyChanged) {
+				// if frequency has just been changed, must report an event
+				gnsData.frequencyChanged = false;
+				return new FrequencyChangeEvent(new RealTime(), gnsData.frequency);
+			}
+
+			if (!gnsData.groupReady) return null;
+
+			newGroups = true;
+			return new GroupEvent(new RealTime(), gnsData.blocks, false);
 		}
-
-		response = processResponse();
-
-		if ((response == null) || !groupReady) return null;
-
-		int[] res = new int[4];
-		for (int i = 0; i < 4; i++) {
-			res[i] = (int) ((response >> (48 - i * 16)) & 0xFFFF);
-		}
-
-		newGroups = true;
-		return new GroupEvent(new RealTime(), res, false);
 	}
 
 	@Override
 	public int getSignalStrength() {
-		return rssi;
+		synchronized(gnsData) {
+			return gnsData.rssi;
+		}
 	}
 
 	@Override
@@ -223,7 +200,9 @@ public class GnsGroupReader extends TunerGroupReader {
 
 	@Override
 	public boolean isSynchronized() {
-		return rdsSynchronized;
+		synchronized(gnsData) {
+			return gnsData.rdsSynchronized;
+		}
 	}
 
 	@Override
@@ -240,18 +219,12 @@ public class GnsGroupReader extends TunerGroupReader {
 
 	@Override
 	public boolean seek(boolean up) {
-		Long response;
+		int frequency;
+		synchronized(gnsData) {
+			frequency = gnsData.frequency;
+		}
 		try {
-			synchronized(this) {
-				sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01 : 0x00);
-				rdsSynchronized = false;
-				do {
-					response = processResponse();
-				} while (!hasOpcode(response, OPCODE_SEEK[cmdSet]));
-			}
-			do {
-				response = processResponse();
-			} while (!rdsSynchronized);
+			sendCommand(OPCODE_SEEK[cmdSet], getChannelFromFrequency(frequency), up ? 0x01 : 0x00);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -260,30 +233,27 @@ public class GnsGroupReader extends TunerGroupReader {
 	}
 
 	@Override
-	public synchronized int setFrequency(int frequency) {
-		Long response;
+	public int setFrequency(int frequency) {
 		try {
 			sendCommand(OPCODE_TUNE[cmdSet], getChannelFromFrequency(frequency), 0x05);
-			do {
-				response = processResponse();
-			} while (!hasOpcode(response, OPCODE_TUNE[cmdSet]));
 		} catch (IOException e) {
 			e.printStackTrace();
 			return 0;
 		}
-		if (response == null)
-			return 0;
 		return frequency;
 	}
 
 	@Override
 	public void tune(boolean up) {
-		int freq = frequency + (up ? 100 : -100);
+		int freq;
+		synchronized(gnsData) {
+			freq = gnsData.frequency + (up ? 100 : -100);
+		}
 
 		if(freq > 108000) freq = 87500;
 		if(freq < 87500) freq = 108000;
 
-		frequency = setFrequency(freq);
+		setFrequency(freq);
 	}
 
 	@Override
@@ -319,123 +289,6 @@ public class GnsGroupReader extends TunerGroupReader {
 		return channel * 100 + 87500;
 	}
 
-	
-	/**
-	 * @brief Whether a response is a status response to a particular opcode
-	 * 
-	 * @param response The response, as obtained from {@link #processResponse()}
-	 * @param opcode The opcode
-	 * 
-	 * @return True if the response starts with two null bytes followed by the opcode, false if not
-	 * (including if the response is null)
-	 */
-	private static boolean hasOpcode(Long response, int opcode) {
-		if (response == null)
-			return false;
-		int first3 = (int) (response >> 40);
-		return (((first3 & 0xFF) == first3) && (first3 == opcode));
-	}
-	
-
-	/**
-	 * @brief Reads and processes a response from the device.
-	 * 
-	 * @return The payload of the response (without enclosing delimiters) as a big-endian 64-bit
-	 * integer, or null if no valid response was read
-	 * 
-	 * @throws IOException 
-	 */
-	private Long processResponse() throws IOException {
-		long res;
-		int[] data = new int[10];
-		int len = -1;
-		
-		if (responseStart == 10) {
-			responseStart = 0;
-			responseData = new byte[10];
-		}
-
-		while ((responseStart < 10) && ((len = in.read(responseData, responseStart, responseData.length - responseStart)) > 0)) {
-			System.out.printf("Read %d bytes\n", len);
-			responseStart += len;
-		}
-
-		/* set groupReady to false until we know better */
-		groupReady = false;
-
-		if (responseStart == 0) {
-			return null;
-		} else if (responseStart < 10) {
-			System.out.printf("Incomplete response (%d bytes)\n", responseStart);
-			return null;
-		}
-
-		if (((responseData[0] & 0xFF) != DELIM_RESPONSE) || ((responseData[9] & 0xFF) != DELIM_RESPONSE)) {
-			System.err.printf("Malformed response (does not start and end with 0x%02X):", DELIM_RESPONSE);
-			for (int i = 0; i < len; i++)
-				System.err.printf(" %02X", responseData[i]);
-			System.err.print("\n");
-			return null;
-		}
-
-		/* we now have a complete response, convert it */
-		res = 0;
-		for (int i = 0; i < 10; i++) {
-			data[i] = responseData[i] & 0xFF;
-			if ((i >= 1) && (i <= 8))
-				res |= ((long) data[i]) << (64 - (i * 8));
-		}
-
-		if (opcode == OPCODE_IDENTIFICATION[cmdSet]) {
-			/* we requested an identification */
-			deviceName = new String(responseData, 1, 8);
-			opcode = -1;
-			System.out.printf("Identification: %s\n", deviceName);
-			return res;
-		} else if ((data[1] == 0) && (data[2] == 0)) {
-			/* likely a status response (or an illegal PI code of 0000) */
-			if (((data[3] == opcode) && (data[3] == OPCODE_TUNE[cmdSet]))
-					|| (data[3] == OPCODE_SEEK_STATUS[cmdSet])) {
-				/* frequency changed by either a seek or a tune operation */
-				frequency = getFrequencyFromChannel(data[4]);
-				rdsSynchronized = ((data[5] == 0x01) && (data[6] == 0x55));
-				// TODO figure out if we can get true RSSI
-				rssi = (rdsSynchronized ? 65535 : 0);
-				frequencyChanged = true;
-				opcode = -1;
-				System.out.printf("Tuned to %.1f (0x%02X), RDS: %b\n", frequency / 1000.0f, data[4], rdsSynchronized);
-				return res;
-			} else if (data[3] == opcode) {
-				/* this is the response to a previously issued command */
-				/* OPCODE_IDENTIFICATION is not repeated in the response */
-				/* OPCODE_SEEK_STATUS is not a valid command opcode */
-				/* OPCODE_TUNE is already handled above */
-				if (opcode == OPCODE_DISABLE[cmdSet]) {
-					/* nothing to do */
-					System.out.println("Disable response received");
-				} else if (opcode == OPCODE_ENABLE[cmdSet]) {
-					/* nothing to do yet, as we don't know what the response means */
-					System.out.println("Enable response received");
-				} else if (opcode == OPCODE_SEEK[cmdSet]) {
-					if ("ok".equals(new String(data, 5, 2)))
-						System.out.println("Starting seek operation");
-					else
-						System.err.println("Seek command failed");
-				}
-				opcode = -1;
-				return res;
-			} else if (res == 0x45727200) {
-				/* Error */
-				System.err.println("Error");
-				opcode = -1;
-				return res;
-			}
-		}
-		/* if we get here, treat the response as RDS */
-		groupReady = true;
-		return res;
-	}
-
 
 	/**
 	 * @brief Sends a command to the device.
@@ -451,6 +304,169 @@ public class GnsGroupReader extends TunerGroupReader {
 	 */
 	private void sendCommand(int opcode, int aParam, int bParam) throws IOException {
 		out.write(new byte[] {(byte) DELIM_COMMAND, (byte) opcode, (byte) aParam, (byte) bParam, (byte) opcode});
-		this.opcode = opcode;
+		if (opcode != OPCODE_DISABLE[cmdSet])
+			opcodes.add(opcode);
+	}
+
+
+	/**
+	 * Data read from the tuner.
+	 * 
+	 * Since instances of this class are shared between threads, access must be synchronized to the
+	 * instance.
+	 */
+	private static class GnsData {
+		private int[] blocks = {-1, -1, -1, -1};
+
+		private String deviceName = "GNS (not initialized)";
+
+		/** Frequency in kHz */
+		private int frequency;
+
+		private boolean frequencyChanged = true;
+
+		private boolean groupReady;
+
+		private boolean rdsSynchronized;
+
+		/** Received Signal Strength Indicator, 0..65535 */
+		private int rssi;
+	}
+
+
+	/**
+	 * A separate thread which reads the responses received from the device and stores them in the
+	 * appropriate data structures.
+	 */
+	private class ResponseReader extends Thread {
+		@Override
+		public void run() {
+			while (!isInterrupted()) {
+				long res;
+
+				/* Last response received from device */
+				byte[] responseData = new byte[10];
+
+				/* Next response byte to be read */
+				int responseStart = 0;
+
+				/* Response converted to integers */
+				int[] intData = new int[10];
+
+				int len = -1;
+
+				if (responseStart == 10) {
+					responseStart = 0;
+					responseData = new byte[10];
+				}
+
+				while (responseStart < 10) {
+					try {
+						while ((responseStart < 10) && ((len = in.read(responseData, responseStart, responseData.length - responseStart)) > 0)) {
+							System.out.printf("Read %d bytes\n", len);
+							responseStart += len;
+						}
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
+					if (responseStart < 10) {
+						/* wait and repeat until we have 10 bytes */
+						try {
+							sleep(100);
+						} catch (InterruptedException e) {
+							return;
+						}
+					} else if (((responseData[0] & 0xFF) != DELIM_RESPONSE) || ((responseData[9] & 0xFF) != DELIM_RESPONSE)) {
+						/* malformed response; look for two consecutive delimiters */
+						System.err.printf("Malformed response (does not start and end with 0x%02X):", DELIM_RESPONSE);
+						for (int i = 0; i < 10; i++)
+							System.err.printf(" %02X", responseData[i]);
+						System.err.print("\n");
+						int discard = 1;
+						// TODO if there's junk between two responses, this will discard the first valid response following it
+						while ((discard < 10) && (responseData[discard - 1] != DELIM_RESPONSE) && responseData[discard] != DELIM_RESPONSE)
+							discard++;
+						for (int i = 0; (i + discard) < 10; i++)
+							responseData[i] = responseData[i + discard];
+						responseStart -= discard;
+						System.err.printf("Discarded %d bytes\n", discard);
+					}
+				}
+
+				/* we now have a complete response, convert it */
+				res = 0;
+				for (int i = 0; i < 10; i++) {
+					intData[i] = responseData[i] & 0xFF;
+					if ((i >= 1) && (i <= 8))
+						res |= ((long) intData[i]) << (64 - (i * 8));
+				}
+
+				if ((intData[1] == 0) && (intData[2] == 0)) {
+					/* likely a status response (or an illegal PI code of 0000) */
+					if ((opcodes.contains(intData[3]) && (intData[3] == OPCODE_TUNE[cmdSet]))
+							|| (intData[3] == OPCODE_SEEK_STATUS[cmdSet])) {
+						/* frequency changed by either a seek or a tune operation */
+						synchronized(gnsData) {
+							gnsData.frequency = getFrequencyFromChannel(intData[4]);
+							gnsData.rdsSynchronized = ((intData[5] == 0x01) && (intData[6] == 0x55));
+							// TODO figure out if we can get true RSSI
+							gnsData.rssi = (gnsData.rdsSynchronized ? 65535 : 0);
+							gnsData.frequencyChanged = true;
+							System.out.printf("Tuned to %.1f (0x%02X), RDS: %b\n", gnsData.frequency / 1000.0f, intData[4], gnsData.rdsSynchronized);
+						}
+						opcodes.remove(Integer.valueOf(intData[3]));
+						continue;
+					} else if (opcodes.contains(intData[3])) {
+						/* this is the response to a previously issued command */
+						/* OPCODE_IDENTIFICATION is not repeated in the response */
+						/* OPCODE_SEEK_STATUS is not a valid command opcode */
+						/* OPCODE_TUNE is already handled above */
+						if (intData[3] == OPCODE_DISABLE[cmdSet]) {
+							/* nothing to do */
+							System.out.println("Disable response received");
+						} else if (intData[3] == OPCODE_ENABLE[cmdSet]) {
+							/* nothing to do yet, as we don't know what the response means */
+							System.out.printf("Enable response received: %016X\n", res);
+						} else if (intData[3] == OPCODE_SEEK[cmdSet]) {
+							if ("ok".equals(new String(intData, 5, 2)))
+								System.out.println("Starting seek operation");
+							else
+								System.err.println("Seek command failed");
+						}
+						opcodes.remove(Integer.valueOf(intData[3]));
+						continue;
+					} else if (res == 0x45727200) {
+						/* Error */
+						System.err.println("Error");
+						try {
+							opcodes.remove(0);
+						} catch (IndexOutOfBoundsException e) {
+							// NOP
+						}
+						continue;
+					}
+				} else if (opcodes.contains(OPCODE_IDENTIFICATION[cmdSet])) {
+					/* we requested an identification */
+					synchronized(gnsData) {
+						gnsData.deviceName = new String(responseData, 1, 8);
+						System.out.printf("Identification: %s\n", gnsData.deviceName);
+					}
+					opcodes.remove(Integer.valueOf(OPCODE_IDENTIFICATION[cmdSet]));
+					continue;
+				}
+
+				/* if we get here, treat the response as RDS */
+				System.out.println("RDS group received");
+				int[] newBlocks = new int[4];
+				for (int i = 0; i < 4; i++)
+					newBlocks[i] = (intData[2 * i + 1] << 8) | intData[2 * i + 2];
+				synchronized(gnsData) {
+					gnsData.blocks = newBlocks;
+					gnsData.groupReady = true;
+				}
+			}
+		}
 	}
 }
