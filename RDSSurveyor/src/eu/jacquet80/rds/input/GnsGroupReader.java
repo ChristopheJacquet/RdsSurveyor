@@ -75,6 +75,10 @@ public class GnsGroupReader extends TunerGroupReader {
 	/** Opcode to request an identification string. */
 	private static final int[] OPCODE_IDENTIFICATION = {0x43, 0x43};
 
+	/** Opcode to retrieve signal strength of current station */
+	// TODO opcode for 9830 is not known
+	private static final int[] OPCODE_RSSI = {0x6c, 0x6c};
+
 	/** Opcode to seek forward to the next valid station. */
 	private static final int[] OPCODE_SEEK_UP = {0x59, 0x79};
 
@@ -96,6 +100,9 @@ public class GnsGroupReader extends TunerGroupReader {
 	private InputStream in;
 
 	private boolean newGroups;
+
+	/** Time at which we got the last RSSI */
+	private long lastRssiTimestamp = 0;
 
 	/** Opcodes sent to the device for which we are awaiting a response */
 	private List<Integer> opcodes = Collections.synchronizedList(new LinkedList<Integer>());
@@ -165,6 +172,16 @@ public class GnsGroupReader extends TunerGroupReader {
 
 	@Override
 	public GroupReaderEvent getGroup() throws IOException {
+		if (System.currentTimeMillis() - lastRssiTimestamp > 1000) {
+			/* query RSSI periodically (npo more than once per second) */
+			try {
+				sendCommand(OPCODE_RSSI[cmdSet], 0, 0);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			lastRssiTimestamp = System.currentTimeMillis();
+		}
+
 		synchronized(gnsData) {
 			if (gnsData.frequencyChanged) {
 				// if frequency has just been changed, must report an event
@@ -415,8 +432,6 @@ public class GnsGroupReader extends TunerGroupReader {
 						synchronized(gnsData) {
 							gnsData.frequency = getFrequencyFromChannel(intData[4]);
 							gnsData.rdsSynchronized = ((intData[5] == 0x01) && (intData[6] == 0x55));
-							// TODO figure out if we can get true RSSI
-							gnsData.rssi = (gnsData.rdsSynchronized ? 65535 : 0);
 							gnsData.frequencyChanged = true;
 							System.out.printf("Tuned to %.1f (0x%02X), RDS: %b\n", gnsData.frequency / 1000.0f, intData[4], gnsData.rdsSynchronized);
 						}
@@ -439,6 +454,20 @@ public class GnsGroupReader extends TunerGroupReader {
 								System.out.println("Starting seek operation");
 							else
 								System.err.println("Seek command failed");
+						} else if ((intData[3] == OPCODE_RSSI[cmdSet])) {
+							/* RSSI has changed (frequency is reported here as well, so check it) */
+							synchronized(gnsData) {
+								int frequency = getFrequencyFromChannel(intData[7]);
+								if (frequency != gnsData.frequency) {
+									gnsData.frequency = frequency;
+									gnsData.frequencyChanged = true;
+								}
+								/*
+								 * TODO not sure if conversion is correct
+								 * (maximum is 0xFF in theory, 0x0F is maximum observed so far)
+								 */
+								gnsData.rssi = intData[6] * 0x1111;
+							}
 						}
 						opcodes.remove(Integer.valueOf(intData[3]));
 						continue;
