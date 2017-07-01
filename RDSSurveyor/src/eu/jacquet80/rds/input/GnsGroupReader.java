@@ -386,7 +386,6 @@ public class GnsGroupReader extends TunerGroupReader {
 				while (responseStart < 10) {
 					try {
 						while ((responseStart < 10) && ((len = in.read(responseData, responseStart, responseData.length - responseStart)) > 0)) {
-							System.out.printf("Read %d bytes\n", len);
 							responseStart += len;
 						}
 					} catch (IOException e) {
