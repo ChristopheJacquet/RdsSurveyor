@@ -49,9 +49,6 @@ import eu.jacquet80.rds.log.RealTime;
  * No block error rate is reported because there is no known way to obtain it from the device.
  * Presumably error correction happens in the device and groups with faulty blocks are suppressed.
  * As a result, this reader will never report block errors, although the data rate may vary.
- * 
- * RSSI is not reported because, again, there is no known way to obtain it from the device. As a
- * substitute, RSSI is reported to be at a maximum when RDS is detected, zero otherwise.
  */
 public class GnsGroupReader extends TunerGroupReader {
 	/** FM9 command set */
