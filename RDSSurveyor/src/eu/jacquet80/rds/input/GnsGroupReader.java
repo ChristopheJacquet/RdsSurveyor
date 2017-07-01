@@ -49,6 +49,22 @@ import eu.jacquet80.rds.log.RealTime;
  * No block error rate is reported because there is no known way to obtain it from the device.
  * Presumably error correction happens in the device and groups with faulty blocks are suppressed.
  * As a result, this reader will never report block errors, although the data rate may vary.
+ * 
+ * GNS devices are known to use one of two different command sets (which have some opcodes in
+ * common but differ in others). Currently only the FM9 is supported, as we lack a way to reliably
+ * identify the command set used by the device.
+ * 
+ * Communication with the device is through an {@link InputStream} (to which commands are sent) and
+ * an {@link OutputStream} (which receives responses).
+ * 
+ * Some devices are pure TMC devices, which can be connected directly via Bluetooth or a USB-to-TTL
+ * serial bridge and controlled through a serial communications library such as jSerialComm.
+ * 
+ * Other devices are combined GPS/TMC devices, which deliver GPS data via NMEA and insert responses
+ * into the NMEA data stream. For these devices, it may be necessary to write wrappers which
+ * extract TMC output from the data stream and provide it via an {@link OutputStream}, and accept
+ * commands via an {@link InputStream}. This class has only rudimentary logic to discard invalid
+ * data and accept only valid response sentences.
  */
 public class GnsGroupReader extends TunerGroupReader {
 	/** FM9 command set */
