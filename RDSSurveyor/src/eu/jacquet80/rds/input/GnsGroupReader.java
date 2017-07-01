@@ -191,6 +191,8 @@ public class GnsGroupReader extends TunerGroupReader {
 
 			if (!gnsData.groupReady) return null;
 
+			gnsData.groupReady = false;
+
 			newGroups = true;
 			return new GroupEvent(new RealTime(), gnsData.blocks, false);
 		}
