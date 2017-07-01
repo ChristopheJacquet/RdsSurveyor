@@ -495,6 +495,7 @@ public class GnsGroupReader extends TunerGroupReader {
 				for (int i = 0; i < 4; i++)
 					newBlocks[i] = (intData[2 * i + 1] << 8) | intData[2 * i + 2];
 				synchronized(gnsData) {
+					gnsData.rdsSynchronized = true;
 					gnsData.blocks = newBlocks;
 					gnsData.groupReady = true;
 				}
