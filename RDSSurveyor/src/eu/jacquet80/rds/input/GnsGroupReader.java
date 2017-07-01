@@ -444,8 +444,10 @@ public class GnsGroupReader extends TunerGroupReader {
 							/* nothing to do */
 							System.out.println("Disable response received");
 						} else if (intData[3] == OPCODE_ENABLE[cmdSet]) {
-							/* nothing to do yet, as we don't know what the response means */
-							System.out.printf("Enable response received: %016X\n", res);
+							/* enable response, just print it */
+							// TODO can we use the response to identify the command set?
+							System.out.printf("Enable response: GNS V%02d %02d/%02d %02X%X (%016X)\n",
+									intData[6], intData[5], intData[4], intData[7], intData[8], res);
 						} else if ((intData[3] == OPCODE_SEEK_UP[cmdSet])
 								|| (intData[3] == OPCODE_SEEK_DOWN[cmdSet])) {
 							if ("ok".equals(new String(intData, 5, 2)))
