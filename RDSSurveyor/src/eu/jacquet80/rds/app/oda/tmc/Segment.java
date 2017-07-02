@@ -132,13 +132,13 @@ public class Segment extends TMCLocation {
 		return ret;
 	}
 	
-	private Segment getNegOffset() {
+	public Segment getNegOffset() {
 		if ((this.negOffset == null) && (this.negOffLcd != -1))
 			this.negOffset = TMC.getSegment(this.cid, this.tabcd, this.negOffLcd);
 		return this.negOffset;
 	}
 	
-	private Segment getPosOffset() {
+	public Segment getPosOffset() {
 		if ((this.posOffset == null) && (this.posOffLcd != -1))
 			this.posOffset = TMC.getSegment(this.cid, this.tabcd, this.posOffLcd);
 		return this.posOffset;
@@ -223,6 +223,29 @@ public class Segment extends TMCLocation {
 		if ((ret == null) && (!"".equals(this.roadNumber)))
 			ret = this.roadNumber;
 		return ret;
+	}
+
+	/**
+	 * @brief Whether this location is the direct or indirect child of another location.
+	 * 
+	 * {@code Segment} has a reference to an area, a segment and a road. If any of these is
+	 * non-null, then the instance is a child of that location (and any other location that the
+	 * parent location is a child of).
+	 * 
+	 * @param location The potential parent location.
+	 * @return True if this location is a child of {@code location}, false if not.
+	 */
+	@Override
+	public boolean isChildOf(TMCLocation location) {
+		if (location.equals(area) || location.equals(road) || location.equals(segment))
+			return true;
+		if ((area != null) && area.isChildOf(location))
+			return true;
+		if ((road != null) && road.isChildOf(location))
+			return true;
+		if ((segment != null) && segment.isChildOf(location))
+			return true;
+		return false;
 	}
 
 	@Override
