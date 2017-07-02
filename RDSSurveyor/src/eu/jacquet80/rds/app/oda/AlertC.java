@@ -1578,6 +1578,29 @@ public class AlertC extends ODA {
 			return (Date) date.clone();
 		}
 		
+		/**
+		 * @brief Returns the primary location of the message.
+		 * 
+		 * The primary location is the location of the disruption, or the location at which the
+		 * driver would exit from the affected stretch of road.
+		 */
+		public TMCLocation getPrimaryLocation() {
+			return locationInfo;
+		}
+
+		/**
+		 * @brief Returns the secondary location of the message.
+		 * 
+		 * The secondary location is the location at which the driver would first encounter the
+		 * signaled condition. If the message has an extent of zero, this method will return the
+		 * primary location.
+		 */
+		public TMCLocation getSecondaryLocation() {
+			if (extent <= 0)
+				return locationInfo;
+			return locationInfo.getOffset(this.extent, this.direction);
+		}
+
 		public int getUpdateCount() {
 			return updateCount;
 		}
