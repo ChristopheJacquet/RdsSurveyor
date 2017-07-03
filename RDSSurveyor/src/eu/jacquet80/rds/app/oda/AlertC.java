@@ -688,6 +688,21 @@ public class AlertC extends ODA {
 			this.eventForDuration = this.currentInformationBlock.currentEvent;
 		}
 		
+		/**
+		 * @brief Accepts a {@link MessageVisitor}.
+		 * 
+		 * After invoking the visitor’s {@link MessageVisitor#visit(Message)} method on the current
+		 * instance, this method calls the {@link InformationBlock#accept(MessageVisitor)} of each
+		 * {@link InformationBlock} in the message. 
+		 * 
+		 * @param visitor
+		 */
+		public void accept(MessageVisitor visitor) {
+			visitor.visit(this);
+			for (InformationBlock ib : informationBlocks)
+				ib.accept(visitor);
+		}
+
 		public void addField(int label, int value) {
 			switch(label) {
 			// duration
@@ -1860,6 +1875,21 @@ public class AlertC extends ODA {
 		}
 		
 		/**
+		 * @brief Accepts a {@link MessageVisitor}.
+		 * 
+		 * After invoking the visitor’s {@link MessageVisitor#visit(InformationBlock)} method on
+		 * the current instance, this method calls the {@link Event#accept(MessageVisitor)} of each
+		 * {@link Event} in the information block. 
+		 * 
+		 * @param visitor
+		 */
+		public void accept(MessageVisitor visitor) {
+			visitor.visit(this);
+			for (Event e : events)
+				e.accept(visitor);
+		}
+
+		/**
 		 * @brief Returns the destination information.
 		 * 
 		 * @return The location for the destination, or null if no destination is specified or if
@@ -2031,6 +2061,16 @@ public class AlertC extends ODA {
 		
 
 		/**
+		 * @brief Accepts a {@link MessageVisitor}.
+		 * 
+		 * @param visitor
+		 */
+		public void accept(MessageVisitor visitor) {
+			visitor.visit(this);
+		}
+
+
+		/**
 		 * @brief Returns the supplementary information phrases associated with this event.
 		 */
 		public List<SupplementaryInfo> getSupplementaryInfo() {
@@ -2151,5 +2191,11 @@ public class AlertC extends ODA {
 			/* Finally compare by extent */
 			return lhs.extent - rhs.extent;
 		}
+	}
+
+	public static interface MessageVisitor {
+		public void visit(Message message);
+		public void visit(InformationBlock informationBlock);
+		public void visit(Event event);
 	}
 }
