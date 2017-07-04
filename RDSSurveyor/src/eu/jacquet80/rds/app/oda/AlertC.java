@@ -1851,8 +1851,13 @@ public class AlertC extends ODA {
 
 	
 	public static class InformationBlock {
-		/** The enclosing TMC message */
-		private Message message;
+		/** Primary key for persistent storage, -1 if no corresponding DB record exists */
+		private int dbId = -1;
+		
+		/** The country code to be used in decoding the diversion route locations. */
+		private int cc;
+		/** The Location Table Number (LTN) to be used in decoding the diversion route locations. */
+		private int ltn;
 		
 		private int length = -1;
 		private int speed = -1;
@@ -1865,12 +1870,14 @@ public class AlertC extends ODA {
 		private final List<Integer> diversionRoute = new ArrayList<Integer>();
 
 		public InformationBlock(Message message, int eventCode) {
-			this.message = message;
+			this.cc = message.fcc;
+			this.ltn = message.ltn;
 			addEvent(eventCode);
 		}
 		
 		public InformationBlock(Message message) {
-			this.message = message;
+			this.cc = message.fcc;
+			this.ltn = message.ltn;
 			this.currentEvent = null;
 		}
 		
@@ -1908,7 +1915,7 @@ public class AlertC extends ODA {
 		public List<TMCLocation> getDiversion() {
 			List<TMCLocation> res = new LinkedList<TMCLocation>();
 			for (int lcid : diversionRoute) {
-				TMCLocation location = TMC.getLocation(String.format("%X", message.fcc), message.fltn, lcid);
+				TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 				if (location == null)
 					return new LinkedList<TMCLocation>();
 				res.add(location);
@@ -1958,7 +1965,7 @@ public class AlertC extends ODA {
 		 */
 		private void setDestination(int destination) {
 			this.destination = destination;
-			this.destinationInfo = TMC.getLocation(String.format("%X", message.fcc), message.fltn, destination);
+			this.destinationInfo = TMC.getLocation(String.format("%X", cc), ltn, destination);
 		}
 
 		@Override
@@ -1990,7 +1997,7 @@ public class AlertC extends ODA {
 				res.append("Diversion route: " + diversionRoute).append("\n");
 				for (int lcid : diversionRoute) {
 					res.append("#").append(lcid);
-					TMCLocation location = TMC.getLocation(String.format("%X", message.fcc), message.fltn, lcid);
+					TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 					if (location != null)
 						res.append(location).append("\n");
 				}
@@ -2026,7 +2033,7 @@ public class AlertC extends ODA {
 				res.append("Diversion route: " + diversionRoute).append("<br><ul>");
 				for (int lcid : diversionRoute) {
 					res.append("<li>").append(lcid);
-					TMCLocation location = TMC.getLocation(String.format("%X", message.fcc), message.fltn, lcid);
+					TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 					if (location != null)
 						res.append("<blockquote>").append(location.html()).append("</blockquote>");
 				}
