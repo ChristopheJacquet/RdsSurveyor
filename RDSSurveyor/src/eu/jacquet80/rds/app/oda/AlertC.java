@@ -572,18 +572,10 @@ public class AlertC extends ODA {
 
 		private boolean reversedDurationType = false;
 		
-		private int duration = 0;		// 0- duration (0 if not set)
-		private int startTime = -1;		// 7- start time
-		private int stopTime = -1;		// 8- stop time
-		// 13- cross linkage to source
-
-		/** Number of levels by which to increase or decrease default urgency. */
-		private int increasedUrgency = 0;
-		/** The urgency of the message. */
-		private EventUrgency urgency;
-		
-		/*
-		 * The TMC event which was followed by the duration.
+		/**
+		 * Duration type for the entire message.
+		 * 
+		 * The value is taken from the TMC event which was followed by the duration.
 		 * 
 		 * Duration and expiration of a message is represented by a duration code. How this code
 		 * maps to actual times is governed by the event nature and duration type. The latter two
@@ -591,7 +583,23 @@ public class AlertC extends ODA {
 		 * message. In this case, the nature and duration type of the last event received before the
 		 * duration field apply (the last event may be the first group event).
 		 */
-		private AlertC.Event eventForDuration = null;
+		private EventDurationType durationType = null;
+		private int duration = 0;		// 0- duration (0 if not set)
+		private int startTime = -1;		// 7- start time
+		private int stopTime = -1;		// 8- stop time
+		// 13- cross linkage to source
+
+		/**
+		 * The nature of the entire message.
+		 * 
+		 * The value is taken from the TMC event which was followed by the duration.
+		 */
+		private EventNature nature = null;
+
+		/** Number of levels by which to increase or decrease default urgency. */
+		private int increasedUrgency = 0;
+		/** The urgency of the message. */
+		private EventUrgency urgency;
 		
 		private boolean spoken = false;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
@@ -685,7 +693,8 @@ public class AlertC extends ODA {
 			this(direction, extent, eventCode, location, cc, ltn, sid, date, tz, encrypted);
 			this.diversion = diversion;
 			this.duration = duration;
-			this.eventForDuration = this.currentInformationBlock.currentEvent;
+			this.durationType = this.currentInformationBlock.currentEvent.durationType;
+			this.nature = this.currentInformationBlock.currentEvent.nature;
 		}
 		
 		/**
@@ -708,7 +717,8 @@ public class AlertC extends ODA {
 			// duration
 			case 0:
 				duration = value;
-				this.eventForDuration = this.currentInformationBlock.currentEvent;
+				this.durationType = this.currentInformationBlock.currentEvent.durationType;
+				this.nature = this.currentInformationBlock.currentEvent.nature;
 				break;
 			
 			// control code
@@ -815,11 +825,13 @@ public class AlertC extends ODA {
 			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
 			 * we use? (Nature is not relevant for persistence.)
 			 */
-			if (eventForDuration == null)
-				eventForDuration = this.informationBlocks.get(0).events.get(0);
+			if (durationType == null)
+				durationType = this.informationBlocks.get(0).events.get(0).durationType;
+			if (nature == null)
+				nature = this.informationBlocks.get(0).events.get(0).nature;
 			
 			if (reversedDurationType)
-				eventForDuration.invertDurationType(); 
+				invertDurationType();
 			
 			this.complete = true;
 		}
@@ -995,8 +1007,8 @@ public class AlertC extends ODA {
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
 			res.append('\n');
 			res.append("urgency=").append(urgency);
-			res.append(", nature=").append(eventForDuration.nature);
-			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
@@ -1087,8 +1099,8 @@ public class AlertC extends ODA {
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
 			res.append("<br/>");
 			res.append("urgency=").append(urgency);
-			res.append(", nature=").append(eventForDuration.nature);
-			res.append(", durationType=").append(eventForDuration.durationType);
+			res.append(", nature=").append(nature);
+			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.diversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
@@ -1372,42 +1384,42 @@ public class AlertC extends ODA {
 			
 			switch (duration) {
 			case 0:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_15_MIN);
 				else
 					return new Date(date.getTime() + MS_1_H);
 			case 1:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_15_MIN);
 				else
 					return new Date(date.getTime() + MS_2_H);
 			case 2:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_30_MIN);
 				else
 					return new Date(midnight.getTime());
 			case 3:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_1_H);
 				else
 					return new Date(midnight.getTime() + MS_24_H);
 			case 4:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_2_H);
 				else
 					return new Date(midnight.getTime() + MS_24_H);
 			case 5:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_3_H);
 				else
 					return new Date(midnight.getTime() + MS_24_H);
 			case 6:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(date.getTime() + MS_4_H);
 				else
 					return new Date(midnight.getTime() + MS_24_H);
 			case 7:
-				if (eventForDuration.durationType == EventDurationType.DYNAMIC)
+				if (durationType == EventDurationType.DYNAMIC)
 					return new Date(midnight.getTime());
 				else
 					return new Date(midnight.getTime() + MS_24_H);
@@ -1705,6 +1717,13 @@ public class AlertC extends ODA {
 				this.sid = sid;
 			} else
 				throw new IllegalArgumentException("LTN and SID cannot be changed after being set");
+		}
+
+		private void invertDurationType() {
+			if (this.durationType == EventDurationType.DYNAMIC)
+				this.durationType = EventDurationType.LONGER_LASTING;
+			else
+				this.durationType = EventDurationType.DYNAMIC;
 		}
 
 		private void setLocation(int location) {
