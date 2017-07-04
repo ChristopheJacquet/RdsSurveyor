@@ -23,6 +23,17 @@ public class TMCEvent {
 				return DYNAMIC;
 			}
 		}
+		
+		/**
+		 * @brief Returns the inverted duration type.
+		 */
+		public EventDurationType invert() {
+			switch(this) {
+			case LONGER_LASTING: return DYNAMIC;
+			case DYNAMIC: return LONGER_LASTING;
+			default: return this;
+			}
+		}
 
 		@Override
 		public String toString() {
