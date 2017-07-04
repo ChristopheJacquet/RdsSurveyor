@@ -38,6 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 
 import eu.jacquet80.rds.app.oda.tmc.SupplementaryInfo;
@@ -697,6 +698,38 @@ public class AlertC extends ODA {
 			this.nature = this.currentInformationBlock.currentEvent.nature;
 		}
 		
+		private Message(Date date, TimeZone tz, int cc, int ltn, int sid,
+				boolean encrypted, boolean interroad, int fcc, int fltn, int location,
+				int direction, boolean bidirectional, int extent, boolean diversion,
+				EventDurationType durationType, int duration, int startTime, int stopTime,
+				EventNature nature, EventUrgency urgency, boolean spoken,
+				List<InformationBlock> informationBlocks, int updateCount) {
+			this.bidirectional = bidirectional;
+			this.cc = cc;
+			this.date = date;
+			this.direction = direction;
+			this.diversion = diversion;
+			this.duration = duration;
+			this.durationType = durationType;
+			this.encrypted = encrypted;
+			this.extent = extent;
+			this.fcc = fcc;
+			this.fltn = fltn;
+			this.urgency = urgency;
+			this.informationBlocks = informationBlocks;
+			this.interroad = interroad;
+			this.setLocation(location);
+			this.ltn = ltn;
+			this.nature = nature;
+			this.sid = sid;
+			this.spoken = spoken;
+			this.startTime = startTime;
+			this.stopTime = stopTime;
+			this.timeZone = tz;
+			this.updateCount = updateCount;
+			this.complete = true; // TODO drop this once the switch is complete
+		}
+
 		/**
 		 * @brief Accepts a {@link MessageVisitor}.
 		 * 
@@ -1883,23 +1916,43 @@ public class AlertC extends ODA {
 		private int destination = -1;
 		private TMCLocation destinationInfo = null;
 
-		private final List<Event> events = new ArrayList<Event>();
+		private final List<Event> events;
 		private Event currentEvent;
 		
-		private final List<Integer> diversionRoute = new ArrayList<Integer>();
+		private final List<Integer> diversionRoute;
 
 		public InformationBlock(Message message, int eventCode) {
+			events = new ArrayList<Event>();
+			diversionRoute = new ArrayList<Integer>();
 			this.cc = message.fcc;
 			this.ltn = message.ltn;
 			addEvent(eventCode);
 		}
 		
 		public InformationBlock(Message message) {
+			events = new ArrayList<Event>();
+			diversionRoute = new ArrayList<Integer>();
 			this.cc = message.fcc;
 			this.ltn = message.ltn;
 			this.currentEvent = null;
 		}
 		
+		/**
+		 * @brief Constructs an information block with the given parameters.
+		 * 
+		 * This constructor is intended for use by {@link MessageBuilder}.
+		 */
+		private InformationBlock(List<Event> events, int cc, int ltn, int destination,
+				List<Integer> diversionRoute, int length, int speed) {
+			this.events = events;
+			this.cc = cc;
+			this.ltn = ltn;
+			this.setDestination(destination);
+			this.diversionRoute = diversionRoute;
+			this.length = length;
+			this.speed = speed;
+		}
+
 		/**
 		 * @brief Accepts a {@link MessageVisitor}.
 		 * 
@@ -2064,6 +2117,11 @@ public class AlertC extends ODA {
 	}
 	
 	public static class Event {
+		/** The country code to be used in decoding the source location. */
+		private int cc;
+		/** The Location Table Number (LTN) to be used in decoding the source location. */
+		private int ltn;
+
 		private TMCEvent tmcEvent;
 		private EventUrgency urgency;
 		private EventNature nature;
@@ -2086,6 +2144,29 @@ public class AlertC extends ODA {
 		}
 		
 
+		/**
+		 * @brief Constructs an event with the given parameters.
+		 * 
+		 * This constructor is intended for use by {@link MessageBuilder}.
+		 */
+		private Event(int id, int quantifier, int cc, int ltn, int sourceLocation, List<SupplementaryInfo> suppInfo) {
+			this.tmcEvent = TMC.getEvent(id);
+
+			if (this.tmcEvent == null) {
+				throw new IllegalArgumentException("No such TMC event: " + id);
+			}
+
+			this.urgency = this.tmcEvent.urgency;
+			this.nature = this.tmcEvent.nature;
+			this.durationType = this.tmcEvent.durationType;
+			this.quantifier = quantifier;
+			this.cc = cc;
+			this.ltn = ltn;
+			this.sourceLocation = sourceLocation;
+			this.suppInfo = suppInfo;
+		}
+
+		
 		/**
 		 * @brief Accepts a {@link MessageVisitor}.
 		 * 
@@ -2208,6 +2289,767 @@ public class AlertC extends ODA {
 			
 			/* Finally compare by extent */
 			return lhs.extent - rhs.extent;
+		}
+	}
+
+	public static class MessageBuilder {
+		/** Whether the message affects both directions. */
+		private boolean bidirectional;
+
+		/** The country code of the service that sent the message (from RDS PI). */
+		private int cc = -1;
+
+		/** The time at which the message was received. */
+		private Date date;
+
+		/** Direction of queue growth (0 for positive, 1 for negative). */
+		private int direction;
+
+		/** Whether a diversion is available. */
+		private boolean diversion;
+
+		/** Duration of the event. */
+		private int duration;
+
+		/** Duration type for the entire message. */
+		private EventDurationType durationType;
+
+		/** Whether the location code is encrypted. */
+		private boolean encrypted = false;
+
+		/** The event code for this event. */
+		private int evId;
+
+		/** The quantifier for this event. */
+		private int evQuantifier;
+
+		/** The source location for this event. */
+		private int evSourceLocation;
+
+		/** Supplementary information for this event. */
+		private List<SupplementaryInfo> evSuppInfo;
+
+		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
+		private int extent;
+
+		/** The country code of the location. */
+		private int fcc = -1;
+
+		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
+		private int fltn = -1;
+
+		/** The destination to which this information block applies. */
+		private int ibDestination;
+
+		/** The diversion route for this information block. */
+		private List<Integer> ibDiversionRoute;
+
+		/** Completed events for this information block. */
+		private List<Event> ibEvents;
+
+		/** The length of the route affected by the events in this information block. */
+		private int ibLength;
+
+		/** The speed limit for this information block. */
+		private int ibSpeed;
+
+		/** Number of levels by which to increase or decrease default urgency. */
+		private int increasedUrgency;
+
+		/** Completed information blocks. */
+		private List<InformationBlock> informationBlocks;
+
+		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
+		private boolean interroad;
+
+		/** The raw location code. */
+		private int location;
+
+		/** The Location Table Number (LTN) of the service that sent the message. */
+		private int ltn = -1;
+
+		/** The nature of the entire message. */
+		private EventNature nature;
+
+		/** Whether the default directionality of the message should be reversed. */
+		private boolean reversedDirectionality;
+
+		/** Whether the default duration type of the message should be inverted. */
+		private boolean reversedDurationType;
+
+		/** The Service ID (SID). */
+		private int sid = -1;
+
+		private boolean spoken;
+
+		/** When the signaled condition is expected to begin. */
+		private int startTime;
+
+		/** When the signaled contition is expected to end. */
+		private int stopTime;
+
+		/** The time zone to be used for persistence times based on "midnight". */
+		private TimeZone timeZone = new SimpleTimeZone(0, "");
+
+		/** The number of times the message was updated. */
+		private int updateCount;
+
+		/** The urgency of the message. */
+		private EventUrgency urgency;
+
+		/**
+		 * @brief Instantiates a new message builder.
+		 */
+		public MessageBuilder() {
+			super();
+			reset();
+		}
+
+		/**
+		 * @brief Instantiates a new message builder with pre-filled service info.
+		 * 
+		 * This is the same as calling {@link #MessageBuilder()} followed by
+		 * {@link #setServiceInfo(int, int, int, TimeZone, boolean)}.
+		 */
+		public MessageBuilder(int cc, int ltn, int sid, TimeZone timeZone, boolean encrypted) {
+			this();
+			setServiceInfo(cc, ltn, sid, timeZone, encrypted);
+		}
+
+		/**
+		 * @brief Adds a new waypoint to the diversion route for the current information block.
+		 * 
+		 * @param diversion
+		 */
+		public void addDiversion(int diversion) {
+			this.ibDiversionRoute.add(diversion);
+		}
+
+		/**
+		 * @brief Adds a new event.
+		 * 
+		 * This method must be called before any event data is set.
+		 * 
+		 * @param id The TMC event code for the new event.
+		 */
+		public void addEvent(int code) throws IllegalStateException {
+			completeEvent();
+			this.evId = code;
+		}
+
+		/**
+		 * @brief Adds a new information block.
+		 * 
+		 * A new information block is implicitly added to every new message, thus information block
+		 * data (and events) can be added before the first call to this method.
+		 * 
+		 * Calling this method without having previously called {@link #addEvent(int)} has the same
+		 * effect as calling {@link #addEvent(int)}.
+		 * 
+		 * If information block data has been supplied but no event data, an
+		 * {@link IllegalStateException} is thrown.
+		 * 
+		 * @param id The TMC event code for the first event in the new information block.
+		 */
+		public void addInformationBlock(int eventCode) throws IllegalStateException {
+			completeInformationBlock();
+			addEvent(eventCode);
+		}
+
+		/**
+		 * @brief Adds a field from the data stream to the message.
+		 * 
+		 * @param label The field label as it appears in the data stream
+		 * @param value The value for the field as it appears in the data stream
+		 */
+		public void addField(int label, int value) throws IllegalStateException {
+			switch(label) {
+			// duration
+			case 0:
+				setDuration(value);
+				break;
+
+				// control code
+			case 1:
+				switch(value) {
+				case 0: increaseUrgency(); break;
+				case 1: decreaseUrgency(); break;
+				case 2: reverseDirectionality(); break;
+				case 3: reverseDurationType(); break;
+				case 4: reverseSpoken(); break;
+				case 5: setDiversion(true); break;
+				case 6: increaseExtent(8); break;
+				case 7: increaseExtent(16); break;
+				}
+				break;
+
+
+			case 2:
+				if (value == 0)
+					setLength(1000);
+				else if (value <= 10)
+					setLength(value);
+				else if (value <= 15)
+					setLength(10 + (value - 10) * 2);
+				else
+					setLength(20 + (value - 15) * 5);
+				break;
+
+			case 3:
+				setSpeed(5 * value);
+				break;
+
+			case 4:
+			case 5:
+				setQuantifier(value);
+				break;
+
+			case 6:
+				SupplementaryInfo si = TMC.SUPP_INFOS.get(value);
+				if (si != null)
+					addSupplementaryInformation(value);
+				break;
+
+			case 7:
+				setStartTime(value);
+				break;
+
+			case 8:
+				setStopTime(value);
+				break;
+
+			case 9:		// additional event
+				addEvent(value);
+				break;
+
+			case 11:
+				//addInformationBlock();
+				// TODO the spec says we should maybe create a new information block
+				// also, a 11 may be followed only by a 6 (sup info)
+				setDestination(value);
+				break;
+
+			case 10:
+				addDiversion(value);
+				break;
+
+			case 13:
+				if (hasEventData()) {
+					setSourceLocation(value);
+				}
+				break;
+
+			case 14:
+				completeInformationBlock();
+				break;
+
+			}
+		}
+
+		/**
+		 * @brief Adds a new supplementary information code to the current event.
+		 * 
+		 * If this method is called without {@link #addEvent(int)} being called first, an
+		 * {@link IllegalStateException} is thrown.
+		 * 
+		 * @param code
+		 */
+		public void addSupplementaryInformation(int code) throws IllegalStateException {
+			if (evId == -1)
+				throw new IllegalStateException("Cannot set event data before an event has been added");
+			SupplementaryInfo si = TMC.SUPP_INFOS.get(code);
+			this.evSuppInfo.add(si);
+		}
+
+		/**
+		 * @brief Builds a message.
+		 * 
+		 * After building, all internal data is reset (except for values set by
+		 * {@link #setServiceInfo(int, int, int, TimeZone, boolean)}) and a new message can be
+		 * built.
+		 * 
+		 * @return The new message
+		 */
+		public Message build() throws IllegalStateException {
+			Message res = null;
+
+			if (this.date == null)
+				this.date = new Date();
+			if (this.direction == -1)
+				throw new IllegalStateException("Direction must be set");
+			completeInformationBlock();
+			if (this.informationBlocks.isEmpty())
+				throw new IllegalStateException("Cannot create a message without information blocks");
+
+			if (this.urgency == null)
+				for (InformationBlock ib : informationBlocks)
+					for (Event e : ib.events) {
+						this.bidirectional &= e.tmcEvent.bidirectional;
+						if (this.urgency == null)
+							this.urgency = e.urgency;
+						else
+							this.urgency = EventUrgency.max(urgency, e.urgency);
+					}
+
+			/*
+			 * TODO: what if we have a multi-event message with different duration types and no
+			 * duration set explicitly? As per the spec, duration would be assumed to be 0, which
+			 * means the event is expected to last for an unspecified time. Even then, persistence
+			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
+			 * we use? (Nature is not relevant for persistence.)
+			 */
+			if (this.durationType == null)
+				this.durationType = this.informationBlocks.get(0).events.get(0).durationType;
+			if (this.nature == null)
+				this.nature = this.informationBlocks.get(0).events.get(0).nature;
+
+			if (this.increasedUrgency > 0)
+				for (int i = 0; i < this.increasedUrgency; i++)
+					this.urgency.next();
+			else if (this.increasedUrgency < 0)
+				for (int i = 0; i > this.increasedUrgency; i--)
+					this.urgency.prev();
+
+			if (this.reversedDirectionality)
+				this.bidirectional = !this.bidirectional;
+
+			if (this.reversedDurationType)
+				this.durationType = this.durationType.invert();
+
+			res = new Message(this.date, this.timeZone, this.cc, this.ltn, this.sid,
+					this.encrypted, this.interroad, this.fcc, this.fltn, this.location,
+					this.direction, this.bidirectional, this.extent, this.diversion,
+					this.durationType, this.duration, this.startTime, this.stopTime, this.nature,
+					this.urgency, this.spoken, this.informationBlocks, this.updateCount);
+
+			reset();
+			return res;
+		}
+
+		/**
+		 * @brief Decreases urgency by one level.
+		 */
+		public void decreaseUrgency() {
+			this.increasedUrgency--;
+		}
+
+		/**
+		 * @brief Increases the extent by the specified number of steps.
+		 * 
+		 * @param increment The number of steps by which to increase the extent
+		 */
+		public void increaseExtent(int increment) {
+			this.extent += increment;
+		}
+
+		/**
+		 * @brief Increases urgency by one level.
+		 */
+		public void increaseUrgency() {
+			this.increasedUrgency++;
+		}
+
+		/**
+		 * @brief Whether the builder is preparing an INTER-ROAD message
+		 */
+		public boolean isInterroad() {
+			return interroad;
+		}
+
+		/**
+		 * @brief Discards the prepared message.
+		 * 
+		 * Calling this method resets all values to their defaults, except for those set in
+		 * {@link #setServiceInfo(int, int, int, TimeZone, boolean)} (as it is assumed that these
+		 * frequently do not change between messages). Information block and event data is cleared
+		 * out as well.
+		 */
+		public void reset() {
+			resetInformationBlock();
+			this.bidirectional = true;
+			this.date = null;
+			this.diversion = false;
+			this.direction = -1;
+			this.durationType = null;
+			this.extent = 0;
+			this.fcc = -1;
+			this.fltn = -1;
+			this.increasedUrgency = 0;
+			this.informationBlocks = new ArrayList<InformationBlock>();
+			this.interroad = false;
+			this.location = -1;
+			this.nature = null;
+			this.reversedDirectionality = false;
+			this.reversedDurationType = false;
+			this.spoken = false;
+			this.startTime = -1;
+			this.stopTime = -1;
+			this.updateCount = 0;
+			this.urgency = null;
+		}
+
+		/**
+		 * @brief Specifies that the directionality of this message should be inverted.
+		 */
+		public void reverseDirectionality() {
+			this.reversedDirectionality = true;
+		}
+
+		/**
+		 * @brief Specifies that the duration type of this message should be inverted.
+		 */
+		public void reverseDurationType() {
+			this.reversedDurationType = true;
+		}
+
+		public void reverseSpoken() {
+			this.spoken = !this.spoken;
+		}
+
+		/**
+		 * @brief Sets the direction of the message.
+		 * 
+		 * The direction is used to translate the extent into a location. If the message is
+		 * directional, it also identifies the direction for which the message is valid.
+		 * 
+		 * Direction always refers to the direction of queue growth, i.e. opposite to the direction
+		 * of travel.
+		 * 
+		 * @param direction 0 for positive, 1 for negative
+		 */
+		public void setDirection(int direction) {
+			this.direction = direction;
+		}
+
+		/**
+		 * @brief Sets the date and time at which the message was received.
+		 * 
+		 * If no date is explicitly set before {@code #build()} is called, the current system time
+		 * is used.
+		 * 
+		 * @param date
+		 */
+		public void setDate(Date date) {
+			this.date = date;
+		}
+
+		/**
+		 * @brief Sets the destination for the current information block.
+		 * 
+		 * @param destination
+		 */
+		public void setDestination(int destination) {
+			this.ibDestination = destination;
+		}
+
+		/**
+		 * @brief Sets the diversion flag.
+		 * 
+		 * @param diversion
+		 */
+		public void setDiversion(boolean diversion) {
+			this.diversion = diversion;
+		}
+
+		/**
+		 * @brief Sets the duration for the message.
+		 * 
+		 * Calling this method will also set the duration type and nature of the message to those
+		 * of the last event added.
+		 * 
+		 * Callers must ensure that {@link #addEvent(int)} or {@link #addInformationBlock(int)} has
+		 * been called prior to calling this method, and that no {@link #reset()} or
+		 * {@link #build()} has since taken place. If this is not the case, an
+		 * {@link IllegalStateException} will be thrown.
+		 * 
+		 * @param duration The duration code as obtained from the data stream
+		 */
+		public void setDuration(int duration) throws IllegalStateException {
+			if (this.evId == -1)
+				throw new IllegalStateException("An event must be added before setting duration");
+			TMCEvent event = TMC.getEvent(this.evId);
+			if (event == null)
+				throw new IllegalStateException("A valid event must be added before duration");
+			this.duration = duration;
+			this.durationType = event.durationType;
+			this.nature = event.nature;
+		}
+
+		/**
+		 * @brief Sets the duration type for the entire message.
+		 * 
+		 * This will override previous implicit value set by {@link #setDuration(int)}. However,
+		 * subsequent calls to {@link #setDuration(int)} may still change the duration type.
+		 * 
+		 * @param durationType
+		 */
+		public void setDurationType(EventDurationType durationType) {
+			this.durationType = durationType;
+		}
+
+		/**
+		 * @brief Sets the extent of the message.
+		 * 
+		 * @param extent The extent (number of steps from the primary location)
+		 */
+		public void setExtent(int extent) {
+			this.extent = extent;
+		}
+
+		/**
+		 * @brief Sets the route length for the current information block.
+		 * 
+		 * @param length
+		 */
+		public void setLength(int length) {
+			this.ibLength = length;
+		}
+
+		/**
+		 * @brief Sets the location for the message.
+		 * 
+		 * To process an INTER-ROAD location, call this method twice: first with the FLTN as
+		 * transmitted in the first group, then with the actual location.
+		 * 
+		 * @param location
+		 */
+		public void setLocation(int location) {
+			if ((location < Message.LOCATION_INTER_ROAD) || (location >= Message.LOCATION_ALL_LISTENERS)) {
+				this.location = location;
+			} else {
+				this.interroad = true;
+				this.fcc = (location >> 6) & 0xF;
+				this.fltn = location & 0x3F;
+			}
+		}
+
+		/**
+		 * @brief Copies data from an existing message.
+		 * 
+		 * @param message
+		 */
+		public void setMessage(Message message) {
+			// TODO
+		}
+
+		/**
+		 * @brief Sets the event nature for the entire message.
+		 * 
+		 * This will override previous implicit value set by {@link #setDuration(int)}. However,
+		 * subsequent calls to {@link #setDuration(int)} may still change the event nature.
+		 * 
+		 * @param nature
+		 */
+		public void setNature(EventNature nature) {
+			this.nature = nature;
+		}
+
+		/**
+		 * @brief Sets the quantifier for the current event.
+		 * 
+		 * If this method is called without {@link #addEvent(int)} being called first, an
+		 * {@link IllegalStateException} is thrown.
+		 * 
+		 * @param quantifier
+		 */
+		public void setQuantifier(int quantifier) throws IllegalStateException {
+			if (evId == -1)
+				throw new IllegalStateException("Cannot set event data before an event has been added");
+			this.evQuantifier = quantifier;
+		}
+
+		/**
+		 * @brief Sets service parameters.
+		 * 
+		 * Note that the {@code cc} and {@code ltn} fields refer to the whole service. If an
+		 * INTER-ROAD message is received, it will use different CC and LTN codes to decode its
+		 * location.
+		 * 
+		 * @param cc The Country Code
+		 * @param ltn The Location Table Number
+		 * @param sid The service identifier
+		 * @param timeZone The time zone used to determine midnight
+		 * @param encrypted Whether the service sends encrypted location codes
+		 */
+		public void setServiceInfo(int cc, int ltn, int sid, TimeZone timeZone, boolean encrypted) {
+			this.cc = cc;
+			this.sid = sid;
+			this.timeZone = timeZone;
+			this.encrypted = encrypted;
+			if (ltn != 0)
+				this.ltn = ltn;
+			else {
+				this.ltn = -1;
+				this.encrypted = true;
+			}
+			if (this.fcc == -1)
+				this.fcc = cc;
+			if (this.fltn == -1)
+				this.fltn = ltn;
+		}
+
+		/**
+		 * @brief Sets the source location for the current event.
+		 * 
+		 * If this method is called without {@link #addEvent(int)} being called first, an
+		 * {@link IllegalStateException} is thrown.
+		 * 
+		 * @param sourceLocation
+		 */
+		public void setSourceLocation(int sourceLocation) throws IllegalStateException {
+			if (evId == -1)
+				throw new IllegalStateException("Cannot set event data before an event has been added");
+			this.evSourceLocation = sourceLocation;
+		}
+
+		/**
+		 * @brief Sets the speed limit for the current information block.
+		 * 
+		 * @param speed
+		 */
+		public void setSpeed(int speed) {
+			this.ibSpeed = speed;
+		}
+
+		/**
+		 * @brief Sets the time at which the signaled condition is expected to start.
+		 * 
+		 * @param startTime
+		 */
+		public void setStartTime(int startTime) {
+			this.startTime = startTime;
+		}
+
+		/**
+		 * @brief Sets the time at which the signaled condition is expected to end.
+		 * @param stopTime
+		 */
+		public void setStopTime(int stopTime) {
+			this.stopTime = stopTime;
+		}
+
+		// TODO set update count from previous message?
+
+		/**
+		 * @brief Sets the number of updates received for this message.
+		 * 
+		 * @param updateCount
+		 */
+		public void setUpdateCount(int updateCount) {
+			this.updateCount = updateCount;
+		}
+
+		/**
+		 * @brief Sets the urgency for the entire message.
+		 * 
+		 * @param urgency
+		 */
+		public void setUrgency(EventUrgency urgency) {
+			this.urgency = urgency;
+		}
+
+		/**
+		 * @brief Completes an event.
+		 * 
+		 * This takes all event data, builds a new event, adds it to the internal list and resets
+		 * all event data.
+		 * 
+		 * Calling this method multiple times, without supplying event data in between, is a no-op.
+		 * 
+		 * If event data has been supplied but no event code has been set, an
+		 * {@link IllegalStateException} is thrown.
+		 */
+		private void completeEvent() throws IllegalStateException {
+			if (!hasEventData())
+				return;
+			if (evId == -1)
+				throw new IllegalStateException("Missing event code");
+			this.ibEvents.add(new Event(this.evId, this.evQuantifier, this.fcc, this.fltn,
+					this.evSourceLocation, this.evSuppInfo));
+			resetEvent();
+		}
+
+		/**
+		 * @brief Completes an information block.
+		 * 
+		 * This completes any open event, takes all information block data, builds a new
+		 * information block, adds it to the internal list and resets all information block (and
+		 * event) data.
+		 * 
+		 * Calling this method multiple times, without supplying information block or event data in
+		 * between, is a no-op.
+		 * 
+		 * If information block data has been supplied but no event data, an
+		 * {@link IllegalStateException} is thrown.
+		 */
+		private void completeInformationBlock() throws IllegalStateException {
+			if (!hasInformationBlockData())
+				return;
+			completeEvent();
+			if (this.ibEvents.isEmpty())
+				throw new IllegalStateException("Cannot create an information block without events");
+			this.informationBlocks.add(new InformationBlock(this.ibEvents, this.fcc, this.fltn,
+					this.ibDestination,	this.ibDiversionRoute, this.ibLength, this.ibSpeed));
+			resetInformationBlock();
+		}
+
+		/**
+		 * @brief Whether data for a new event has been received.
+		 * 
+		 * This method will return true if any single event value has been set. It does not
+		 * guarantee that all values needed for a valid event have been supplied.
+		 * 
+		 * @return True if any event value has been set.
+		 */
+		private boolean hasEventData() {
+			return (this.evId != -1)
+					|| (this.evQuantifier != -1)
+					|| (this.evSourceLocation != -1)
+					|| !this.evSuppInfo.isEmpty();
+		}
+
+		/**
+		 * @brief Whether data for a new information block has been received.
+		 * 
+		 * This method will return true if any single information block value has been set. It does
+		 * not guarantee that all values needed for a valid information block have been supplied.
+		 * 
+		 * @return True if any information block value has been set.
+		 */
+		private boolean hasInformationBlockData() {
+			return hasEventData()
+					|| (this.ibLength != -1)
+					|| (this.ibSpeed != -1)
+					|| (this.ibDestination != -1)
+					|| !this.ibDiversionRoute.isEmpty()
+					|| !this.ibEvents.isEmpty();
+		}
+
+		/**
+		 * @brief Discards the prepared event.
+		 * 
+		 * Calling this method resets all event-related values to their defaults.
+		 */
+		private void resetEvent() {
+			this.evId = -1;
+			this.evQuantifier = -1;
+			this.evSourceLocation = -1;
+			this.evSuppInfo = new ArrayList<SupplementaryInfo>();
+		}
+
+		/**
+		 * @brief Discards the prepared information block.
+		 * 
+		 * Calling this method resets all information block-related values to their defaults,
+		 * including event-related values.
+		 */
+		private void resetInformationBlock() {
+			resetEvent();
+			this.ibLength = -1;
+			this.ibSpeed = -1;
+			this.ibDestination = -1;
+			this.ibDiversionRoute = new ArrayList<Integer>();
+			this.ibEvents = new ArrayList<Event>();
 		}
 	}
 
