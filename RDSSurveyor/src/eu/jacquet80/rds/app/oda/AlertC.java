@@ -569,12 +569,12 @@ public class AlertC extends ODA {
 		/** Direction of queue growth (0 for positive, 1 for negative). */
 		private final int direction;
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
-		private int extent;		
+		public int extent;
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The time at which the message was received. */
 		private Date date = null;
 		/** The time zone to be used for persistence times based on "midnight". */
-		private TimeZone timeZone;
+		public TimeZone timeZone;
 		/** The country code of the service that sent the message (from RDS PI). */
 		private final int cc;
 		/** The Location Table Number (LTN) of the service that sent the message. */
@@ -584,7 +584,7 @@ public class AlertC extends ODA {
 		/** Whether the location code is encrypted. */
 		private boolean encrypted;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
-		private final boolean interroad;
+		public final boolean interroad;
 		/** The country code of the location. */
 		private int fcc = -1;
 		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
@@ -594,7 +594,7 @@ public class AlertC extends ODA {
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
 		private TMCLocation locationInfo;
 		/** Whether the default directionality of the message should be reversed. */
-		private boolean reversedDirectionality = false;
+		public boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 		/** The coordinates of the event. */
@@ -615,10 +615,10 @@ public class AlertC extends ODA {
 		 * message. In this case, the nature and duration type of the last event received before the
 		 * duration field apply (the last event may be the first group event).
 		 */
-		private EventDurationType durationType = null;
-		private int duration = 0;		// 0- duration (0 if not set)
-		private int startTime = -1;		// 7- start time
-		private int stopTime = -1;		// 8- stop time
+		public EventDurationType durationType = null;
+		public int duration = 0;		// 0- duration (0 if not set)
+		public int startTime = -1;		// 7- start time
+		public int stopTime = -1;		// 8- stop time
 		// 13- cross linkage to source
 
 		/**
@@ -626,14 +626,14 @@ public class AlertC extends ODA {
 		 * 
 		 * The value is taken from the TMC event which was followed by the duration.
 		 */
-		private EventNature nature = null;
+		public EventNature nature = null;
 
 		/** Number of levels by which to increase or decrease default urgency. */
 		private int increasedUrgency = 0;
 		/** The urgency of the message. */
-		private EventUrgency urgency;
+		public EventUrgency urgency;
 		
-		private boolean spoken = false;      // TODO default   // 1.4
+		public boolean spoken = false;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
 		
 		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
@@ -1791,7 +1791,7 @@ public class AlertC extends ODA {
 		
 		private int length = -1;
 		private int speed = -1;
-		private int destination = -1;
+		public int destination = -1;
 		private TMCLocation destinationInfo = null;
 
 		private final List<Event> events;
@@ -1855,6 +1855,21 @@ public class AlertC extends ODA {
 				res.add(location);
 			}
 			return res;
+		}
+
+		/**
+		 * @brief Returns the location codes which make up the diversion route.
+		 * 
+		 * @return A list of location codes. An empty list is returned if no diversion is specified
+		 * or if one or more location codes cannot be resolved.
+		 */
+		public List<Integer> getDiversionLcids() {
+			List<Integer> result = new ArrayList<Integer>();
+
+			for (int lcid : diversionRoute)
+				result.add(lcid);
+
+			return result;
 		}
 
 		/**
@@ -1979,13 +1994,13 @@ public class AlertC extends ODA {
 		/** The Location Table Number (LTN) to be used in decoding the source location. */
 		private int ltn;
 
-		private TMCEvent tmcEvent;
+		public final TMCEvent tmcEvent;
 		private EventUrgency urgency;
 		private EventNature nature;
 		private EventDurationType durationType;
-		private int sourceLocation = -1;
+		public final int sourceLocation;
 
-		private int quantifier = -1;
+		public final int quantifier;
 		private List<SupplementaryInfo> suppInfo = new ArrayList<SupplementaryInfo>();
 
 		/**
