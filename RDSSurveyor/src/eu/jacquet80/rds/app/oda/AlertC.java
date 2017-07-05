@@ -230,7 +230,6 @@ public class AlertC extends ODA {
 									console.printf(" ignoring, bad continuity index (was %d), probably missed groups", currentContIndex);
 									currentContIndex = -1;
 									nextGroupExpected = -1;
-									builder.reset();
 								} else if(groupNumber != nextGroupExpected) {
 									console.print(" ignoring, next expected is #" + nextGroupExpected);
 								} else {
