@@ -594,7 +594,7 @@ public class AlertC extends ODA {
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
 		private TMCLocation locationInfo;
 		/** Whether the default directionality of the message should be reversed. */
-		public boolean reversedDirectionality = false;
+		private boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 		/** The coordinates of the event. */
