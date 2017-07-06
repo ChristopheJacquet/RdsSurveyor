@@ -2450,15 +2450,15 @@ public class AlertC extends ODA {
 			if (this.informationBlocks.isEmpty())
 				throw new IllegalStateException("Cannot create a message without information blocks");
 
-			if (this.urgency == null)
-				for (InformationBlock ib : informationBlocks)
-					for (Event e : ib.events) {
-						this.bidirectional &= e.tmcEvent.bidirectional;
-						if (this.urgency == null)
-							this.urgency = e.urgency;
-						else
-							this.urgency = EventUrgency.max(urgency, e.urgency);
-					}
+			boolean needsUrgency = (this.urgency == null);
+			for (InformationBlock ib : informationBlocks)
+				for (Event e : ib.events) {
+					this.bidirectional &= e.tmcEvent.bidirectional;
+					if (this.urgency == null)
+						this.urgency = e.urgency;
+					else if (needsUrgency)
+						this.urgency = EventUrgency.max(urgency, e.urgency);
+				}
 
 			/*
 			 * TODO: what if we have a multi-event message with different duration types and no
