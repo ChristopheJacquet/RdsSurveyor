@@ -697,12 +697,17 @@ public class AlertC extends ODA {
 		 * instance, this method calls the {@link InformationBlock#accept(MessageVisitor)} of each
 		 * {@link InformationBlock} in the message. 
 		 * 
-		 * @param visitor
+		 * @param visitor The visitor
+		 * @param parentFirst If true, the parent will be visited before its first child. If false,
+		 * the parent will be visited after its last child.
 		 */
-		public void accept(MessageVisitor visitor) {
-			visitor.visit(this);
+		public void accept(MessageVisitor visitor, boolean parentFirst) {
+			if (parentFirst)
+				visitor.visit(this);
 			for (InformationBlock ib : informationBlocks)
-				ib.accept(visitor);
+				ib.accept(visitor, parentFirst);
+			if (!parentFirst)
+				visitor.visit(this);
 		}
 
 		/**
@@ -1822,12 +1827,17 @@ public class AlertC extends ODA {
 		 * the current instance, this method calls the {@link Event#accept(MessageVisitor)} of each
 		 * {@link Event} in the information block. 
 		 * 
-		 * @param visitor
+		 * @param visitor The visitor
+		 * @param parentFirst If true, the parent will be visited before its first child. If false,
+		 * the parent will be visited after its last child.
 		 */
-		public void accept(MessageVisitor visitor) {
-			visitor.visit(this);
+		public void accept(MessageVisitor visitor, boolean parentFirst) {
+			if (parentFirst)
+				visitor.visit(this);
 			for (Event e : events)
 				e.accept(visitor);
+			if (!parentFirst)
+				visitor.visit(this);
 		}
 
 		/**
