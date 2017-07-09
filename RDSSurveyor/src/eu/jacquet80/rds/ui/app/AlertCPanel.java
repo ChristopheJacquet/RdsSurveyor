@@ -153,7 +153,7 @@ public class AlertCPanel extends AppPanel {
 				int row = tblList.getSelectedRow();
 				if(row >= 0) {
 					Message msg = app.getMessages().get(row);
-					latestSelectedLocation = msg.getLcid();
+					latestSelectedLocation = msg.lcid;
 					txtDetails.setText(msg.html());
 				} else {
 					txtDetails.setText("");
@@ -244,7 +244,7 @@ public class AlertCPanel extends AppPanel {
 			case 0:
 				String ret = msg.getShortDisplayName();
 				if (ret == null)
-					ret = "#" + msg.getLcid();
+					ret = "#" + msg.lcid;
 				return ret;
 			case 1:
 				StringBuffer buf = new StringBuffer();
@@ -266,7 +266,7 @@ public class AlertCPanel extends AppPanel {
 		private int getRowForLocation(int location) {
 			int row = 0;
 			for(AlertC.Message m : app.getMessages()) {
-				if(m.getLcid() == location) {
+				if(m.lcid == location) {
 					return row;
 				}
 				row++;

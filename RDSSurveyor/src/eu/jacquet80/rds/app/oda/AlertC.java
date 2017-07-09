@@ -569,7 +569,7 @@ public class AlertC extends ODA {
 		/** 
 		 * Direction of queue growth (0 for positive, 1 for negative).
 		 * 
-		 * In most cases, this field should be evaluated together with {@link #isBidirectional()}.
+		 * In most cases, this field should be evaluated together with {@link #isBidirectional}.
 		 */
 		public final int direction;
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
@@ -579,8 +579,14 @@ public class AlertC extends ODA {
 		private final Date date;
 		/** The time zone to be used for persistence times based on "midnight". */
 		public final TimeZone timeZone;
-		/** The country code of the service that sent the message (from RDS PI). */
-		private final int cc;
+		/**
+		 * The PID country code for this event (single hex digit from RDS PI).
+		 * 
+		 * This is the country code of the service which sent this event. For an INTER-ROAD
+		 * message, the country code of the location may differ and can be retrieved using
+		 * {@link #getForeignCountryCode()}.
+		 */
+		public final int cc;
 		/** The Location Table Number (LTN) of the service that sent the message. */
 		private int ltn;
 		/** The Service ID (SID). */
@@ -589,12 +595,18 @@ public class AlertC extends ODA {
 		public final boolean isEncrypted;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
 		public final boolean interroad;
-		/** The country code of the location. */
-		private final int fcc;
+		/**
+		 * The country code for the location of this event (single hex digit).
+		 * 
+		 * For an INTER-ROAD message, the country code of the service which sent this event may
+		 * differ and can be retrieved using {@link #getCountryCode()}.
+		 */
+		public final int fcc;
 		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
 		private int fltn = -1;
-		/** The raw location code. */
-		private final int lcid;
+
+		/** The raw location code of the primary location. */
+		public final int lcid;
 		/** 
 		 * The resolved primary location, if the location is contained in a previously loaded TMC location table.
 		 * 
@@ -602,8 +614,13 @@ public class AlertC extends ODA {
 		 * driver would exit from the affected stretch of road.
 		 */
 		public final TMCLocation location;
-		/** Whether the event affects both directions. */
-		private final boolean bidirectional;
+
+		/** Whether the message affects both directions.
+		 * 
+		 * To get the direction, evaluate {@link #direction}.
+		 */
+		public final boolean isBidirectional;
+
 		/** The coordinates of the event. */
 		private float[] coords = null;
 		/** The auxiliary coordinates of the event. */
@@ -637,7 +654,11 @@ public class AlertC extends ODA {
 		public final EventUrgency urgency;
 		
 		public final boolean spoken;      // TODO default   // 1.4
-		private final boolean diversion;							   // 1.5
+
+		/**
+		 * Whether a diversion route is available.
+		 */
+		public final boolean hasDiversion;							   // 1.5
 		
 		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
 		
@@ -665,11 +686,11 @@ public class AlertC extends ODA {
 				EventDurationType durationType, int duration, int startTime, int stopTime,
 				EventNature nature, EventUrgency urgency, boolean spoken,
 				List<InformationBlock> informationBlocks, int updateCount) {
-			this.bidirectional = bidirectional;
+			this.isBidirectional = bidirectional;
 			this.cc = cc;
 			this.date = date;
 			this.direction = direction;
-			this.diversion = diversion;
+			this.hasDiversion = diversion;
 			this.duration = duration;
 			this.durationType = durationType;
 			this.isEncrypted = encrypted;
@@ -877,14 +898,14 @@ public class AlertC extends ODA {
 			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
-			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
+			res.append(", ").append(this.isBidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
 			res.append('\n');
 			res.append("urgency=").append(urgency);
 			res.append(", nature=").append(nature);
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
-			if(this.diversion) res.append(", diversion advised");
+			if(this.hasDiversion) res.append(", diversion advised");
 			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
 			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
 			res.append('\n');
@@ -966,14 +987,14 @@ public class AlertC extends ODA {
 			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
-			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
+			res.append(", ").append(this.isBidirectional ? "bi" : "mono").append("directional");
 			res.append(", growth direction ").append(this.direction == 0 ? "+" : "-");
 			res.append("<br/>");
 			res.append("urgency=").append(urgency);
 			res.append(", nature=").append(nature);
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
-			if(this.diversion) res.append(", diversion advised");
+			if(this.hasDiversion) res.append(", diversion advised");
 			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
 			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
 			res.append("<br/>");
@@ -1184,32 +1205,7 @@ public class AlertC extends ODA {
 			if (location == null)
 				return null;
 			TMCLocation secondary = location.getOffset(this.extent, this.direction);
-			return location.getDisplayName(secondary, this.direction, this.bidirectional);
-		}
-		
-		/**
-		 * @brief Returns the PID country code for this event (single hex digit).
-		 * 
-		 * This is the country code of the service which sent this event. For an INTER-ROAD
-		 * message, the country code of the location may differ and can be retrieved using
-		 * {@link #getForeignCountryCode()}.
-		 * 
-		 * @return the country code, or -1 if unknown
-		 */
-		public int getCountryCode() {
-			return cc;
-		}
-		
-		/**
-		 * @brief Returns the country code for the location of this event (single hex digit).
-		 * 
-		 * For an INTER-ROAD message, the country code of the service which sent this event may
-		 * differ and can be retrieved using {@link #getCountryCode()}.
-		 * 
-		 * @return the country code, or -1 if unknown
-		 */
-		public int getForeignCountryCode() {
-			return fcc;
+			return location.getDisplayName(secondary, this.direction, this.isBidirectional);
 		}
 		
 		/**
@@ -1407,13 +1403,6 @@ public class AlertC extends ODA {
 		}
 		
 		/**
-		 * @brief Returns the location code of the primary location.
-		 */
-		public int getLcid() {
-			return lcid;
-		}
-		
-		/**
 		 * @brief Returns the Location Table Number (LTN) for the location of this event.
 		 * 
 		 * This is the LTN of the location table in which the location is defined. For an
@@ -1507,22 +1496,6 @@ public class AlertC extends ODA {
 			if ((secondary == null) || (location.equals(secondary)))
 				return false;
 			return true;
-		}
-		
-		/**
-		 * @brief Returns whether the message affects both directions.
-		 * 
-		 * To get the direction, evaluate {@link #direction}.
-		 */
-		public boolean isBidirectional() {
-			return bidirectional;
-		}
-		
-		/**
-		 * @brief Returns whether a diversion route is available.
-		 */
-		public boolean isDiversionAvailable() {
-			return diversion;
 		}
 		
 		public void setUpdateCount(int newCount) {
