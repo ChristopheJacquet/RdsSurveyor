@@ -566,8 +566,12 @@ public class AlertC extends ODA {
 		public static final int LOCATION_INDEPENDENT = 65535;
 		
 		// basic information
-		/** Direction of queue growth (0 for positive, 1 for negative). */
-		private final int direction;
+		/** 
+		 * Direction of queue growth (0 for positive, 1 for negative).
+		 * 
+		 * In most cases, this field should be evaluated together with {@link #isBidirectional()}.
+		 */
+		public final int direction;
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
 		public final int extent;
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
@@ -582,7 +586,7 @@ public class AlertC extends ODA {
 		/** The Service ID (SID). */
 		private int sid;
 		/** Whether the location code is encrypted. */
-		private final boolean encrypted;
+		public final boolean isEncrypted;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
 		public final boolean interroad;
 		/** The country code of the location. */
@@ -591,8 +595,13 @@ public class AlertC extends ODA {
 		private int fltn = -1;
 		/** The raw location code. */
 		private final int location;
-		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
-		private final TMCLocation locationInfo;
+		/** 
+		 * The resolved primary location, if the location is contained in a previously loaded TMC location table.
+		 * 
+		 * The primary location is the location of the disruption, or the location at which the
+		 * driver would exit from the affected stretch of road.
+		 */
+		public final TMCLocation locationInfo;
 		/** Whether the event affects both directions. */
 		private final boolean bidirectional;
 		/** The coordinates of the event. */
@@ -663,7 +672,7 @@ public class AlertC extends ODA {
 			this.diversion = diversion;
 			this.duration = duration;
 			this.durationType = durationType;
-			this.encrypted = encrypted;
+			this.isEncrypted = encrypted;
 			this.extent = extent;
 			this.fcc = fcc;
 			this.fltn = fltn;
@@ -671,7 +680,7 @@ public class AlertC extends ODA {
 			this.informationBlocks = informationBlocks;
 			this.interroad = interroad;
 			this.location = location;
-			if (!this.encrypted)
+			if (!this.isEncrypted)
 				this.locationInfo = TMC.getLocation(String.format("%X", this.fcc), this.fltn, location);
 			else
 				this.locationInfo = null;
@@ -865,7 +874,7 @@ public class AlertC extends ODA {
 			res.append("CC: ").append(String.format("%X", fcc));
 			res.append(", LTN: ").append(fltn);
 			res.append(", Location: ").append(location);
-			if (encrypted)
+			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
@@ -954,7 +963,7 @@ public class AlertC extends ODA {
 			res.append("CC: ").append(String.format("%X", fcc));
 			res.append(", LTN: ").append(fltn);
 			res.append(", Location: ").append(location);
-			if (encrypted)
+			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
 			res.append(", ").append(this.bidirectional ? "bi" : "mono").append("directional");
@@ -1158,19 +1167,6 @@ public class AlertC extends ODA {
 				return null;
 			else
 				return coords.clone();
-		}
-		
-		
-		/**
-		 * @brief Returns the direction of the message.
-		 * 
-		 * In most cases, the return value should be evaluated together with
-		 * {@link #isBidirectional()}.
-		 * 
-		 * @return 0 for positive, 1 for negative
-		 */
-		public int getDirection() {
-			return direction;
 		}
 		
 		
@@ -1468,16 +1464,6 @@ public class AlertC extends ODA {
 		}
 		
 		/**
-		 * @brief Returns the primary location of the message.
-		 * 
-		 * The primary location is the location of the disruption, or the location at which the
-		 * driver would exit from the affected stretch of road.
-		 */
-		public TMCLocation getPrimaryLocation() {
-			return locationInfo;
-		}
-
-		/**
 		 * @brief Returns the secondary location of the message.
 		 * 
 		 * The secondary location is the location at which the driver would first encounter the
@@ -1523,7 +1509,7 @@ public class AlertC extends ODA {
 		/**
 		 * @brief Returns whether the message affects both directions.
 		 * 
-		 * To get the direction, call {@link #getDirection()}.
+		 * To get the direction, evaluate {@link #direction}.
 		 */
 		public boolean isBidirectional() {
 			return bidirectional;
@@ -1534,13 +1520,6 @@ public class AlertC extends ODA {
 		 */
 		public boolean isDiversionAvailable() {
 			return diversion;
-		}
-		
-		/**
-		 * @brief Returns whether the location is encrypted.
-		 */
-		public boolean isEncrypted() {
-			return encrypted;
 		}
 		
 		public void setUpdateCount(int newCount) {
@@ -1727,10 +1706,24 @@ public class AlertC extends ODA {
 		/** The Location Table Number (LTN) to be used in decoding the diversion route locations. */
 		private int ltn;
 		
-		private final int length;
-		private final int speed;
+		/**
+		 * The length of the route affected in km, -1 if unknown. Values greater than 100 are to be
+		 * interpreted as "100 km or more" rather than literally.
+		 */
+		public final int length;
+
+		/**
+		 * The speed limit in km/h, or -1 if unknown.
+		 */
+		public final int speed;
+
 		public final int destination;
-		private final TMCLocation destinationInfo;
+
+		/**
+		 * The location for the destination (null if no destination is specified or if the location
+		 * code cannot be resolved).
+		 */
+		public final TMCLocation destinationInfo;
 
 		private final List<Event> events;
 		
@@ -1773,16 +1766,6 @@ public class AlertC extends ODA {
 				visitor.visit(this);
 		}
 
-		/**
-		 * @brief Returns the destination information.
-		 * 
-		 * @return The location for the destination, or null if no destination is specified or if
-		 * the location code cannot be resolved.
-		 */
-		public TMCLocation getDestination() {
-			return destinationInfo;
-		}
-		
 		/**
 		 * @brief Returns the locations which make up the diversion route.
 		 * 
@@ -1828,34 +1811,14 @@ public class AlertC extends ODA {
 			return result;
 		}
 		
-		/**
-		 * @brief Returns the length of the route affected.
-		 * 
-		 * @return The length of the route affected in km, -1 if unknown. Return values greater
-		 * than 100 are to be interpreted as "100 km or more" rather than literally.
-		 */
-		public int getLength() {
-			return length;
-		}
-		
-		/**
-		 * @brief Returns the speed limit.
-		 * 
-		 * @return The speed limit in km/h, or -1 if unknown.
-		 */
-		public int getSpeed() {
-			return speed;
-		}
-		
 		@Override
 		public String toString() {
 			StringBuilder res = new StringBuilder();
 			res.append("-------------\n");
 			if (destination != -1) {
 				res.append("For destination: " + destination + "  ");
-				TMCLocation location = getDestination();
-				if (location != null)
-					res.append(location).append("\n");
+				if (destinationInfo != null)
+					res.append(destinationInfo).append("\n");
 			}
 			
 			if(length != -1) {
@@ -1890,9 +1853,8 @@ public class AlertC extends ODA {
 			res.append("<hr>");
 			if (destination != -1) {
 				res.append("For destination: " + destination + "  ");
-				TMCLocation location = getDestination();
-				if (location != null)
-					res.append("<blockquote>").append(location.html()).append("</blockquote>");
+				if (destinationInfo != null)
+					res.append("<blockquote>").append(destinationInfo.html()).append("</blockquote>");
 			}
 			
 			if(length != -1) {
