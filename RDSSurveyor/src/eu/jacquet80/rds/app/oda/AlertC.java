@@ -572,7 +572,7 @@ public class AlertC extends ODA {
 		public final int extent;
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The time at which the message was received. */
-		private Date date = null;
+		private final Date date;
 		/** The time zone to be used for persistence times based on "midnight". */
 		public final TimeZone timeZone;
 		/** The country code of the service that sent the message (from RDS PI). */
@@ -582,19 +582,19 @@ public class AlertC extends ODA {
 		/** The Service ID (SID). */
 		private int sid;
 		/** Whether the location code is encrypted. */
-		private boolean encrypted;
+		private final boolean encrypted;
 		/** Whether the message has an INTER-ROAD location, i.e. uses a foreign location table */
 		public final boolean interroad;
 		/** The country code of the location. */
-		private int fcc = -1;
+		private final int fcc;
 		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
 		private int fltn = -1;
 		/** The raw location code. */
-		private int location;
+		private final int location;
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
-		private TMCLocation locationInfo;
+		private final TMCLocation locationInfo;
 		/** Whether the event affects both directions. */
-		private boolean bidirectional = true;
+		private final boolean bidirectional;
 		/** The coordinates of the event. */
 		private float[] coords = null;
 		/** The auxiliary coordinates of the event. */
@@ -628,7 +628,7 @@ public class AlertC extends ODA {
 		public final EventUrgency urgency;
 		
 		public final boolean spoken;      // TODO default   // 1.4
-		private boolean diversion = false;							   // 1.5
+		private final boolean diversion;							   // 1.5
 		
 		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
 		
@@ -673,6 +673,8 @@ public class AlertC extends ODA {
 			this.location = location;
 			if (!this.encrypted)
 				this.locationInfo = TMC.getLocation(String.format("%X", this.fcc), this.fltn, location);
+			else
+				this.locationInfo = null;
 			this.ltn = ltn;
 			this.nature = nature;
 			this.sid = sid;
@@ -1725,10 +1727,10 @@ public class AlertC extends ODA {
 		/** The Location Table Number (LTN) to be used in decoding the diversion route locations. */
 		private int ltn;
 		
-		private int length = -1;
-		private int speed = -1;
+		private final int length;
+		private final int speed;
 		public final int destination;
-		private TMCLocation destinationInfo = null;
+		private final TMCLocation destinationInfo;
 
 		private final List<Event> events;
 		
@@ -1928,13 +1930,13 @@ public class AlertC extends ODA {
 		private int ltn;
 
 		public final TMCEvent tmcEvent;
-		private EventUrgency urgency;
-		private EventNature nature;
-		private EventDurationType durationType;
+		private final EventUrgency urgency;
+		private final EventNature nature;
+		private final EventDurationType durationType;
 		public final int sourceLocation;
 
 		public final int quantifier;
-		private List<SupplementaryInfo> suppInfo = new ArrayList<SupplementaryInfo>();
+		private final List<SupplementaryInfo> suppInfo;
 
 		/**
 		 * @brief Constructs an event with the given parameters.
