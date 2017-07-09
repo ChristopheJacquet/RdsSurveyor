@@ -569,12 +569,12 @@ public class AlertC extends ODA {
 		/** Direction of queue growth (0 for positive, 1 for negative). */
 		private final int direction;
 		/** The geographic extent of the event, expressed as a number of steps from 0 to 31. */
-		public int extent;
+		public final int extent;
 		// extent, affected by 1.6 and 1.7   (= number of steps, see ISO 81419-1, par. 5.5.2 a: 31 steps max
 		/** The time at which the message was received. */
 		private Date date = null;
 		/** The time zone to be used for persistence times based on "midnight". */
-		public TimeZone timeZone;
+		public final TimeZone timeZone;
 		/** The country code of the service that sent the message (from RDS PI). */
 		private final int cc;
 		/** The Location Table Number (LTN) of the service that sent the message. */
@@ -593,8 +593,6 @@ public class AlertC extends ODA {
 		private int location;
 		/** The resolved location, if the location is contained in a previously loaded TMC location table. */
 		private TMCLocation locationInfo;
-		/** Whether the default directionality of the message should be reversed. */
-		private boolean reversedDirectionality = false;
 		/** Whether the event affects both directions. */
 		private boolean bidirectional = true;
 		/** The coordinates of the event. */
@@ -602,8 +600,6 @@ public class AlertC extends ODA {
 		/** The auxiliary coordinates of the event. */
 		private float[] auxCoords = null;
 
-		private boolean reversedDurationType = false;
-		
 		/**
 		 * Duration type for the entire message.
 		 * 
@@ -615,10 +611,10 @@ public class AlertC extends ODA {
 		 * message. In this case, the nature and duration type of the last event received before the
 		 * duration field apply (the last event may be the first group event).
 		 */
-		public EventDurationType durationType = null;
-		public int duration = 0;		// 0- duration (0 if not set)
-		public int startTime = -1;		// 7- start time
-		public int stopTime = -1;		// 8- stop time
+		public final EventDurationType durationType;
+		public final int duration;		// 0- duration (0 if not set)
+		public final int startTime;		// 7- start time
+		public final int stopTime;		// 8- stop time
 		// 13- cross linkage to source
 
 		/**
@@ -626,20 +622,16 @@ public class AlertC extends ODA {
 		 * 
 		 * The value is taken from the TMC event which was followed by the duration.
 		 */
-		public EventNature nature = null;
+		public final EventNature nature;
 
-		/** Number of levels by which to increase or decrease default urgency. */
-		private int increasedUrgency = 0;
 		/** The urgency of the message. */
-		public EventUrgency urgency;
+		public final EventUrgency urgency;
 		
-		public boolean spoken = false;      // TODO default   // 1.4
+		public final boolean spoken;      // TODO default   // 1.4
 		private boolean diversion = false;							   // 1.5
 		
 		private List<InformationBlock> informationBlocks = new ArrayList<AlertC.InformationBlock>();
-		private InformationBlock currentInformationBlock;
 		
-		private boolean complete = false;
 		private int updateCount = 0;
 		
 		public final static int[] labelSizes = {3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0};
@@ -678,7 +670,9 @@ public class AlertC extends ODA {
 			this.urgency = urgency;
 			this.informationBlocks = informationBlocks;
 			this.interroad = interroad;
-			this.setLocation(location);
+			this.location = location;
+			if (!this.encrypted)
+				this.locationInfo = TMC.getLocation(String.format("%X", this.fcc), this.fltn, location);
 			this.ltn = ltn;
 			this.nature = nature;
 			this.sid = sid;
@@ -687,7 +681,6 @@ public class AlertC extends ODA {
 			this.stopTime = stopTime;
 			this.timeZone = tz;
 			this.updateCount = updateCount;
-			this.complete = true; // TODO drop this once the switch is complete
 		}
 
 		/**
@@ -710,48 +703,6 @@ public class AlertC extends ODA {
 				visitor.visit(this);
 		}
 
-		/**
-		 * Used to indicate that this message is complete. 
-		 */
-		public void complete() {
-			this.bidirectional = true;
-			for(InformationBlock ib : informationBlocks) {
-				for(Event e : ib.events) {
-					this.bidirectional &= e.tmcEvent.bidirectional;
-					if (urgency == null)
-						urgency = e.urgency;
-					else
-						urgency = EventUrgency.max(urgency, e.urgency);
-				}
-			}
-			
-			if(reversedDirectionality) this.bidirectional = !this.bidirectional;
-			
-			if (increasedUrgency > 0)
-				for (int i = 0; i < increasedUrgency; i++)
-					urgency.next();
-			else if (increasedUrgency < 0)
-				for (int i = 0; i > increasedUrgency; i--)
-					urgency.prev();
-			
-			/*
-			 * TODO: what if we have a multi-event message with different duration types and no
-			 * duration set explicitly? As per the spec, duration would be assumed to be 0, which
-			 * means the event is expected to last for an unspecified time. Even then, persistence
-			 * depends on duration type (15 mins vs. 1 hour) - which event's duration type should
-			 * we use? (Nature is not relevant for persistence.)
-			 */
-			if (durationType == null)
-				durationType = this.informationBlocks.get(0).events.get(0).durationType;
-			if (nature == null)
-				nature = this.informationBlocks.get(0).events.get(0).nature;
-			
-			if (reversedDurationType)
-				durationType = durationType.invert();
-			
-			this.complete = true;
-		}
-		
 		/**
 		 * @brief Whether this message overrides another message.
 		 * 
@@ -786,7 +737,6 @@ public class AlertC extends ODA {
 		 */
 		public boolean overrides(Message m) {
 			return
-				complete &&
 				hasLocationMatching(m) && 
 				(direction == m.direction) &&
 				hasAnEventFromTheSameUpdateClassAs(m) &&
@@ -884,9 +834,6 @@ public class AlertC extends ODA {
 		
 		@Override
 		public String toString() {
-			if(! complete) {
-				return "Incomplete!";
-			}
 			StringBuilder res = new StringBuilder("");
 			if (locationInfo != null) {
 				String tmp = this.getRoadNumber();
@@ -974,9 +921,6 @@ public class AlertC extends ODA {
 		}
 		
 		public String html() {
-			if(! complete) {
-				return "<html><b>Incomplete!</b><html>";
-			}
 			StringBuilder res = new StringBuilder("<html>");
 			if (locationInfo != null) {
 				res.append("<b>");
@@ -1634,19 +1578,6 @@ public class AlertC extends ODA {
 			} else
 				throw new IllegalArgumentException("LTN and SID cannot be changed after being set");
 		}
-
-		private void invertDurationType() {
-			if (this.durationType == EventDurationType.DYNAMIC)
-				this.durationType = EventDurationType.LONGER_LASTING;
-			else
-				this.durationType = EventDurationType.DYNAMIC;
-		}
-
-		private void setLocation(int location) {
-			this.location = location;
-			if (!encrypted)
-				this.locationInfo = TMC.getLocation(String.format("%X", fcc), fltn, location);
-		}
 	}
 	
 	/* Table derived from work done by Tobias Lorenz,
@@ -1796,11 +1727,10 @@ public class AlertC extends ODA {
 		
 		private int length = -1;
 		private int speed = -1;
-		public int destination = -1;
+		public final int destination;
 		private TMCLocation destinationInfo = null;
 
 		private final List<Event> events;
-		private Event currentEvent;
 		
 		private final List<Integer> diversionRoute;
 
@@ -1814,7 +1744,8 @@ public class AlertC extends ODA {
 			this.events = events;
 			this.cc = cc;
 			this.ltn = ltn;
-			this.setDestination(destination);
+			this.destination = destination;
+			this.destinationInfo = TMC.getLocation(String.format("%X", this.cc), this.ltn, destination);
 			this.diversionRoute = diversionRoute;
 			this.length = length;
 			this.speed = speed;
@@ -1914,14 +1845,6 @@ public class AlertC extends ODA {
 			return speed;
 		}
 		
-		/**
-		 * @param destination the destination to set
-		 */
-		private void setDestination(int destination) {
-			this.destination = destination;
-			this.destinationInfo = TMC.getLocation(String.format("%X", cc), ltn, destination);
-		}
-
 		@Override
 		public String toString() {
 			StringBuilder res = new StringBuilder();
