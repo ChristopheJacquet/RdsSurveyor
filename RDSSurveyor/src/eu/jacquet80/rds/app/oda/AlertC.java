@@ -159,7 +159,7 @@ public class AlertC extends ODA {
 						builder.setServiceInfo(cc, ltn, sid, station.getTimeZone(), Boolean.TRUE.equals(encrypted));
 						builder.setDirection(dir);
 						builder.setExtent(extent);
-						builder.setLocation(location);
+						builder.setLcid(location);
 						builder.setDate(date);
 						builder.setDiversion(div == 1);
 						builder.addEvent(event);
@@ -201,7 +201,7 @@ public class AlertC extends ODA {
 								builder.setServiceInfo(cc, ltn, sid, station.getTimeZone(), Boolean.TRUE.equals(encrypted));
 								builder.setDirection(dir);
 								builder.setExtent(extent);
-								builder.setLocation(location);
+								builder.setLcid(location);
 								builder.setDate(date);
 								builder.addEvent(event);
 							} catch (IllegalStateException e) {
@@ -253,7 +253,7 @@ public class AlertC extends ODA {
 										 * state that free format bits start at Z11, immediately
 										 * after the location code. 
 										 */
-										builder.setLocation(multiGroupBits.take(16));
+										builder.setLcid(multiGroupBits.take(16));
 									}
 
 									while(multiGroupBits.count() >= 4) {
@@ -594,14 +594,14 @@ public class AlertC extends ODA {
 		/** The Foreign Location Table Number (LTN), i.e. the LTN for the location. */
 		private int fltn = -1;
 		/** The raw location code. */
-		private final int location;
+		private final int lcid;
 		/** 
 		 * The resolved primary location, if the location is contained in a previously loaded TMC location table.
 		 * 
 		 * The primary location is the location of the disruption, or the location at which the
 		 * driver would exit from the affected stretch of road.
 		 */
-		public final TMCLocation locationInfo;
+		public final TMCLocation location;
 		/** Whether the event affects both directions. */
 		private final boolean bidirectional;
 		/** The coordinates of the event. */
@@ -679,11 +679,11 @@ public class AlertC extends ODA {
 			this.urgency = urgency;
 			this.informationBlocks = informationBlocks;
 			this.interroad = interroad;
-			this.location = location;
+			this.lcid = location;
 			if (!this.isEncrypted)
-				this.locationInfo = TMC.getLocation(String.format("%X", this.fcc), this.fltn, location);
+				this.location = TMC.getLocation(String.format("%X", this.fcc), this.fltn, location);
 			else
-				this.locationInfo = null;
+				this.location = null;
 			this.ltn = ltn;
 			this.nature = nature;
 			this.sid = sid;
@@ -793,7 +793,7 @@ public class AlertC extends ODA {
 		 * @return
 		 */
 		private boolean hasLocationMatching(Message m) {
-			if ((location == LOCATION_INDEPENDENT) && (!interroad))
+			if ((lcid == LOCATION_INDEPENDENT) && (!interroad))
 					return true;
 			/* 
 			 * Messages received before we had full service info may have -1 as CC and/or LTN
@@ -809,7 +809,7 @@ public class AlertC extends ODA {
 					mfltn = fltn;
 			}
 			return ((fcc == mfcc) && (fltn == mfltn) &&
-					((location == m.location) || (location == LOCATION_INDEPENDENT)));
+					((lcid == m.lcid) || (lcid == LOCATION_INDEPENDENT)));
 		}
 		
 		/**
@@ -846,7 +846,7 @@ public class AlertC extends ODA {
 		@Override
 		public String toString() {
 			StringBuilder res = new StringBuilder("");
-			if (locationInfo != null) {
+			if (location != null) {
 				String tmp = this.getRoadNumber();
 				if (tmp != null)
 					res.append(tmp);
@@ -858,8 +858,8 @@ public class AlertC extends ODA {
 						tmp = name;
 					res.append(name);
 				}
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				TMCLocation secondary = location.getOffset(this.extent, this.direction);
+				name = location.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
 				if (name != null) {
 					if (tmp != null)
 						res.append(", ");
@@ -873,7 +873,7 @@ public class AlertC extends ODA {
 				res.append("Inter-Road, ");
 			res.append("CC: ").append(String.format("%X", fcc));
 			res.append(", LTN: ").append(fltn);
-			res.append(", Location: ").append(location);
+			res.append(", Location: ").append(lcid);
 			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
@@ -891,7 +891,7 @@ public class AlertC extends ODA {
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
 			res.append('\n');
-			if (locationInfo != null) {
+			if (location != null) {
 				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
 				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
 				float[] c = this.getCoordinates();
@@ -921,10 +921,10 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib);
 			}
-			if (locationInfo != null) {
-				res.append("-------------\n").append(locationInfo).append("\n");
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				if (secondary != locationInfo)
+			if (location != null) {
+				res.append("-------------\n").append(location).append("\n");
+				TMCLocation secondary = location.getOffset(this.extent, this.direction);
+				if (secondary != location)
 					res.append("-------------\nExtent:\n").append(secondary);
 			}
 			
@@ -933,7 +933,7 @@ public class AlertC extends ODA {
 		
 		public String html() {
 			StringBuilder res = new StringBuilder("<html>");
-			if (locationInfo != null) {
+			if (location != null) {
 				res.append("<b>");
 				String tmp = this.getRoadNumber();
 				if (tmp != null)
@@ -946,8 +946,8 @@ public class AlertC extends ODA {
 						tmp = name;
 					res.append(name);
 				}
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				name = locationInfo.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
+				TMCLocation secondary = location.getOffset(this.extent, this.direction);
+				name = location.getDetailedDisplayName(secondary, "at %s", "between %s and %s");
 				if (name != null) {
 					if (tmp != null)
 						res.append(", ");
@@ -962,7 +962,7 @@ public class AlertC extends ODA {
 				res.append("Inter-Road, ");
 			res.append("CC: ").append(String.format("%X", fcc));
 			res.append(", LTN: ").append(fltn);
-			res.append(", Location: ").append(location);
+			res.append(", Location: ").append(lcid);
 			if (isEncrypted)
 				res.append(" (encrypted)");
 			res.append(", extent=" + this.extent);
@@ -980,7 +980,7 @@ public class AlertC extends ODA {
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
 			res.append("<br>");
-			if (locationInfo != null) {
+			if (location != null) {
 				// http://www.openstreetmap.org/?mlat=60.31092&mlon=25.03073#map=9/60.31092/25.03073&layers=Q
 				// http://www.openstreetmap.org/directions?engine=mapquest_car&route=48.071%2C11.482%3B45.486%2C9.129
 				float[] c = this.getCoordinates();
@@ -1031,10 +1031,10 @@ public class AlertC extends ODA {
 			for(InformationBlock ib : informationBlocks) {
 				res.append(ib.html());
 			}
-			if (locationInfo != null) {
-				res.append("<hr>").append(locationInfo.html());
-				TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-				if (secondary != locationInfo)
+			if (location != null) {
+				res.append("<hr>").append(location.html());
+				TMCLocation secondary = location.getOffset(this.extent, this.direction);
+				if (secondary != location)
 					res.append("<hr>Extent:<br>").append(secondary.html());
 			}
 			res.append("</html>");
@@ -1053,9 +1053,9 @@ public class AlertC extends ODA {
 		 * resolved.
 		 */
 		public String getAreaName() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			return locationInfo.getAreaName();
+			return location.getAreaName();
 		}
 		
 		/**
@@ -1138,18 +1138,18 @@ public class AlertC extends ODA {
 		public float[] getCoordinates() {
 			float[] c1, c2;
 			// TODO do we need to deal with extent changes?
-			if (locationInfo == null)
+			if (location == null)
 				return null;
 			if (coords == null) {
 				if (direction == 0)
-					c1 = locationInfo.getFirstCoordinates();
+					c1 = location.getFirstCoordinates();
 				else
-					c1 = locationInfo.getLastCoordinates();
+					c1 = location.getLastCoordinates();
 				if ((c1 == null) || (c1.length < 2))
 					coords = new float[] {};
 				else {
-					TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-					if ((locationInfo.equals(secondary)) && (locationInfo instanceof TMCPoint))
+					TMCLocation secondary = location.getOffset(this.extent, this.direction);
+					if ((location.equals(secondary)) && (location instanceof TMCPoint))
 						coords = c1;
 					else {
 						if (direction == 0)
@@ -1181,10 +1181,10 @@ public class AlertC extends ODA {
 		 * the location of the message could not be resolved.
 		 */
 		public String getDisplayName() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-			return locationInfo.getDisplayName(secondary, this.direction, this.bidirectional);
+			TMCLocation secondary = location.getOffset(this.extent, this.direction);
+			return location.getDisplayName(secondary, this.direction, this.bidirectional);
 		}
 		
 		/**
@@ -1293,11 +1293,11 @@ public class AlertC extends ODA {
 		 * resolved.
 		 */
 		public String getPrimaryJunctionNumber() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			if (!(locationInfo instanceof TMCPoint))
+			if (!(location instanceof TMCPoint))
 				return null;
-			TMCPoint loc = (TMCPoint) locationInfo;
+			TMCPoint loc = (TMCPoint) location;
 			if ((loc.junctionNumber != null) && !loc.junctionNumber.isEmpty())
 				return loc.junctionNumber;
 			else
@@ -1311,14 +1311,14 @@ public class AlertC extends ODA {
 		 * a {@link eu.jacquet80.rds.app.oda.tmc.TMCPoint}, has no name or could not be resolved.
 		 */
 		public String getPrimaryName() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			if (!(locationInfo instanceof TMCPoint))
+			if (!(location instanceof TMCPoint))
 				return null;
-			if ((locationInfo.name1.name == null) || (locationInfo.name1.name.isEmpty()))
+			if ((location.name1.name == null) || (location.name1.name.isEmpty()))
 				return null;
 			else
-				return locationInfo.name1.name;
+				return location.name1.name;
 		}
 		
 		/**
@@ -1328,9 +1328,9 @@ public class AlertC extends ODA {
 		 * or if the location of the message could not be resolved.
 		 */
 		public String getRoadNumber() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			return locationInfo.getRoadNumber();
+			return location.getRoadNumber();
 		}
 		
 		/**
@@ -1341,10 +1341,10 @@ public class AlertC extends ODA {
 		 * junction number or could not be resolved.
 		 */
 		public String getSecondaryJunctionNumber() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-			if ((secondary == null) || (locationInfo.equals(secondary)))
+			TMCLocation secondary = location.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (location.equals(secondary)))
 				return null;
 			if (!(secondary instanceof TMCPoint))
 				return null;
@@ -1363,10 +1363,10 @@ public class AlertC extends ODA {
 		 * has no name or could not be resolved.
 		 */
 		public String getSecondaryName() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-			if ((secondary == null) || (locationInfo.equals(secondary)))
+			TMCLocation secondary = location.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (location.equals(secondary)))
 				return null;
 			if (!(secondary instanceof TMCPoint))
 				return null;
@@ -1392,11 +1392,11 @@ public class AlertC extends ODA {
 		 * be resolved.
 		 */
 		public String getShortDisplayName() {
-			if (locationInfo == null)
+			if (location == null)
 				return null;
-			String ret = locationInfo.getRoadNumber();
+			String ret = location.getRoadNumber();
 			if (ret == null)
-				ret = locationInfo.getAreaName();
+				ret = location.getAreaName();
 			if (ret == null)
 				ret = getDisplayName();
 			return ret;
@@ -1406,8 +1406,11 @@ public class AlertC extends ODA {
 			return sid;
 		}
 		
-		public int getLocation() {
-			return location;
+		/**
+		 * @brief Returns the location code of the primary location.
+		 */
+		public int getLcid() {
+			return lcid;
 		}
 		
 		/**
@@ -1472,8 +1475,8 @@ public class AlertC extends ODA {
 		 */
 		public TMCLocation getSecondaryLocation() {
 			if (extent <= 0)
-				return locationInfo;
-			return locationInfo.getOffset(this.extent, this.direction);
+				return location;
+			return location.getOffset(this.extent, this.direction);
 		}
 
 		public int getUpdateCount() {
@@ -1500,8 +1503,8 @@ public class AlertC extends ODA {
 				return false;
 			if (!checkValidity)
 				return true;
-			TMCLocation secondary = locationInfo.getOffset(this.extent, this.direction);
-			if ((secondary == null) || (locationInfo.equals(secondary)))
+			TMCLocation secondary = location.getOffset(this.extent, this.direction);
+			if ((secondary == null) || (location.equals(secondary)))
 				return false;
 			return true;
 		}
@@ -1533,7 +1536,7 @@ public class AlertC extends ODA {
 		 */
 		public boolean isFullyResolved() {
 			return ((cc >= 0) && (ltn >= 0) && (sid >= 0)
-					&& ((locationInfo != null) || (location >= LOCATION_ALL_LISTENERS)));
+					&& ((location != null) || (lcid >= LOCATION_ALL_LISTENERS)));
 		}
 		
 		/**
@@ -1717,31 +1720,32 @@ public class AlertC extends ODA {
 		 */
 		public final int speed;
 
-		public final int destination;
+		/** The location code for the destination, or -1 if not set. */
+		public final int destinationLcid;
 
 		/**
 		 * The location for the destination (null if no destination is specified or if the location
 		 * code cannot be resolved).
 		 */
-		public final TMCLocation destinationInfo;
+		public final TMCLocation destination;
 
 		private final List<Event> events;
 		
-		private final List<Integer> diversionRoute;
+		private final List<Integer> diversionLcids;
 
 		/**
 		 * @brief Constructs an information block with the given parameters.
 		 * 
 		 * This constructor is intended for use by {@link MessageBuilder}.
 		 */
-		private InformationBlock(List<Event> events, int cc, int ltn, int destination,
-				List<Integer> diversionRoute, int length, int speed) {
+		private InformationBlock(List<Event> events, int cc, int ltn, int destinationLcid,
+				List<Integer> diversionLcids, int length, int speed) {
 			this.events = events;
 			this.cc = cc;
 			this.ltn = ltn;
-			this.destination = destination;
-			this.destinationInfo = TMC.getLocation(String.format("%X", this.cc), this.ltn, destination);
-			this.diversionRoute = diversionRoute;
+			this.destinationLcid = destinationLcid;
+			this.destination = TMC.getLocation(String.format("%X", this.cc), this.ltn, destinationLcid);
+			this.diversionLcids = diversionLcids;
 			this.length = length;
 			this.speed = speed;
 		}
@@ -1774,7 +1778,7 @@ public class AlertC extends ODA {
 		 */
 		public List<TMCLocation> getDiversion() {
 			List<TMCLocation> res = new LinkedList<TMCLocation>();
-			for (int lcid : diversionRoute) {
+			for (int lcid : diversionLcids) {
 				TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 				if (location == null)
 					return new LinkedList<TMCLocation>();
@@ -1792,7 +1796,7 @@ public class AlertC extends ODA {
 		public List<Integer> getDiversionLcids() {
 			List<Integer> result = new ArrayList<Integer>();
 
-			for (int lcid : diversionRoute)
+			for (int lcid : diversionLcids)
 				result.add(lcid);
 
 			return result;
@@ -1815,10 +1819,10 @@ public class AlertC extends ODA {
 		public String toString() {
 			StringBuilder res = new StringBuilder();
 			res.append("-------------\n");
-			if (destination != -1) {
-				res.append("For destination: " + destination + "  ");
-				if (destinationInfo != null)
-					res.append(destinationInfo).append("\n");
+			if (destinationLcid != -1) {
+				res.append("For destination: " + destinationLcid + "  ");
+				if (destination != null)
+					res.append(destination).append("\n");
 			}
 			
 			if(length != -1) {
@@ -1829,15 +1833,15 @@ public class AlertC extends ODA {
 			}
 			
 			if(speed != -1) res.append("speed limit = ").append(speed).append(" km/h");
-			if(length != -1 || speed != -1 || destination != -1) res.append('\n');
+			if(length != -1 || speed != -1 || destinationLcid != -1) res.append('\n');
 			for(Event e : events) {
 				res.append(e).append('\n');
 			}
 			
-			if(diversionRoute.size() > 0) res.append("Diversion route: " + diversionRoute).append('\n');
-			if (diversionRoute.size() > 0) {
-				res.append("Diversion route: " + diversionRoute).append("\n");
-				for (int lcid : diversionRoute) {
+			if(diversionLcids.size() > 0) res.append("Diversion route: " + diversionLcids).append('\n');
+			if (diversionLcids.size() > 0) {
+				res.append("Diversion route: " + diversionLcids).append("\n");
+				for (int lcid : diversionLcids) {
 					res.append("#").append(lcid);
 					TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 					if (location != null)
@@ -1851,10 +1855,10 @@ public class AlertC extends ODA {
 		public String html() {
 			StringBuilder res = new StringBuilder();
 			res.append("<hr>");
-			if (destination != -1) {
-				res.append("For destination: " + destination + "  ");
-				if (destinationInfo != null)
-					res.append("<blockquote>").append(destinationInfo.html()).append("</blockquote>");
+			if (destinationLcid != -1) {
+				res.append("For destination: " + destinationLcid + "  ");
+				if (destination != null)
+					res.append("<blockquote>").append(destination.html()).append("</blockquote>");
 			}
 			
 			if(length != -1) {
@@ -1865,14 +1869,14 @@ public class AlertC extends ODA {
 			}
 			
 			if(speed != -1) res.append("speed limit = ").append(speed).append(" km/h");
-			if(length != -1 || speed != -1 || destination != -1) res.append("<br>");
+			if(length != -1 || speed != -1 || destinationLcid != -1) res.append("<br>");
 			for(Event e : events) {
 				res.append(e.html()).append("<br>");
 			}
 			
-			if (diversionRoute.size() > 0) {
-				res.append("Diversion route: " + diversionRoute).append("<br><ul>");
-				for (int lcid : diversionRoute) {
+			if (diversionLcids.size() > 0) {
+				res.append("Diversion route: " + diversionLcids).append("<br><ul>");
+				for (int lcid : diversionLcids) {
 					res.append("<li>").append(lcid);
 					TMCLocation location = TMC.getLocation(String.format("%X", cc), ltn, lcid);
 					if (location != null)
@@ -1895,7 +1899,7 @@ public class AlertC extends ODA {
 		private final EventUrgency urgency;
 		private final EventNature nature;
 		private final EventDurationType durationType;
-		public final int sourceLocation;
+		public final int sourceLcid;
 
 		public final int quantifier;
 		private final List<SupplementaryInfo> suppInfo;
@@ -1905,7 +1909,7 @@ public class AlertC extends ODA {
 		 * 
 		 * This constructor is intended for use by {@link MessageBuilder}.
 		 */
-		private Event(int id, int quantifier, int cc, int ltn, int sourceLocation, List<SupplementaryInfo> suppInfo) {
+		private Event(int id, int quantifier, int cc, int ltn, int sourceLcid, List<SupplementaryInfo> suppInfo) {
 			this.tmcEvent = TMC.getEvent(id);
 
 			if (this.tmcEvent == null) {
@@ -1918,7 +1922,7 @@ public class AlertC extends ODA {
 			this.quantifier = quantifier;
 			this.cc = cc;
 			this.ltn = ltn;
-			this.sourceLocation = sourceLocation;
+			this.sourceLcid = sourceLcid;
 			this.suppInfo = suppInfo;
 		}
 
@@ -1970,7 +1974,7 @@ public class AlertC extends ODA {
 			res.append(", urgency=").append(urgency);
 			res.append(", nature=").append(nature);
 			res.append(", durationType=").append(durationType);
-			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
+			if(this.sourceLcid != -1) res.append(", source problem at ").append(this.sourceLcid);
 			if(this.quantifier != -1) res.append(" (Q=").append(quantifier).append(')');
 			if(this.suppInfo.size() > 0) res.append("\nSupplementary information: ").append(this.suppInfo);
 			return res.toString();
@@ -1982,7 +1986,7 @@ public class AlertC extends ODA {
 			res.append(", urgency=").append(urgency);
 			res.append(", nature=").append(nature);
 			res.append(", durationType=").append(durationType);
-			if(this.sourceLocation != -1) res.append(", source problem at ").append(this.sourceLocation);
+			if(this.sourceLcid != -1) res.append(", source problem at ").append(this.sourceLcid);
 			if(this.suppInfo.size() > 0) {
 				res.append("<font color='#555555'><br>Supplementary information: <br>");
 				for(SupplementaryInfo si : suppInfo) {
@@ -2039,7 +2043,7 @@ public class AlertC extends ODA {
 				return 1;
 			
 			/* Then compare by primary location codes */
-			res = lhs.location - rhs.location;
+			res = lhs.lcid - rhs.lcid;
 			if (res != 0)
 				return res;
 			
@@ -2080,7 +2084,7 @@ public class AlertC extends ODA {
 		private int evQuantifier;
 
 		/** The source location for this event. */
-		private int evSourceLocation;
+		private int evSourceLcid;
 
 		/** Supplementary information for this event. */
 		private List<SupplementaryInfo> evSuppInfo;
@@ -2098,7 +2102,7 @@ public class AlertC extends ODA {
 		private int ibDestination;
 
 		/** The diversion route for this information block. */
-		private List<Integer> ibDiversionRoute;
+		private List<Integer> ibDiversionLcids;
 
 		/** Completed events for this information block. */
 		private List<Event> ibEvents;
@@ -2119,7 +2123,7 @@ public class AlertC extends ODA {
 		private boolean interroad;
 
 		/** The raw location code. */
-		private int location;
+		private int lcid;
 
 		/** The Location Table Number (LTN) of the service that sent the message. */
 		private int ltn = -1;
@@ -2177,8 +2181,8 @@ public class AlertC extends ODA {
 		 * 
 		 * @param diversion
 		 */
-		public void addDiversion(int diversion) {
-			this.ibDiversionRoute.add(diversion);
+		public void addDiversionLcid(int diversion) {
+			this.ibDiversionLcids.add(diversion);
 		}
 
 		/**
@@ -2282,11 +2286,11 @@ public class AlertC extends ODA {
 				//addInformationBlock();
 				// TODO the spec says we should maybe create a new information block
 				// also, a 11 may be followed only by a 6 (sup info)
-				setDestination(value);
+				setDestinationLcid(value);
 				break;
 
 			case 10:
-				addDiversion(value);
+				addDiversionLcid(value);
 				break;
 
 			case 13:
@@ -2373,7 +2377,7 @@ public class AlertC extends ODA {
 				this.durationType = this.durationType.invert();
 
 			res = new Message(this.date, this.timeZone, this.cc, this.ltn, this.sid,
-					this.encrypted, this.interroad, this.fcc, this.fltn, this.location,
+					this.encrypted, this.interroad, this.fcc, this.fltn, this.lcid,
 					this.direction, this.bidirectional, this.extent, this.diversion,
 					this.durationType, this.duration, this.startTime, this.stopTime, this.nature,
 					this.urgency, this.spoken, this.informationBlocks, this.updateCount);
@@ -2434,7 +2438,7 @@ public class AlertC extends ODA {
 			this.increasedUrgency = 0;
 			this.informationBlocks = new ArrayList<InformationBlock>();
 			this.interroad = false;
-			this.location = -1;
+			this.lcid = -1;
 			this.nature = null;
 			this.reversedDirectionality = false;
 			this.reversedDurationType = false;
@@ -2495,7 +2499,7 @@ public class AlertC extends ODA {
 		 * 
 		 * @param destination
 		 */
-		public void setDestination(int destination) {
+		public void setDestinationLcid(int destination) {
 			this.ibDestination = destination;
 		}
 
@@ -2554,15 +2558,6 @@ public class AlertC extends ODA {
 		}
 
 		/**
-		 * @brief Sets the route length for the current information block.
-		 * 
-		 * @param length
-		 */
-		public void setLength(int length) {
-			this.ibLength = length;
-		}
-
-		/**
 		 * @brief Sets the location for the message.
 		 * 
 		 * To process an INTER-ROAD location, call this method twice: first with the FLTN as
@@ -2570,14 +2565,23 @@ public class AlertC extends ODA {
 		 * 
 		 * @param location
 		 */
-		public void setLocation(int location) {
+		public void setLcid(int location) {
 			if ((location < Message.LOCATION_INTER_ROAD) || (location >= Message.LOCATION_ALL_LISTENERS)) {
-				this.location = location;
+				this.lcid = location;
 			} else {
 				this.interroad = true;
 				this.fcc = (location >> 6) & 0xF;
 				this.fltn = location & 0x3F;
 			}
+		}
+
+		/**
+		 * @brief Sets the route length for the current information block.
+		 * 
+		 * @param length
+		 */
+		public void setLength(int length) {
+			this.ibLength = length;
 		}
 
 		/**
@@ -2656,7 +2660,7 @@ public class AlertC extends ODA {
 		public void setSourceLocation(int sourceLocation) throws IllegalStateException {
 			if (evId == -1)
 				throw new IllegalStateException("Cannot set event data before an event has been added");
-			this.evSourceLocation = sourceLocation;
+			this.evSourceLcid = sourceLocation;
 		}
 
 		/**
@@ -2722,7 +2726,7 @@ public class AlertC extends ODA {
 			if (evId == -1)
 				throw new IllegalStateException("Missing event code");
 			this.ibEvents.add(new Event(this.evId, this.evQuantifier, this.fcc, this.fltn,
-					this.evSourceLocation, this.evSuppInfo));
+					this.evSourceLcid, this.evSuppInfo));
 			resetEvent();
 		}
 
@@ -2746,7 +2750,7 @@ public class AlertC extends ODA {
 			if (this.ibEvents.isEmpty())
 				throw new IllegalStateException("Cannot create an information block without events");
 			this.informationBlocks.add(new InformationBlock(this.ibEvents, this.fcc, this.fltn,
-					this.ibDestination,	this.ibDiversionRoute, this.ibLength, this.ibSpeed));
+					this.ibDestination,	this.ibDiversionLcids, this.ibLength, this.ibSpeed));
 			resetInformationBlock();
 		}
 
@@ -2761,7 +2765,7 @@ public class AlertC extends ODA {
 		private boolean hasEventData() {
 			return (this.evId != -1)
 					|| (this.evQuantifier != -1)
-					|| (this.evSourceLocation != -1)
+					|| (this.evSourceLcid != -1)
 					|| !this.evSuppInfo.isEmpty();
 		}
 
@@ -2778,7 +2782,7 @@ public class AlertC extends ODA {
 					|| (this.ibLength != -1)
 					|| (this.ibSpeed != -1)
 					|| (this.ibDestination != -1)
-					|| !this.ibDiversionRoute.isEmpty()
+					|| !this.ibDiversionLcids.isEmpty()
 					|| !this.ibEvents.isEmpty();
 		}
 
@@ -2790,7 +2794,7 @@ public class AlertC extends ODA {
 		private void resetEvent() {
 			this.evId = -1;
 			this.evQuantifier = -1;
-			this.evSourceLocation = -1;
+			this.evSourceLcid = -1;
 			this.evSuppInfo = new ArrayList<SupplementaryInfo>();
 		}
 
@@ -2805,7 +2809,7 @@ public class AlertC extends ODA {
 			this.ibLength = -1;
 			this.ibSpeed = -1;
 			this.ibDestination = -1;
-			this.ibDiversionRoute = new ArrayList<Integer>();
+			this.ibDiversionLcids = new ArrayList<Integer>();
 			this.ibEvents = new ArrayList<Event>();
 		}
 	}
