@@ -2,15 +2,15 @@ package eu.jacquet80.rds.app.oda.tmc;
 
 
 public class TMCEvent {
-	public int code;
-	public String text;
-	public String textQ;
-	public EventNature nature; // N (blank, F, S)
-	public int quantifierType; // Q
-	public EventDurationType durationType; // T duration type (D=Dynamic, L=Longer lasting)
-	public boolean bidirectional; // D directionality (1=unidirectional, 2=bidirectional)
-	public EventUrgency urgency; // U (blank, U, X)
-	public int updateClass;  // C
+	public final int code;
+	public final String text;
+	public final String textQ;
+	public final EventNature nature; // N (blank, F, S)
+	public final int quantifierType; // Q
+	public final EventDurationType durationType; // T duration type (D=Dynamic, L=Longer lasting)
+	public final boolean bidirectional; // D directionality (1=unidirectional, 2=bidirectional)
+	public final EventUrgency urgency; // U (blank, U, X)
+	public final int updateClass;  // C
 	// R phrasal code (NOT TO BE IMPLEMENTED HERE)
 	
 	public static enum EventDurationType {
@@ -138,8 +138,10 @@ public class TMCEvent {
 		String[] comp = TMC.colonPattern.split(line);
 		this.code = Integer.parseInt(comp[0]);
 		this.textQ = comp[1];
-		this.text = comp[2];
-		if(this.text.length() == 0) this.text = this.textQ;
+		if (comp[2].length() > 0)
+			this.text = comp[2];
+		else
+			this.text = this.textQ;
 		this.nature = EventNature.forCode(comp[5]);
 		
 		if("".equals(comp[6])) {
