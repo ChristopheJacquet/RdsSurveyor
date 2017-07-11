@@ -67,6 +67,9 @@ import eu.jacquet80.rds.log.RealTime;
  * data and accept only valid response sentences.
  */
 public class GnsGroupReader extends TunerGroupReader {
+	/** Unknown command set */
+	private static final int CMD_SET_UNKNOWN = -1;
+
 	/** FM9 command set */
 	private static final int CMD_SET_FM9 = 0;
 
@@ -108,7 +111,7 @@ public class GnsGroupReader extends TunerGroupReader {
 	private static final int[] OPCODE_TUNE = {0x73, 0x46};
 
 	/** The command set used by this device */
-	private int cmdSet = -1;
+	private int cmdSet = CMD_SET_UNKNOWN;
 
 	private GnsData gnsData = new GnsData();
 
