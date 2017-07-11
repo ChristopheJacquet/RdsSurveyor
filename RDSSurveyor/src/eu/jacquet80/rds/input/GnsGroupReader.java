@@ -420,7 +420,7 @@ public class GnsGroupReader extends TunerGroupReader {
 							System.err.printf(" %02X", responseData[i]);
 						System.err.print("\n");
 						int discard = 1;
-						while ((discard < 9) && ((responseData[discard] != DELIM_RESPONSE) || (responseData[discard + 1] != DELIM_RESPONSE)))
+						while ((discard < 9) && ((responseData[discard] != DELIM_RESPONSE) || (responseData[discard + 1] == DELIM_RESPONSE)))
 							discard++;
 						/* 
 						 * if we're discarding all but the last character, check if it's a
