@@ -501,6 +501,10 @@ public class GnsGroupReader extends TunerGroupReader {
 							// NOP
 						}
 						continue;
+					} else if (res == 0x530000000000l) {
+						/* response to disable command, discard silently */
+						System.out.println("Disable response received.");
+						continue;
 					}
 				} else if (opcodes.contains(OPCODE_IDENTIFICATION[cmdSet])) {
 					/* we requested an identification */
