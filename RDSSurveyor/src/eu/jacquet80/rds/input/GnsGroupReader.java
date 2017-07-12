@@ -156,14 +156,14 @@ public class GnsGroupReader extends TunerGroupReader {
 		this.out = out;
 
 		try {
-			System.out.println("\nSending disable command and flushing buffer");
+			System.out.println("Sending disable command and flushing buffer");
 			/* Disable to stop any data delivery from a previous instance */
 			sendCommand(OPCODE_DISABLE, 0x78, 0x78);
 
 			responseReader = new ResponseReader();
 			responseReader.start();
 
-			System.out.println("\nSending enable command");
+			System.out.println("Sending enable command");
 			sendCommand(OPCODE_ENABLE, 0x78, 0x78);
 
 			System.out.println("Probing to determine command set");
