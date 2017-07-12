@@ -488,14 +488,12 @@ public class GnsGroupReader extends TunerGroupReader {
 						continue;
 					} else if (opcodes.contains(intData[3])) {
 						/* this is the response to a previously issued command */
+						/* OPCODE_DISABLE is already handled above */
 						/* OPCODE_ENABLE is already handled above */
 						/* OPCODE_IDENTIFICATION is not repeated in the response */
 						/* OPCODE_SEEK_STATUS is not a valid command opcode */
 						/* OPCODE_TUNE is already handled above */
-						if (intData[3] == OPCODE_DISABLE[cmdSet]) {
-							/* nothing to do */
-							System.out.println("Disable response received");
-						} else if ((intData[3] == OPCODE_SEEK_UP[cmdSet])
+						if ((intData[3] == OPCODE_SEEK_UP[cmdSet])
 								|| (intData[3] == OPCODE_SEEK_DOWN[cmdSet])) {
 							if ("ok".equals(new String(intData, 5, 2)))
 								System.out.println("Starting seek operation");
