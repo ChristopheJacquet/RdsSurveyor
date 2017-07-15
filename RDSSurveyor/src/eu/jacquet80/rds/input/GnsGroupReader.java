@@ -26,6 +26,7 @@
 
 package eu.jacquet80.rds.input;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -66,7 +67,7 @@ import eu.jacquet80.rds.log.RealTime;
  * commands via an {@link InputStream}. This class has only rudimentary logic to discard invalid
  * data and accept only valid response sentences.
  */
-public class GnsGroupReader extends TunerGroupReader {
+public class GnsGroupReader extends TunerGroupReader implements Closeable {
 	/** Unknown command set */
 	private static final int CMD_SET_UNKNOWN = -1;
 
@@ -192,6 +193,16 @@ public class GnsGroupReader extends TunerGroupReader {
 		}
 
 		setFrequency(87500);
+	}
+
+	/**
+	 * @brief Closes this GroupReader.
+	 * 
+	 * The input and output streams are left open and must be closed by the caller as needed.
+	 */
+	@Override
+	public void close() throws IOException {
+		sendCommand(OPCODE_DISABLE, 0x78, 0x78);
 	}
 
 	@Override
