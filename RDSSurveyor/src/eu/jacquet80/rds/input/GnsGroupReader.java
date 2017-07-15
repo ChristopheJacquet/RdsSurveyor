@@ -203,6 +203,7 @@ public class GnsGroupReader extends TunerGroupReader implements Closeable {
 	@Override
 	public void close() throws IOException {
 		sendCommand(OPCODE_DISABLE, 0x78, 0x78);
+		responseReader.interrupt();
 	}
 
 	@Override
