@@ -1,0 +1,44 @@
+apply plugin: 'java'
+
+group = 'eu.jacquet80.rds'
+archivesBaseName = 'rdssurveyor'
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+javadoc.options.links("http://docs.oracle.com/javase/7/docs/api/")
+
+jar {
+  manifest {
+    attributes 'Class-Path': '.',
+               'Main-Class': 'eu.jacquet80.rds.RDSSurveyor'
+  }
+}
+
+dependencies {
+    compile fileTree(dir: 'lib', include: '*.jar')
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+        resources {
+            srcDirs = ['src']
+        }
+    }
+}
+
+task javadocJar(type: Jar) {
+  classifier = 'javadoc'
+  from javadoc
+}
+
+task sourcesJar(type: Jar) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives jar, javadocJar, sourcesJar
+}
