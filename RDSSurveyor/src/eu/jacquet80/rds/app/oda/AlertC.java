@@ -2558,15 +2558,6 @@ public class AlertC extends ODA {
 		}
 
 		/**
-		 * @brief Copies data from an existing message.
-		 * 
-		 * @param message
-		 */
-		public void setMessage(Message message) {
-			// TODO
-		}
-
-		/**
 		 * @brief Sets the event nature for the entire message.
 		 * 
 		 * This will override previous implicit value set by {@link #setDuration(int)}. However,
