@@ -1,8 +1,8 @@
 package eu.jacquet80.rds.app.oda.tmc;
 
 public class SupplementaryInfo {
-	public int code;
-	public String text;
+	public final int code;
+	public final String text;
 
 	SupplementaryInfo(String line) {
 		String[] comp = TMC.colonPattern.split(line);

@@ -246,6 +246,25 @@ public abstract class TMCLocation {
 		return null;
 	}
 	
+	/**
+	 * @brief Whether this location is the direct or indirect child of another location.
+	 * 
+	 * The base class, {@code TMCLocation}, has a reference to an area. If it is non-null, then the
+	 * instance is a child of that area (and any other location that the area is a child of).
+	 * 
+	 * Descendants of {@code TMCLocation} can have additional parent objects.
+	 * 
+	 * @param location The potential parent location.
+	 * @return True if this location is a child of {@code location}, false if not.
+	 */
+	public boolean isChildOf(TMCLocation location) {
+		if (area == null)
+			return false;
+		if (location.equals(area))
+			return true;
+		return area.isChildOf(location);
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder res = new StringBuilder("CID: ").append(cid);

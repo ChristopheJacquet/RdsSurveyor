@@ -212,7 +212,12 @@ public class TMC {
 	public static TMCEvent getEvent(int code) {
 		TMCEvent r = EVENTS.get(code);
 		if(r == null) {
-			r = new TMCEvent(code + ";unknown#" + code + ";;;;;;D;1;;1;A50;");
+			/* 
+			 * Event not in list. Create a new event on the fly.
+			 * Update class for undefined events is 0 (illegal in TMC) so that these events will
+			 * never update valid ones, and can easily be recognized.
+			 */
+			r = new TMCEvent(code + ";unknown#" + code + ";;;;;;D;1;;0;Y7;");
 		}
 		return r;
 	}
