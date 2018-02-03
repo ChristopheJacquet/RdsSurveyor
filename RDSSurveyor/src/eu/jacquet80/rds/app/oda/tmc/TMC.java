@@ -38,7 +38,7 @@ public class TMC {
 		// 7 - Languages - LANGUAGES.DAT; skipped for now
 		// 8 - EuroRoadNo - EUROROADNO.DAT; skipped for now;
 		// 9 - Names - NAMES.DAT;
-		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100) not null, NCOMMENT varchar(100), primary key(CID, NID), foreign key(CID) references Countries(CID) on delete cascade);",
+		"create cached table if not exists Names(CID integer, LID integer, NID integer, NAME varchar(100) not null, NCOMMENT varchar(100), OFFICIALNAME varchar(100), primary key(CID, NID), foreign key(CID) references Countries(CID) on delete cascade);",
 		// 10 - NameTranslations - NAMETRANSLATIONS.DAT; skipped for now
 		// 11 - SubtypeTranslations - SUBTYPETRANSLATIONS.DAT; skipped for now
 		// 12 - ERNo_belongs_to_country - ERNO_BELONGS_TO_CO.DAT; skipped for now
