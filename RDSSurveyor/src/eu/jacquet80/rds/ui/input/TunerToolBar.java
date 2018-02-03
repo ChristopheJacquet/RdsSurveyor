@@ -92,6 +92,8 @@ public class TunerToolBar extends InputToolBar {
 	
 	private void tune() {
 		String res = JOptionPane.showInputDialog(null, "Enter frequency to tune to", Double.toString(frequency/1000.));
+		if (res == null)
+			return;
 		try {
 			double freq = Double.parseDouble(res);
 			if(freq >= 87.5 && freq <= 108.) {
