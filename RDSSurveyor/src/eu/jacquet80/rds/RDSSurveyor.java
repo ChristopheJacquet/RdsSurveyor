@@ -28,6 +28,7 @@ package eu.jacquet80.rds;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
@@ -37,6 +38,8 @@ import java.util.Locale;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.fazecast.jSerialComm.SerialPort;
 
 import eu.jacquet80.rds.app.oda.TDC;
 import eu.jacquet80.rds.app.oda.tmc.TMC;
@@ -51,6 +54,7 @@ import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.FileFormatGuesser;
+import eu.jacquet80.rds.input.GnsGroupReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
@@ -198,6 +202,22 @@ public class RDSSurveyor {
 				} else if("-insdr".equals(args[i])) {
 					reader = new SdrGroupReader(console, getParam("insdr", args, ++i));
 					liveGroupInput = true;
+				} else if("-ingns".equals(args[i])) {
+					int baudRate = 38400;
+					String port = getParam("ingns", args, ++i);
+					System.out.printf("Using device on port %s\n", port);
+					SerialPort comPort = SerialPort.getCommPort(port);
+					comPort.setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
+					comPort.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
+					if (!comPort.openPort()) {
+						System.err.println("Could not open port for input. Aborting.");
+						System.exit(1);
+					}
+					comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
+					InputStream in = comPort.getInputStream();
+					OutputStream out = comPort.getOutputStream();
+					reader = new GnsGroupReader(in, out);
+					liveGroupInput = true;
 				} else if("-invert".equals(args[i])) {
 					inversion = BitInversion.INVERT;
 				} else if("-noinvert".equals(args[i])) {
@@ -266,6 +286,7 @@ public class RDSSurveyor {
 					System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 					System.out.println("  -intuner <driver>        Reads from a native tuner, specify driver (.so, .dll, .dylib)");
 					System.out.println("  -insdr <driver>          Reads from an SDR, specify driver (.so, .dll, .dylib)");
+					System.out.println("  -ingns <port>            Reads from a GNS TMC tuner, specify port (tty*, COM*)");
 					System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 					System.out.println("  -outbinfile <file>       Write bitstream to binary file (if applicable)");
 					System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
