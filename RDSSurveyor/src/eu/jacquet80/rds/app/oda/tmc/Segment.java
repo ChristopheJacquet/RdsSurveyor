@@ -132,16 +132,62 @@ public class Segment extends TMCLocation {
 		return ret;
 	}
 	
-	private Segment getNegOffset() {
+	public Segment getNegOffset() {
 		if ((this.negOffset == null) && (this.negOffLcd != -1))
 			this.negOffset = TMC.getSegment(this.cid, this.tabcd, this.negOffLcd);
 		return this.negOffset;
 	}
 	
-	private Segment getPosOffset() {
+	public Segment getPosOffset() {
 		if ((this.posOffset == null) && (this.posOffLcd != -1))
 			this.posOffset = TMC.getSegment(this.cid, this.tabcd, this.posOffLcd);
 		return this.posOffset;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the first point of this Location.
+	 *
+	 * For a ROAD or SEGMENT location, this method determines if the location is further divided
+	 * into segments. In that case, the first segment is identified (the only segment whose
+	 * negative offset location is empty) and the coordinates of its first point are returned.
+	 * 
+	 * If the location is not segmented, its first point is identified (the only point whose
+	 * negative offset location AND interruptsRoad are empty) and its coordinates are returned.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getFirstCoordinates() {
+		TMCPoint point = TMC.getFirstPoint(this.cid, this.tabcd, this.lcd);
+		if (point != null)
+			return point.getFirstCoordinates();
+		Segment segment = TMC.getFirstSegment(this.cid, this.tabcd, this.lcd);
+		if (segment != null)
+			return segment.getFirstCoordinates();
+		return null;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the last point of this Location.
+	 *
+	 * For a ROAD or SEGMENT location, this method determines if the location is further divided
+	 * into segments. In that case, the last segment is identified (the only segment whose
+	 * positive offset location is empty) and the coordinates of its last point are returned.
+	 * 
+	 * If the location is not segmented, its last point is identified (the only point whose
+	 * positive offset location AND interruptsRoad are empty) and its coordinates are returned.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getLastCoordinates() {
+		TMCPoint point = TMC.getLastPoint(this.cid, this.tabcd, this.lcd);
+		if (point != null)
+			return point.getLastCoordinates();
+		Segment segment = TMC.getLastSegment(this.cid, this.tabcd, this.lcd);
+		if (segment != null)
+			return segment.getLastCoordinates();
+		return null;
 	}
 	
 	/**
@@ -177,6 +223,29 @@ public class Segment extends TMCLocation {
 		if ((ret == null) && (!"".equals(this.roadNumber)))
 			ret = this.roadNumber;
 		return ret;
+	}
+
+	/**
+	 * @brief Whether this location is the direct or indirect child of another location.
+	 * 
+	 * {@code Segment} has a reference to an area, a segment and a road. If any of these is
+	 * non-null, then the instance is a child of that location (and any other location that the
+	 * parent location is a child of).
+	 * 
+	 * @param location The potential parent location.
+	 * @return True if this location is a child of {@code location}, false if not.
+	 */
+	@Override
+	public boolean isChildOf(TMCLocation location) {
+		if (location.equals(area) || location.equals(road) || location.equals(segment))
+			return true;
+		if ((area != null) && area.isChildOf(location))
+			return true;
+		if ((road != null) && road.isChildOf(location))
+			return true;
+		if ((segment != null) && segment.isChildOf(location))
+			return true;
+		return false;
 	}
 
 	@Override

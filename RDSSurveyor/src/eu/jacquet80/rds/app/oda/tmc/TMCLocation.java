@@ -70,6 +70,30 @@ public abstract class TMCLocation {
 	}
 	
 	/**
+	 * @brief Returns the name of the area in which the location is situated.
+	 * 
+	 * If the location is within an area of a lower order than A10.x (town), the name of the town
+	 * is returned.
+	 * 
+	 * This method is somewhat resilient to incomplete or corrupt data: if the area hierarchy is
+	 * interrupted and no A10.x area is found, the name of the highest-order area is returned. If
+	 * no area information is found at all, this method will return {@code null}.
+	 * 
+	 * @return The area name, or {@code null} if no area name can be found.
+	 */
+	public String getAreaName() {
+		String ret = null; // higher-order administrative area name
+		TMCArea a = area;
+		if ((a != null) && (a.name1 != null)) {
+			// when enclosing area is a town district, we want the town (A10.x or higher), not the district
+			while ((a.tcd > 10) && (a.area != null))
+				a = a.area;
+			ret = a.name1.name;
+		}
+		return ret;
+	}
+	
+	/**
 	 * @brief Returns a string specifying the exact location in a road, in a user-friendly form.
 	 * 
 	 * The result of this method is intended to be used as a refinement to the results of
@@ -108,25 +132,31 @@ public abstract class TMCLocation {
 	 * <li>{@code name1 - name2 (roadName)} (for roads with endpoints and a name)</li>
 	 * <li>{@code name1 - name2} (for roads with endpoints but no road name)</li>
 	 * <li>{@code roadName} (for roads with only a road name, e.g. ring roads)</li>
-	 * <li>{@code areaName, roadName} (for roads with no road number, e.g. urban roads)</li>
+	 * <li>{@code roadName, areaName} (for roads with no road number, e.g. urban roads)</li>
 	 * </ul>
 	 * 
 	 * Where endpoint names {@code name1} and {@code name2} are used, they are reordered to match
-	 * the travel direction of affected traffic (is opposite to the direction of queue growth).
+	 * the travel direction of affected traffic (opposite to the direction of queue growth).
 	 * 
 	 * @param secondary The secondary location. If supplied, this method will try to return the names
 	 * for the lowest-order segment or road which spans both locations.
 	 * @param direction The direction of queue growth (0 for positive), used to order names correctly.
+	 * @param bidirectional Whether the message applies to one or both directions.
 	 * @return A user-friendly string describing the location of the event.
 	 */
-	public String getDisplayName(TMCLocation secondary, int direction) {
+	public String getDisplayName(TMCLocation secondary, int direction, boolean bidirectional) {
 		if ((secondary == null) || (this.equals(secondary))) {
 			String n1n2 = null; // endpoint names, ordered
 			if ((name1 != null) && (name2 != null)) {
-				if (direction != 0)
-					n1n2 = String.format("%s – %s", name1.name, name2.name);
+				if (bidirectional)
+					/* bidirectional */
+					n1n2 = String.format("%s ↔ %s", name2.name, name1.name);
+				else if (direction != 0)
+					/* negative */
+					n1n2 = String.format("%s → %s", name1.name, name2.name);
 				else
-					n1n2 = String.format("%s – %s", name2.name, name1.name);
+					/* positive */
+					n1n2 = String.format("%s → %s", name2.name, name1.name);
 			}
 			
 			String lname = null; // location name (roadName or name1)
@@ -135,14 +165,7 @@ public abstract class TMCLocation {
 			else if ((name1 != null) && (name2 == null))
 				lname = name1.name;
 			
-			String aname = null; // higher-order administrative area name
-			TMCArea a = area;
-			if ((a != null) && (a.name1 != null)) {
-				// when enclosing area is a town district, we want the town (A10.x or higher), not the district
-				while ((a.tcd > 10) && (a.area != null))
-					a = a.area;
-				aname = a.name1.name;
-			}
+			String aname = getAreaName();
 			
 			if ((n1n2 != null) && (lname != null))
 				return String.format("%s (%s)", n1n2, lname);
@@ -160,7 +183,7 @@ public abstract class TMCLocation {
 		TMCLocation loc = this.getEnclosingLocation(secondary);
 		if (loc == null)
 			return null;
-		return loc.getDisplayName(null, direction);
+		return loc.getDisplayName(null, direction, bidirectional);
 	}
 	
 	/**
@@ -175,6 +198,30 @@ public abstract class TMCLocation {
 			return this;
 		else
 			return null;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the first point of this Location.
+	 *
+	 * This is a dummy implementation which can be used for all subclasses which have no explicit
+	 * or implicit coordinates. It will simply return {@code null}.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	public float[] getFirstCoordinates() {
+		return null;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the last point of this Location.
+	 *
+	 * This is a dummy implementation which can be used for all subclasses which have no explicit
+	 * or implicit coordinates. It will simply return {@code null}.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	public float[] getLastCoordinates() {
+		return null;
 	}
 	
 	/**
@@ -199,6 +246,25 @@ public abstract class TMCLocation {
 		return null;
 	}
 	
+	/**
+	 * @brief Whether this location is the direct or indirect child of another location.
+	 * 
+	 * The base class, {@code TMCLocation}, has a reference to an area. If it is non-null, then the
+	 * instance is a child of that area (and any other location that the area is a child of).
+	 * 
+	 * Descendants of {@code TMCLocation} can have additional parent objects.
+	 * 
+	 * @param location The potential parent location.
+	 * @return True if this location is a child of {@code location}, false if not.
+	 */
+	public boolean isChildOf(TMCLocation location) {
+		if (area == null)
+			return false;
+		if (location.equals(area))
+			return true;
+		return area.isChildOf(location);
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder res = new StringBuilder("CID: ").append(cid);

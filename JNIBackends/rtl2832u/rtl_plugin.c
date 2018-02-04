@@ -75,6 +75,7 @@
 
 #include <rtl-sdr.h>
 #include "convenience/convenience.h"
+#include "kissfft/kiss_fftr.h"
 
 /* The default sample rate.
  * Samples will be collected at this rate and resampled if needed.
@@ -94,6 +95,8 @@
 /* Minimum RSSI to stop during seek */
 #define RSSI_MIN            -7.5
 #define RSSI_MIN_DX         -10
+#define RSSI_INVALID        -100
+
 
 static volatile int do_exit = 0;
 static int lcm_post[17] = {1,1,1,3,1,5,3,7,1,9,5,11,3,13,7,15,1};
@@ -122,9 +125,14 @@ struct dongle_state
 	int      dev_index;
 	uint32_t freq;       /**< The current frequency in Hz, corrected. */
 	uint32_t rate;
-	int      gain;
+	int      gain;       /**< Tuner gain, in multiples of 0.1 dB. If the tuner does not support
+	                          this level, it will be changed to the nearest supported level. */
+	int      *gains;     /**< Gain levels supported by the tuner. */
+	uint16_t gains_len;  /**< Number of supported gain levels. */
 	uint16_t buf16[MAXIMUM_BUF_LENGTH];
 	uint32_t buf_len;
+	uint8_t  minSample;  /**< Lowest-value sample encountered, used for gain control */
+	uint8_t  maxSample;  /**< Highest-value sample encountered, used for gain control */
 	int      ppm_error;
 	int      offset_tuning;
 	int      direct_sampling;
@@ -152,7 +160,6 @@ struct demod_state
 	int      prev_index;
 	int      downsample;    /* min 1, max 256 */
 	int      post_downsample;
-	int      output_scale;
 	int      downsample_passes;
 	int      comp_fir_size;
 	int      custom_atan;
@@ -160,10 +167,9 @@ struct demod_state
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
-	void     (*mode_demod)(struct demod_state*);
 	pthread_rwlock_t rw;
-	pthread_cond_t ready;
-	pthread_mutex_t ready_m;
+	pthread_cond_t ready;                /**< Signals that samples are available for demodulation */
+	pthread_mutex_t ready_m;             /**< Mutex to control access to {@code ready} */
 	struct output_state *output_target;
 	double   rssi;  /**< signal strength in dBm */
 
@@ -249,6 +255,40 @@ double log2(double n)
 	return log(n) / log(2.0);
 }
 #endif
+
+/**
+ * @brief Calculates the base 2 logarithm, rounded to an adjacent integer.
+ *
+ * @param n The argument of the log function
+ * @param ceiling If true, round up, else round down; meaningless if {@code n} is a power of 2.
+ */
+int int_log2(int n, short ceiling) {
+	short rounded = 0;
+	int result = 0;
+	while (n > 1) {
+		rounded |= (n & 0x1);
+		n = n >> 1;
+		result++;
+	}
+	if (ceiling)
+		result += rounded;
+	return result;
+}
+
+/** FFT input buffer ({@code nfft} scalar points) */
+kiss_fft_scalar* fft_in;
+
+/** FFT output buffer ({@code nfft/2 + 1} complex points) */
+kiss_fft_cpx* fft_out;
+
+/** Spectrum of demodulated FM baseband, in multiples of .01 dB ({@code nfft/2 + 1} integer items) */
+int16_t* spectrum;
+
+/** FFT size (number of input samples), must be a power of two */
+int nfft;
+
+/** FFT configuration */
+kiss_fftr_cfg kiss_cfg;
 
 void rotate_90(unsigned char *buf, uint32_t len)
 /* 90 rotation is 1+0j, 0+1j, -1+0j, 0-1j
@@ -614,11 +654,77 @@ double dbm(int16_t *samples, int len, int step) {
 	dc = (double)(t*step) / (double)len;
 	err = t * 2 * dc - dc * dc * len;
 
-	/* FIXME: for some reason 10 * log10 is off by 20-22 compared to output from rtl_power, hence
-	 * the correction below - not sure if that is correct. If the offset is changed, the signal
-	 * level thresholds will have to be changed accordingly.
-	 */
-	return 10 * log10((p-err) / len) - 21;
+	return 10 * log10((p-err) / len);
+}
+
+/**
+ * @brief Determines signal quality to identify valid stations.
+ *
+ * Because RSSI is not sufficient to identify valid stations, as some frequencies have noise which
+ * is stronger than some valid stations, this function provides an additional tool to determine if
+ * the current station is valid.
+ *
+ * It works by doing an FFT across the demodulated FM baseband spectrum and analyzing both the
+ * average signal power and the mean average deviation.
+ *
+ * Noise typically has consistently high signal power across most of the spectrum, while a valid
+ * station presents more variation between frequencies and a lower average power level.
+ *
+ * This tool calculates a weighted difference between both, which can be used as a signal quality
+ * indicator: greater values indicate a better signal, 0 is an approximate acceptance threshold.
+ * Note that RDS reception may require the signal to be well above the acceptance threshold.
+ *
+ * Demodulated audio samples are taken from {@code demod}.
+ *
+ * @param out_avg Address which will receive the measured average signal power, can be NULL
+ * @param out_mad Address which will receive the mean average deviation, can be NULL
+ *
+ * @return Signal quality, with greater values indicating a better signal.
+ */
+double qual(double *out_avg, int *out_mad) {
+	double ret;         // return value
+	int lbound, ubound; // lower and upper boundary for frequency bins to analyze
+	int i;              // iterator
+	double avg;         // average power level across all frequency bins
+	int fft_mad;        // power level mean average deviation
+
+	/* if we need to pad FFT input data, low frequencies are not reliable */
+	lbound = 1 / (demod.result_len * nfft) + 1;
+
+	/* Stop at upper boundary of RDS subcarrier spectrum (58.65 kHz) */
+	ubound = nfft / 2 + 1;
+	if (ubound > (58650 * nfft / sampleRateOut - 1))
+		ubound = 58650 * nfft / sampleRateOut - 1;
+
+	for (i = 0; i < nfft; i++) {
+		fft_in[i] = demod.result[i % demod.result_len];
+	}
+	kiss_fftr(kiss_cfg, fft_in, fft_out);
+
+	avg = 0;
+	for (i = lbound; i < ubound; i++) {
+		spectrum[i] = round(500 * log10(fft_out[i].r * fft_out[i].r + fft_out[i].i * fft_out[i].i));
+		avg += spectrum[i];
+	}
+	avg /= ubound - lbound;
+	if (out_avg)
+		*out_avg = avg;
+	fft_mad = mad(spectrum + lbound * sizeof(int16_t), ubound - lbound, 1);
+	if (out_mad)
+		*out_mad = fft_mad;
+
+	ret = 21 * fft_mad - avg;
+
+#if 0
+	if (ret >= 0) {
+		fprintf(stderr, "\n+++++ GOOD SIGNAL (avg %.0f, mad %d) +++++\n", avg, fft_mad);
+	}
+	else {
+		fprintf(stderr, "\n----- bad signal (avg %.0f, mad %d) -----\n", avg, fft_mad);
+	}
+#endif
+
+	return ret;
 }
 
 void arbitrary_upsample(int16_t *buf1, int16_t *buf2, int len1, int len2)
@@ -686,10 +792,9 @@ void arbitrary_resample(int16_t *buf1, int16_t *buf2, int len1, int len2)
 	}
 }
 
-void full_demod(struct demod_state *d)
+void full_demod(struct demod_state *d, JNIEnv *env)
 {
 	int i, ds_p;
-	int sr = 0;
 	double rssi;
 	ds_p = d->downsample_passes;
 	if (ds_p) {
@@ -711,9 +816,9 @@ void full_demod(struct demod_state *d)
 	rssi = dbm(d->lowpassed, d->lp_len, 1);
 	if (rssi != d->rssi) {
 		d->rssi = rssi;
-		(*(d->env))->CallVoidMethod(d->env, d->self, d->onRssiChanged, (jfloat)rssi);
+		(*(env))->CallVoidMethod(env, d->self, d->onRssiChanged, (jfloat)rssi);
 	}
-	d->mode_demod(d);  /* lowpassed -> result */
+	fm_demod(d);  /* lowpassed -> result */
 	/* todo, fm noise squelch */
 	// use nicer filter here too?
 	if (d->post_downsample > 1) {
@@ -756,7 +861,13 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	}
 	if (!s->offset_tuning) {
 		rotate_90(buf, len);}
+	s->minSample = 255;
+	s->maxSample = 0;
 	for (i=0; i<(int)len; i++) {
+		if (buf[i] < s->minSample)
+			s->minSample = buf[i];
+		if (buf[i] > s->maxSample)
+			s->maxSample = buf[i];
 		s->buf16[i] = (int16_t)buf[i] - 127;}
 	pthread_rwlock_wrlock(&d->rw);
 	memcpy(d->lowpassed, s->buf16, 2*len);
@@ -768,9 +879,7 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = arg;
-	int ret = -255;
-	pthread_t tid = pthread_self();
-	ret = rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
+	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
 	return 0;
 }
 
@@ -779,14 +888,14 @@ static void *demod_thread_fn(void *arg)
 	struct demod_state *d = arg;
 	struct output_state *o = d->output_target;
 
-	(*(d->jvm))->AttachCurrentThread(d->jvm, &(d->env), NULL);
+	(*(d->jvm))->AttachCurrentThread(d->jvm, (void **)&(d->env), NULL);
 	jclass clsSelf = (*(d->env))->GetObjectClass(d->env, d->self);
 	d->onRssiChanged = (*(d->env))->GetMethodID(d->env, clsSelf, "onRssiChanged", "(F)V");
 
 	while (!do_exit) {
 		safe_cond_wait(&d->ready, &d->ready_m);
 		pthread_rwlock_wrlock(&d->rw);
-		full_demod(d);
+		full_demod(d, d->env);
 		pthread_rwlock_unlock(&d->rw);
 		if (d->exit_flag) {
 			do_exit = 1;
@@ -814,7 +923,7 @@ static void *output_thread_fn(void *arg)
 {
 	struct output_state *s = arg;
 
-	(*(s->jvm))->AttachCurrentThread(s->jvm, &(s->env), NULL);
+	(*(s->jvm))->AttachCurrentThread(s->jvm, (void **)&(s->env), NULL);
 	jclass clsSelf = (*(s->env))->GetObjectClass(s->env, s->self);
 	jfieldID fTunerOut = (*(s->env))->GetFieldID(s->env, clsSelf, "tunerOut", "Ljava/io/DataOutputStream;");
 	s->tunerOut = (*(s->env))->GetObjectField(s->env, s->self, fTunerOut);
@@ -840,7 +949,7 @@ static void *output_thread_fn(void *arg)
 	return 0;
 }
 
-static void optimal_settings(int freq, int rate)
+static void optimal_settings(int freq)
 {
 	// giant ball of hacks
 	// seems unable to do a single pass, 2:1
@@ -858,13 +967,104 @@ static void optimal_settings(int freq, int rate)
 	if (!d->offset_tuning) {
 		capture_freq = freq + capture_rate/4;}
 	capture_freq += cs->edge * dm->rate_in / 2;
-	dm->output_scale = (1<<15) / (128 * dm->downsample);
-	if (dm->output_scale < 1) {
-		dm->output_scale = 1;}
-	if (dm->mode_demod == &fm_demod) {
-		dm->output_scale = 1;}
 	d->freq = (uint32_t)capture_freq;
 	d->rate = (uint32_t)capture_rate;
+}
+
+/**
+ * @brief Waits for signal quality to stabilize, then returns the result.
+ *
+ * Signal quality is considered to have stabilized when the average power level reaches 2500
+ * (25 dB).
+ *
+ * Other criteria (trend/stability of the quality indicator, monotonic sequence formed by quality
+ * indicator and/or its constituents) were not considered as average power level was considered
+ * sufficient.
+ *
+ * See {@code qual()} on how to interpret the result.
+ */
+double get_stabilized_qual() {
+	/* Size of samples buffer */
+	int samplesSize = MAXIMUM_BUF_LENGTH;
+
+	/* Buffer to receive samples for quality measurement */
+	int16_t samples[samplesSize];
+
+	/* Samples actually read */
+	int samplesRead = 0;
+
+	/* Average and mean average deviation of FFT */
+	double fft_avg;
+	int fft_mad;
+
+	double ret;
+
+	while (1) {
+		/* get a burst of samples to measure quality */
+		if (rtlsdr_read_sync(dongle.dev, &samples, samplesSize, &samplesRead) < 0) {
+			fprintf(stderr, "\nget_stabilized_qual: rtlsdr_read_sync failed\n");
+			return 0;
+		}
+
+		rtlsdr_callback((unsigned char *)&samples, samplesRead, &dongle);
+		pthread_rwlock_wrlock(&demod.rw);
+		full_demod(&demod, controller.env);
+		ret = qual(&fft_avg, &fft_mad);
+		pthread_rwlock_unlock(&demod.rw);
+		if (fft_avg > 2500)
+			return ret;
+	}
+}
+
+/**
+ * @brief Waits for RSSI to stabilize, then returns the result.
+ *
+ * The RSSI is considered to have stabilized when three subsequent measurements fail to form a
+ * monotonic sequence. In that case, the last RSSI measurement is returned.
+ *
+ * A previous stabilization criterion of two subsequent measurements differing by less than 1 dB
+ * was dropped as it gave frequent false positives, resulting in good stations being skipped.
+ */
+double get_stabilized_rssi() {
+	/* Size of samples buffer */
+	int samplesSize = MAXIMUM_BUF_LENGTH / 16;
+	/* Buffer to receive samples for RSSI measurement */
+	int16_t samples[samplesSize];
+	int samplesRead = 0;
+	int rssiTrend = 0;
+	double rssi = RSSI_INVALID;
+	double lastRssi = RSSI_INVALID;
+
+	while (1) {
+		lastRssi = rssi;
+
+		/* get a burst of samples to measure RSSI */
+		if (rtlsdr_read_sync(dongle.dev, &samples, samplesSize, &samplesRead) < 0) {
+			fprintf(stderr, "\nget_stabilized_rssi: rtlsdr_read_sync failed\n");
+			return RSSI_INVALID;
+		}
+
+		rtlsdr_callback((unsigned char *)&samples, samplesRead, &dongle);
+		pthread_rwlock_rdlock(&demod.rw);
+		rssi = dongle.demod_target->rssi;
+		pthread_rwlock_unlock(&demod.rw);
+
+		//fprintf(stderr, "\nget_stabilized_rssi: rssi=%.2f", rssi);
+
+		if (lastRssi == RSSI_INVALID) {
+			/* nothing to compare to yet */
+		} else if (!rssiTrend) {
+			if (rssi < lastRssi)
+				rssiTrend = -1;
+			else if (rssi > lastRssi)
+				rssiTrend = 1;
+		} else {
+			/* RSSI started oscillating, assume stable state */
+			if (((rssi < lastRssi) && rssiTrend == 1)
+					|| ((rssi > lastRssi) && rssiTrend == -1))
+				return rssi;
+		}
+	}
 }
 
 static void *controller_thread_fn(void *arg)
@@ -873,14 +1073,16 @@ static void *controller_thread_fn(void *arg)
 	// might be no good using a controller thread if retune/rate blocks
 	struct controller_state *s = arg;
 	uint32_t freq;
-	void * samples;  // Buffer to receive samples for RSSI measurement
-	int samplesSize; // Size of samples buffer
-	int samplesRead = 0;
-	double rssi, maxRssi;
+	double rssi, lastRssi;
+	/* reference RSSI: when nearStart is true, the lowest one observed; else the highest one */
+	double refRssi;
 	int maxFreq;
+	/* signal quality at maxFreq */
+	double maxQual;
+	/* Whether we are still near the frequency where seek started (or near an invalid station) */
 	int nearStart;
 
-	(*(s->jvm))->AttachCurrentThread(s->jvm, &(s->env), NULL);
+	(*(s->jvm))->AttachCurrentThread(s->jvm, (void **)&(s->env), NULL);
 	jclass clsSelf = (*(s->env))->GetObjectClass(s->env, s->self);
 	s->onFrequencyChanged = (*(s->env))->GetMethodID(s->env, clsSelf, "onFrequencyChanged", "(I)V");
 
@@ -892,7 +1094,7 @@ static void *controller_thread_fn(void *arg)
 
 	/* set up primary channel */
 	pthread_rwlock_wrlock(&s->rw);
-	optimal_settings(s->freq, demod.rate_in);
+	optimal_settings(s->freq);
 	s->retune = TUNE_NONE;
 	freq = s->freq;
 	pthread_rwlock_unlock(&s->rw);
@@ -917,23 +1119,47 @@ static void *controller_thread_fn(void *arg)
 		pthread_rwlock_wrlock(&s->rw);
 		switch (s->retune) {
 		case TUNE_NONE:
+			if (dongle.gain != AUTO_GAIN) {
+				if (dongle.minSample == 0 || dongle.maxSample == 255) {
+					/* clipping detected, decrease gain */
+					int i = 0;
+					while ((i < dongle.gains_len - 1) && (dongle.gains[i+1] < dongle.gain))
+						i++;
+					if (dongle.gain != dongle.gains[i]) {
+						dongle.gain = dongle.gains[i];
+						verbose_gain_set(dongle.dev, dongle.gain);
+					}
+				} else if (dongle.gain < dongle.gains[dongle.gains_len-1]) {
+					/* check if we can increase gain without causing clipping */
+					int i = 0;
+					do {
+						i++;
+					} while ((i < dongle.gains_len - 1) && (dongle.gains[i] <= dongle.gain));
+					float linGain = pow(10, (float)(dongle.gains[i] - dongle.gain) / 450);
+					int newMax = (float) dongle.maxSample * linGain;
+					int newMin = (float) dongle.minSample / linGain;
+					if (newMin >= 0 && newMax <= 255) {
+						dongle.gain = dongle.gains[i];
+						verbose_gain_set(dongle.dev, dongle.gain);
+					}
+				}
+			}
 			pthread_rwlock_unlock(&s->rw);
 			continue;
 		case TUNE_FREQ:
 			/* hacky hopping */
 			freq = s->freq;
-			optimal_settings(freq, demod.rate_in);
+			optimal_settings(freq);
 			rtlsdr_cancel_async(dongle.dev);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			/* TODO should we allow the tuner to settle and flush the buffer before continuing? */
 			/* Start a new dongle thread */
 			pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void *)(&dongle));
 			break;
 		case TUNE_SEEK_UP:
 		case TUNE_SEEK_DOWN:
-			samplesSize = MAXIMUM_BUF_LENGTH / 16;
-			samples = malloc(samplesSize * 2);
 			freq = s->freq;
-			maxRssi = -30;
+			refRssi = -RSSI_INVALID;
 			maxFreq = 0;
 			nearStart = 1;
 			while (s->retune != TUNE_NONE) {
@@ -942,54 +1168,60 @@ static void *controller_thread_fn(void *arg)
 				else
 					freq -= 0.1e+6;
 				pthread_rwlock_unlock(&s->rw);
-				if (freq > FREQ_MAX)
+				if (freq > FREQ_MAX) {
 					freq = FREQ_MIN;
-				else if (freq < FREQ_MIN)
+					nearStart = 0;
+				} else if (freq < FREQ_MIN) {
 					freq = FREQ_MAX;
+					nearStart = 0;
+				}
 				rtlsdr_cancel_async(dongle.dev);
-				optimal_settings(freq, demod.rate_in);
-				fprintf(stderr, "\nSeek: currently at %d Hz (optimized to %d).\n", freq, dongle.freq);
+				optimal_settings(freq);
 				rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-				//TODO do we need to communicate each seek step?
-				(*(s->env))->CallVoidMethod(s->env, s->self, s->onFrequencyChanged, (jint)(freq / 1.0e+3));
 
-				/* get two bursts of samples to measure RSSI */
-				/* FIXME: we have some issue due to which we get the RSSI of the previous frequency
-				 * (or something between both frequencies) after the first call to rtlsdr_callback.
-				 * This may be due to a race condition (lack of synchronization). As a workaround,
-				 * we're doing two passes and discarding the result from the first one.
-				 */
-				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
-					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
-				rtlsdr_callback(samples, samplesRead, &dongle);
+				/* wait for tuner to settle */
+				usleep(5000);
 
-				if (rtlsdr_read_sync(dongle.dev, samples, samplesSize, &samplesRead) < 0)
-					fprintf(stderr, "\nSeek: rtlsdr_read_sync failed\n");
-				rtlsdr_callback(samples, samplesRead, &dongle);
+				lastRssi = rssi;
 
-				pthread_rwlock_rdlock(&demod.rw);
-				rssi = dongle.demod_target->rssi;
-				pthread_rwlock_unlock(&demod.rw);
+				/* measure RSSI */
+				rssi = get_stabilized_rssi();
 
 				pthread_rwlock_wrlock(&s->rw);
-				if (rssi < RSSI_MIN) { // or RSSI_MIN_DX, depending on desired scan sensitivity
-					nearStart = 0;
-				} else if (!nearStart && (rssi >= maxRssi)) {
-					/* store frequency and RSSI and see if the next frequency has a stronger signal */
-					maxRssi = rssi;
-					maxFreq = freq;
+				if (nearStart && (rssi < refRssi)) {
+					/* while we're near the start frequency, store lowest frequency observed */
+					refRssi = rssi;
+				} else if (rssi >= refRssi) {
+					if (rssi >= lastRssi + 1)
+						/* RSSI is increasing significantly (above 1 dB), we're no longer near the start */
+						nearStart = 0;
+					if (!nearStart) {
+						/* store frequency and RSSI and see if the next frequency has a stronger signal */
+						maxFreq = freq;
+						maxQual = get_stabilized_qual();
+						refRssi = rssi;
+					}
 				}
-				if (maxFreq && (rssi < maxRssi)) {
-					/* we're past the peak, tune directly to the strongest frequency */
-					freq = maxFreq;
-					s->freq = freq;
-					optimal_settings(freq, demod.rate_in);
-					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-					s->retune = TUNE_NONE;
+				if (maxFreq && (rssi < refRssi)) {
+					/* we're past the peak, examine if the peak is a good station */
+					if (maxQual >= 0) {
+						/* we've found a good station, tune into it */
+						freq = maxFreq;
+						s->freq = freq;
+						rtlsdr_cancel_async(dongle.dev);
+						optimal_settings(freq);
+						rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+						s->retune = TUNE_NONE;
+					} else {
+						/* we've found a peak but it is just noise, continue searching */
+						nearStart = 1;
+						refRssi = rssi;
+						maxFreq = 0;
+					}
 				} else if (freq == s->freq) {
 					/* We're back at the original frequency and didn't find any stations */
-					// TODO: should we run another round with RSSI_MIN_DX (DX mode)?
-					optimal_settings(freq, demod.rate_in);
+					rtlsdr_cancel_async(dongle.dev);
+					optimal_settings(freq);
 					rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 					s->retune = TUNE_NONE;
 				}
@@ -1008,8 +1240,10 @@ static void *controller_thread_fn(void *arg)
 
 void dongle_init(struct dongle_state *s)
 {
-	s->rate = DEFAULT_SAMPLE_RATE;
-	s->gain = AUTO_GAIN; // tenths of a dB
+	s->rate = sampleRateOut;
+	s->gain = 0; // tenths of a dB
+	s->gains = NULL;
+	s->gains_len = 0;
 	s->mute = 0;
 	s->direct_sampling = 0;
 	s->offset_tuning = 0;
@@ -1018,16 +1252,15 @@ void dongle_init(struct dongle_state *s)
 
 void demod_init(struct demod_state *s)
 {
-	s->rate_in = DEFAULT_SAMPLE_RATE;
-	s->rate_out = DEFAULT_SAMPLE_RATE;
+	s->rate_in = sampleRateOut;
+	s->rate_out = sampleRateOut;
 	s->downsample_passes = 1;  /* truthy placeholder */
-	s->comp_fir_size = 0;
+	s->comp_fir_size = 9;
 	s->prev_index = 0;
 	s->post_downsample = 1;  // once this works, default = 4
 	s->custom_atan = 0;
 	s->deemph = 0;
 	s->rate_out2 = sampleRateOut;
-	s->mode_demod = &fm_demod;
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
@@ -1096,6 +1329,17 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 	output_init(&output);
 	controller_init(&controller);
 
+	/*
+	 * To get a maximum bin width of 20 Hz, nfft must be at least 1/20 of the sample rate.
+	 * The log and shifting operation ensure nfft is a power of 2.
+	 */
+	nfft = 1 << int_log2(sampleRateOut / 20, 1);
+	kiss_cfg = kiss_fftr_alloc(nfft, 0, 0, 0); // not inverse, no memory allocation
+	fft_in = malloc(sizeof(kiss_fft_scalar) * nfft);
+	fft_out = malloc(sizeof(kiss_fft_cpx) * (nfft / 2 + 1));
+	spectrum = malloc(sizeof(int16_t) * (nfft / 2 + 1));
+	fprintf(stderr, "Initialized FFT with size %d (%d bins, %.3f Hz bin width).\n", nfft, nfft/2 + 1, (float)sampleRateOut / (float)nfft);
+
 	controller.self = (*env)->NewGlobalRef(env, self);
 	(*env)->GetJavaVM(env, &(controller.jvm));
 
@@ -1126,6 +1370,16 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 		demod.deemph_a = (int)round(1.0/((1.0-exp(-1.0/(demod.rate_out * 75e-6)))));
 	}
 
+	dongle.gains_len = rtlsdr_get_tuner_gains(dongle.dev, NULL);
+	if (dongle.gains_len) {
+		dongle.gains = malloc(sizeof(int) * dongle.gains_len);
+		dongle.gains_len = rtlsdr_get_tuner_gains(dongle.dev, dongle.gains);
+	}
+
+	/* Fall back to auto gain if we can't get supported gain levels */
+	if (!dongle.gains_len)
+		dongle.gain = AUTO_GAIN;
+
 	/* Set the tuner gain */
 	if (dongle.gain == AUTO_GAIN) {
 		verbose_auto_gain(dongle.dev);
@@ -1150,11 +1404,18 @@ JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_open
 
 JNIEXPORT jstring JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_getDeviceName
   (JNIEnv *env, jobject self) {
+	/* Suppress compiler warnings */
+	(void) self;
+
     return (*env)->NewStringUTF(env, "rtl2832u");
 }
 
 JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_setFrequency
   (JNIEnv *env, jobject self, jint freq) {
+	/* Suppress compiler warnings */
+	(void) env;
+	(void) self;
+
 	pthread_rwlock_wrlock(&controller.rw);
 	controller.freq = freq * 1.0e+3;
 	controller.retune = TUNE_FREQ;
@@ -1163,8 +1424,12 @@ JNIEXPORT jint JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_setFrequency
 }
 
 
-JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_seek
+JNIEXPORT jboolean JNICALL Java_eu_jacquet80_rds_input_SdrGroupReader_nativeSeek
   (JNIEnv *env, jobject self, jboolean up) {
+	/* Suppress compiler warnings */
+	(void) env;
+	(void) self;
+
 	pthread_rwlock_wrlock(&controller.rw);
 	controller.retune = up ? TUNE_SEEK_UP : TUNE_SEEK_DOWN;
 	pthread_rwlock_unlock(&controller.rw);

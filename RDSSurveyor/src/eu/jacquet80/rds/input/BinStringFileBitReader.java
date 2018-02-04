@@ -25,17 +25,24 @@
 
 package eu.jacquet80.rds.input;
 
+import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 
 public class BinStringFileBitReader extends BitReader {
 	private final InputStream isr;
 	
-	public BinStringFileBitReader(File f) throws FileNotFoundException {
+	public BinStringFileBitReader(InputStream isr) {
+		this.isr = isr;
+	}
+	
+	public BinStringFileBitReader(File f) throws IOException {
 		isr = new FileInputStream(f);
 	}
 	

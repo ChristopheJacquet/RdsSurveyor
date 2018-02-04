@@ -185,12 +185,15 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 
 	private final static String[] okVendors = {
 		"SILICON",
-		"www.rding.cn"
+		"www.rding.cn",
+		"ADS"
 	};
 	
 	private final static String[] okNames = {
 		"FM Radio",
-		"Radio"
+		"Radio",
+		"ADS",
+		"Music"
 	};
 
 	
@@ -200,6 +203,7 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 		private SourceDataLine outLine;
 
 		public SoundPlayer() {
+			StringBuffer audioDevices = new StringBuffer();
 			
 			for(Mixer.Info mixInfo : AudioSystem.getMixerInfo()) {
 				String vendor = mixInfo.getVendor();
@@ -217,10 +221,14 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 					mixer = AudioSystem.getMixer(mixInfo);
 					if(mixer != null) break;
 				}
+				
+				audioDevices.append('"').append(vendor).append("\"/\"")
+					.append(name).append("\"   ");
 			}
 			
 			if(mixer == null) {
-				System.out.println("Native tuner: not found audio device.");
+				System.out.println("Native tuner: not found a recognized audio device.");
+				System.out.println("Audio devices: " + audioDevices);
 				return;
 			}
 			

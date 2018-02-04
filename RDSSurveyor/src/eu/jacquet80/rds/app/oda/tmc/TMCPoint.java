@@ -55,7 +55,14 @@ public class TMCPoint extends TMCLocation {
 	/** The Y (longitude) coordinate of the point. */
 	public float yCoord;
 	
-	// INTERRUPTSROAD TODO next location after interruption in the road (?)
+	/**
+	 * If a road is interrupted, the points bordering on the interruption have only one neighbor
+	 * each. Their {@code interruptsRoad} members then refer to each other.
+	 * 
+	 * Note that a road interrupted in that way is not necessarily segmented, and that segments
+	 * can likewise be interrupted without being split up in lower-level segments.
+	 */
+	public int interruptsRoad = -1;
 	
 	/** Whether the point is in a built-up area. */
 	public boolean urban;
@@ -92,6 +99,8 @@ public class TMCPoint extends TMCLocation {
 		this.tcd = rset.getInt("TCD");
 		this.stcd = rset.getInt("STCD");
 		this.junctionNumber = rset.getString("JUNCTIONNUMBER");
+		if (rset.wasNull())
+			this.junctionNumber = null;
 		int rnid = rset.getInt("RNID");
 		if (!rset.wasNull()) {
 			this.rnid = rnid;
@@ -140,7 +149,10 @@ public class TMCPoint extends TMCLocation {
 		this.xCoord = rset.getFloat("XCOORD");
 		this.yCoord = rset.getFloat("YCOORD");
 		
-		// INTERRUPTSROAD TODO
+		int interruptsRoad = rset.getInt("INTERRUPTSROAD");
+		if (!rset.wasNull()) {
+			this.interruptsRoad = interruptsRoad;
+		}
 		
 		this.urban = rset.getBoolean("URBAN");
 		
@@ -171,16 +183,16 @@ public class TMCPoint extends TMCLocation {
 	}
 
 	@Override
-	public String getDisplayName(TMCLocation secondary, int direction) {
+	public String getDisplayName(TMCLocation secondary, int direction, boolean bidirectional) {
 		if ((secondary == null) || (this.equals(secondary))) {
 			if (segment != null)
-				return segment.getDisplayName(null, direction);
+				return segment.getDisplayName(null, direction, bidirectional);
 			else if (road != null)
-				return road.getDisplayName(null, direction);
+				return road.getDisplayName(null, direction, bidirectional);
 			else
 				return null;
 		} else
-			return super.getDisplayName(secondary, direction);
+			return super.getDisplayName(secondary, direction, bidirectional);
 	}
 	
 	@Override
@@ -198,16 +210,40 @@ public class TMCPoint extends TMCLocation {
 		return ret;
 	}
 	
-	private TMCPoint getNegOffset() {
+	public TMCPoint getNegOffset() {
 		if ((this.negOffset == null) && (this.negOffLcd != -1))
 			this.negOffset = TMC.getPoint(this.cid, this.tabcd, this.negOffLcd);
 		return this.negOffset;
 	}
 	
-	private TMCPoint getPosOffset() {
+	public TMCPoint getPosOffset() {
 		if ((this.posOffset == null) && (this.posOffLcd != -1))
 			this.posOffset = TMC.getPoint(this.cid, this.tabcd, this.posOffLcd);
 		return this.posOffset;
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the first point of this Location.
+	 *
+	 * For a POINT location, this method will simply return its coordinates.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getFirstCoordinates() {
+		return new float[] {xCoord, yCoord};
+	}
+	
+	/**
+	 * @brief Returns the coordinates of the last point of this Location.
+	 *
+	 * For a POINT location, this method will simply return its coordinates.
+	 * 
+	 * @return The coordinates (order is longitude, latitude) or {@code null}.
+	 */
+	@Override
+	public float[] getLastCoordinates() {
+		return new float[] {xCoord, yCoord};
 	}
 	
 	/**
@@ -266,6 +302,31 @@ public class TMCPoint extends TMCLocation {
 		if ((ret == null) && (this.segment != null))
 			ret = this.segment.getRoadNumber();
 		return ret;
+	}
+
+	/**
+	 * @brief Whether this location is the direct or indirect child of another location.
+	 * 
+	 * {@code TMCPoint} has a reference to an area, an other area, a segment and a road. If any of
+	 * these is non-null, then the instance is a child of that location (and any other location
+	 * that the parent location is a child of).
+	 * 
+	 * @param location The potential parent location.
+	 * @return True if this location is a child of {@code location}, false if not.
+	 */
+	@Override
+	public boolean isChildOf(TMCLocation location) {
+		if (location.equals(area) || location.equals(othArea) || location.equals(road) || location.equals(segment))
+			return true;
+		if ((area != null) && area.isChildOf(location))
+			return true;
+		if ((othArea != null) && othArea.isChildOf(location))
+			return true;
+		if ((road != null) && road.isChildOf(location))
+			return true;
+		if ((segment != null) && segment.isChildOf(location))
+			return true;
+		return false;
 	}
 
 	@Override

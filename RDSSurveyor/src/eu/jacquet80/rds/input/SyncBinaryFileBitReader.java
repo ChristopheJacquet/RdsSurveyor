@@ -38,8 +38,8 @@ public class SyncBinaryFileBitReader extends BitReader {
 	private int octPtr;
 	private int bytePtr;
 	
-	public SyncBinaryFileBitReader(File f) throws FileNotFoundException {
-		isr = new FileInputStream(f);
+	public SyncBinaryFileBitReader(InputStream isr) throws FileNotFoundException {
+		this.isr = isr;
 		try {
 			// read two bytes at the start
 			isr.read(); isr.read(); 
@@ -49,6 +49,10 @@ public class SyncBinaryFileBitReader extends BitReader {
 		oct = 0;
 		octPtr = 0;
 		bytePtr = 3;
+	}
+	
+	public SyncBinaryFileBitReader(File f) throws FileNotFoundException {
+		this(new FileInputStream(f));
 	}
 	
 	
