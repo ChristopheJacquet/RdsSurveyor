@@ -28,6 +28,7 @@ package eu.jacquet80.rds;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
@@ -38,7 +39,10 @@ import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fazecast.jSerialComm.SerialPort;
+
 import eu.jacquet80.rds.app.oda.TDC;
+import eu.jacquet80.rds.app.oda.tmc.TMC;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.BitInversion;
 import eu.jacquet80.rds.core.DecoderShell;
@@ -49,6 +53,8 @@ import eu.jacquet80.rds.input.AudioFileBitReader;
 import eu.jacquet80.rds.input.BinStringFileBitReader;
 import eu.jacquet80.rds.input.BinaryFileBitReader;
 import eu.jacquet80.rds.input.BitReader;
+import eu.jacquet80.rds.input.FileFormatGuesser;
+import eu.jacquet80.rds.input.GnsGroupReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
@@ -57,6 +63,7 @@ import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
 import eu.jacquet80.rds.input.TCPTunerGroupReader;
 import eu.jacquet80.rds.input.TeeBitReader;
+import eu.jacquet80.rds.input.TeeGroupReader;
 import eu.jacquet80.rds.input.TunerGroupReader;
 import eu.jacquet80.rds.input.USBFMRadioGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
@@ -115,6 +122,7 @@ public class RDSSurveyor {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2014.");
 		
 		GroupReader reader = null;
+		GroupReader teeReader = null;
 		boolean showGui = true;
 		boolean liveInput = false;    // true if input is "live", not playback
 		boolean liveGroupInput = false;
@@ -126,6 +134,8 @@ public class RDSSurveyor {
 		PrintStream console = System.out;
 		BitStreamSynchronizer.BitInversion inversion = BitInversion.AUTO;
 		BitStreamSynchronizer bitStreamSynchronizer = null;
+		String inLtPath = null;
+		String dbUrl = "jdbc:hsqldb:mem:.";
 		
 		// RDS Surveyor is non-localized for the time being
 		Locale.setDefault(Locale.US);
@@ -176,6 +186,8 @@ public class RDSSurveyor {
 					reader = new BitStreamSynchronizer(console, new BinStringFileBitReader(new File(getParam("inbinstrfile", args, ++i))));
 				} else if("-ingrouphexfile".equals(args[i])) {
 					reader  = new HexFileGroupReader(new File(getParam("ingrouphexfile", args, ++i)));
+				} else if("-infile".equals(args[i])) {
+					reader = FileFormatGuesser.createReader(new File(getParam("infile", args, ++i)));
 				} else if("-intcp".equals(args[i])) {
 					reader = new TCPTunerGroupReader(getParam("intcp", args, ++i), 8750);
 				} else if("-inusbkey".equals(args[i])) {
@@ -189,6 +201,22 @@ public class RDSSurveyor {
 					liveGroupInput = true;
 				} else if("-insdr".equals(args[i])) {
 					reader = new SdrGroupReader(console, getParam("insdr", args, ++i));
+					liveGroupInput = true;
+				} else if("-ingns".equals(args[i])) {
+					int baudRate = 38400;
+					String port = getParam("ingns", args, ++i);
+					System.out.printf("Using device on port %s\n", port);
+					SerialPort comPort = SerialPort.getCommPort(port);
+					comPort.setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
+					comPort.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
+					if (!comPort.openPort()) {
+						System.err.println("Could not open port for input. Aborting.");
+						System.exit(1);
+					}
+					comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
+					InputStream in = comPort.getInputStream();
+					OutputStream out = comPort.getOutputStream();
+					reader = new GnsGroupReader(in, out);
 					liveGroupInput = true;
 				} else if("-invert".equals(args[i])) {
 					inversion = BitInversion.INVERT;
@@ -239,6 +267,10 @@ public class RDSSurveyor {
 						System.out.println("Malformed -force option");
 						System.exit(1);
 					}
+				} else if("-lt".equals(args[i])) {
+					inLtPath = getParam("lt", args, ++i);
+				} else if("-ltdb".equals(args[i])) {
+					dbUrl = String.format("jdbc:hsqldb:file:%s", getParam("ltdb", args, ++i));
 				} else {
 					System.out.println("Unknown argument: " + args[i]);
 					
@@ -246,12 +278,15 @@ public class RDSSurveyor {
 					System.out.println("  -inaudio                 Use sound card audio as input");
 					System.out.println("  -inaudiopipe             Use raw audio from stdin as input");
 					System.out.println("  -inbinfile <file>        Use the given binary file as input");
+					System.out.println("  -insyncbinfile <file>    Use the given synchronized binary file as input");
 					System.out.println("  -inbinstrfile <file>     Use the given binary string file as input");
 					System.out.println("  -inaudiofile <file>      Use the given audio file as input");
 					System.out.println("  -ingrouphexfile <file>   Use the given group-level file as input");
+					System.out.println("  -infile <file>           Use the given file as input (autodetect format)");
 					System.out.println("  -inv4l <device>          Reads from Video4Linux device, e.g. /dev/radio");
 					System.out.println("  -intuner <driver>        Reads from a native tuner, specify driver (.so, .dll, .dylib)");
 					System.out.println("  -insdr <driver>          Reads from an SDR, specify driver (.so, .dll, .dylib)");
+					System.out.println("  -ingns <port>            Reads from a GNS TMC tuner, specify port (tty*, COM*)");
 					System.out.println("  -invert / -noinvert      Force bit inversion (default: auto-detect");
 					System.out.println("  -outbinfile <file>       Write bitstream to binary file (if applicable)");
 					System.out.println("  -outgrouphexfile <file>  Write groups to file (in hexadecimal)");
@@ -261,21 +296,41 @@ public class RDSSurveyor {
 					System.out.println("  -rbds                    Force American RBDS mode (and save as a preference)");
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
+					System.out.println("  -lt <path>               Read TMC location tables found at the given path (or subdirs)");
+					System.out.println("  -ltdb <path>             Use TMC location database at the given path");
 					System.exit(1);
 				}
 			}
-		} else if(showGui) {
-			console = null;
-			InputSelectionDialog dialog = new InputSelectionDialog();
-			reader = dialog.makeChoice();
-			liveGroupInput = dialog.live;
 		}
 
-		if(reader == null) {
-			System.out.println("No source provided, aborting. A source must be provided.");
-			System.exit(0);
+		if ((reader == null) && (inLtPath == null)) {
+			if(showGui) {
+				console = null;
+				InputSelectionDialog dialog = new InputSelectionDialog();
+				reader = dialog.makeChoice();
+				liveGroupInput = dialog.live;
+			}
+			if (reader == null) {
+				System.out.println("A source or a set of TMC location tables must be provided. Aborting.");
+				System.exit(0);
+			}
+		}
+		
+		TMC.setDbUrl(dbUrl);
+		
+		// Build db if needed
+		if (inLtPath != null) {
+			System.out.println("Processing TMC location tables...");
+			TMC.readLocationTables(new File(inLtPath));
+			System.out.println("Done processing TMC location tables.");
+			if (reader == null)
+				System.exit(0);
 		}
 				
+		if (outGroupFile == null)
+			teeReader = reader;
+		else
+			teeReader = new TeeGroupReader(reader, outGroupFile);
 		
 		// Create a decoder "shell"
 		final PrintStream fConsole = console == null ? nullConsole : console;
@@ -311,9 +366,9 @@ public class RDSSurveyor {
 		}
 
 		if(showGui) {
-			DecoderShell.instance.process(reader, liveGroupInput);
+			DecoderShell.instance.process(teeReader, liveGroupInput);
 		} else {
-			DecoderShell.instance.processAndQuit(reader, liveGroupInput);
+			DecoderShell.instance.processAndQuit(teeReader, liveGroupInput);
 		}
 		
 		
