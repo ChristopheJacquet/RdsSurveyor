@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import javax.swing.BorderFactory;
@@ -25,6 +26,7 @@ import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
+import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
 
 public class InputSelectionDialog extends JFrame implements ActionListener {
@@ -73,6 +75,45 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		// center the frame
 		setLocationRelativeTo(null);
 	}
+	
+	/**
+	 * @brief Cycles through an array of tuner or SDR drivers and returns a {@link eu.jacquet80.input.rds.GroupReader} for the first device found.
+	 * 
+	 * @param paths The potential driver libraries (other files will be skipped)
+	 * @return A {@link eu.jacquet80.input.rds.GroupReader} for the first device that was opened successfully
+	 * @throws IOException
+	 */
+	private GroupReader guessTuner(File[] paths) throws IOException {
+		GroupReader res = null;
+		boolean found = false;
+		String attempts = "Attempts to connect to a device:\n";
+		for(File path : paths) {
+			for (int i = 0; i <= 1; i++) {
+				try {
+					if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
+
+					res = (i==0) ? new NativeTunerGroupReader(path.getAbsolutePath()) : new SdrGroupReader(RDSSurveyor.nullConsole, path.getAbsolutePath());
+					live = true;
+					found = true;
+					return res;
+				} catch(UnavailableInputMethod exc) {
+					// try the next one
+					System.out.println(exc.getMessage());
+					attempts += exc.getMessage() + "\n";
+				} catch (UnsatisfiedLinkError exc) {
+					/* 
+					 * Library is not a driver for the reader we tried. Encountering this
+					 * condition is normal as we try through the libraries.
+					 */
+				}
+			}
+		}
+		
+		if(! found) {
+			throw new RuntimeException("No available device found\n" + attempts);
+		}
+		return null;
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
@@ -85,28 +126,11 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				choiceDone.release();
 			} else if(source == btnTuner) {
 				String libDir = "lib";
-				boolean found = false;
-				String attempts = "Attempts to connect to a device:\n";
+				File[] paths = new File(libDir).listFiles();
+				if (paths == null)
+					paths = new File[]{};
 				
-				for(File path : new File(libDir).listFiles()) {
-					try {
-						if("msvcrt.dll".equalsIgnoreCase(path.getName())) continue;
-
-						choice = new NativeTunerGroupReader(path.getAbsolutePath());
-						live = true;
-						found = true;
-						break;
-					} catch(UnavailableInputMethod exc) {
-						// try the next one
-						System.out.println(exc.getMessage());
-						attempts += exc.getMessage() + "\n";
-					}
-				}
-				
-				if(! found) {
-					throw new RuntimeException("No available device found\n" + attempts);
-				}
-
+				choice = guessTuner(paths);
 				
 				choiceDone.release();
 			} else if(source == btnFile) {
@@ -127,6 +151,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 				t.start();
 			}
 		} catch(Throwable exc) {
+			exc.printStackTrace();
 			JOptionPane.showMessageDialog(this, exc.toString(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	}
@@ -135,7 +160,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		setVisible(true);
 		do {
 			choiceDone.acquireUninterruptibly();
-		} while(choice == null);
+		} while((choice == null) && isVisible());
 		setVisible(false);
 
 		return choice;
