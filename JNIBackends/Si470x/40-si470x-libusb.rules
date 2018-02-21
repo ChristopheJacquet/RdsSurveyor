@@ -1,0 +1,30 @@
+# /lib/udev/rules.d/40-si470x-libusb.rules
+#
+# Copyright 2012-2015 Christophe Jacquet, Michael von Glasow
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# 10c4:818a: Silicon Labs USB FM Radio Reference Design
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="818a", MODE:="0666"
+
+# 06e1:a155: ADS/Tech FM Radio Receiver (formerly Instant FM Music) (RDX-155-EF)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="06e1", ATTRS{idProduct}=="a155", MODE:="0666"
+
+# 1b80:d700: KWorld USB FM Radio SnapMusic Mobile 700 (FM700)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1b80", ATTRS{idProduct}=="d700", MODE:="0666"
+
+# 10c5:819a: Sanei Electric, Inc. FM USB Radio (sold as DealExtreme.com PCear)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c5", ATTRS{idProduct}=="819a", MODE:="0666"
+

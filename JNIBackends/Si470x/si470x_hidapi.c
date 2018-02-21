@@ -576,7 +576,6 @@ int si470x_read_rds(si470x_dev_t *radio, si470x_tunerdata_t *data) {
 int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 	si470x_dev_t *dev = NULL;
 	uint32_t device_count = 0;
-	int retval;
 
 	dev = malloc(sizeof(si470x_dev_t));
 	if (NULL == dev)
@@ -623,9 +622,14 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 
     if(cur_dev) {
     	dev->devh = hid_open(cur_dev->vendor_id, cur_dev->product_id, NULL);
+    	if (!dev->devh) {
+    		/* If we get here, a device was listed but could not be opened. This indicates a permission problem. */
+        	printf("Opening device %04X:%04X failed. Make sure you have the necessary permissions.\n", cur_dev->vendor_id, cur_dev->product_id);
+    		return -1; // TODO should we use different return values for different errors here?
+    	}
     } else {
-		retval = -1;
-		goto err;
+    	printf("No Si470x device found!\n");
+		return -1;
     }
 
 	hid_free_enumeration(devs);
@@ -633,9 +637,6 @@ int si470x_open(si470x_dev_t **out_dev, uint32_t index) {
 	*out_dev = dev;
 	
 	return 0;
-	
-	err:
-	return retval;
 }
 
 
