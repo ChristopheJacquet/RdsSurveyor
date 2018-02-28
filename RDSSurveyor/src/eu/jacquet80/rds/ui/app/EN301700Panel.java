@@ -43,6 +43,7 @@ public class EN301700Panel extends AppPanel {
 		super(new BorderLayout());
 		
 		this.app = (EN301700)app;
+		setApplication(app);
 		
 		add(lblData, BorderLayout.CENTER);
 	}
