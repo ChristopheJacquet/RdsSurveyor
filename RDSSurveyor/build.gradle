@@ -12,6 +12,20 @@ jar {
     attributes 'Class-Path': '.',
                'Main-Class': 'eu.jacquet80.rds.RDSSurveyor'
   }
+  
+  from {
+    configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Class-Path': '.',
+        	           'Main-Class': 'eu.jacquet80.rds.RDSSurveyor'
+    }
+    baseName = 'all-in-one-jar'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
 
 dependencies {

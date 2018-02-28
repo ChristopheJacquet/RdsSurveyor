@@ -1,4 +1,4 @@
-package eu.jacquet80.rds.core;
+
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -6,6 +6,8 @@ import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 
+import eu.jacquet80.rds.core.GroupLevelDecoder;
+import eu.jacquet80.rds.core.TunedStation;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.log.Log;
 import eu.jacquet80.rds.log.SequentialTime;
