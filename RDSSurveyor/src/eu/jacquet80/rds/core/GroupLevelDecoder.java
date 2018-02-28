@@ -614,22 +614,33 @@ public class GroupLevelDecoder {
 			
 		}
 		
-		// Type 15A
+		// Type 15A: RDS2 Long PS and former RBDS Fast PS (obsolete).
+		// They are somewhat compatible, except:
+		//  1) Long PS addresses are 3-bit, whereas Fast PS addresses were
+		// 1-bit (the other two being marked as "spare bits", so they could
+        // theoretically be anything).
+		//  2) Long PS uses UTF-8 encoding, whereas Fast PS used the RDS
+		// 8-bit charset.
+		// However I believe most Fast PS implementations set the spare bits
+		// to 0, and use only ASCII characters. So we treat everything as
+		// Long PS, and it *should* also work fine for most, if not all,
+		// Fast PS uses.
 		if(type == 15 && version == 0) {
-			int addr = blocks[1] & 1;
-			console.print("DEPRECATED RBDS-only fast PS, pos=" + addr + ": \"");
-			for(int i=2; i<=3; i++) {
-				if(blocksOk[i]) {
-					char ch1 = RDS.toChar( (blocks[i]>>8) & 0xFF);
-					char ch2 = RDS.toChar(blocks[i] & 0xFF);
-					console.print(Character.toString(toASCII(ch1)) + Character.toString(toASCII(ch2)));
-				} else console.print("??");
+			int addr = blocks[1] & 7;
+			console.print("Long PS, pos=" + addr + ":");
+			for(int i=0; i<=1; i++) {
+				if(blocksOk[i+2]) {
+					byte byte1 = (byte)((blocks[i+2]>>8) & 0xFF);
+					byte byte2 = (byte)(blocks[i+2] & 0xFF);
+					console.print(String.format(" %02X %02X", byte1, byte2));
+					station.getLPS().set(addr*4+i*2, byte1, byte2);
+				} else console.print(" -- --");
 			}
-			console.print("\", TA=" + ((blocks[1]>>4) & 1));
+			console.print(", TA=" + ((blocks[1]>>4) & 1));
 			
 			serviceStat.add(ServiceStat.PROG_TYPE, 1);	// TA bit
-			serviceStat.add(ServiceStat.NAME, 1+16+16);	// address + 4 characters
-			serviceStat.add(ServiceStat.OVERHEAD, 3);	// 3 unused bits
+			serviceStat.add(ServiceStat.NAME, 3+16+16);	// address + 4 characters
+			serviceStat.add(ServiceStat.OVERHEAD, 1);	// 1 unused bit
 		}
 		
 		// For 15B we need only group 1, and possibly group 3

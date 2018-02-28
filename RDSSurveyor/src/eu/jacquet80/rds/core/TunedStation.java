@@ -25,6 +25,7 @@
 
 package eu.jacquet80.rds.core;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +59,7 @@ public class TunedStation extends Station {
 	private int latestBlocksOkCount = 0;
 	private int ecc, language;
 	private Text rt = new Text(64);
+	private UnicodeString lps = new UnicodeString(64, StandardCharsets.UTF_8);
 	private ServiceStat serviceStat;
 	
 	private final List<String> trafficEvents = new ArrayList<String>();
@@ -242,6 +244,10 @@ public class TunedStation extends Station {
 	
 	public Text getRT() {
 		return rt;
+	}
+	
+	public UnicodeString getLPS() {
+		return lps;
 	}
 	
 	public void setDIbit(int addr, boolean diInfo, PrintWriter console) {
