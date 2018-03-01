@@ -210,7 +210,7 @@ public class AlertCPanel extends AppPanel {
 		if(selectedRow >= 0 && selectedRow < model.getRowCount()) {
 			tblList.getSelectionModel().setSelectionInterval(selectedRow, selectedRow);
 		}
-		Util.packColumns(tblList);
+		Util.packColumns(tblList, 1);
 		freezeDetails = false;
 	}
 	

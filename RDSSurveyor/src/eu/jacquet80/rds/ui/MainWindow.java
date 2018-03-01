@@ -277,7 +277,9 @@ public class MainWindow extends JFrame {
 
 		
 		final JPanel pnlEON = new JPanel(new BorderLayout());
-		pnlEON.add(new JScrollPane(tblEON = new JTable(eonTableModel)), BorderLayout.CENTER);
+		tblEON = new JTable(eonTableModel);
+		tblEON.getColumnModel().getColumn(4).setCellRenderer(new Util.WrappingCellRenderer());
+		pnlEON.add(new JScrollPane(tblEON), BorderLayout.CENTER);
 		
 		final JPanel pnlAF = new JPanel();
 		BoxLayout boxLayoutAF = new BoxLayout(pnlAF, BoxLayout.PAGE_AXIS);
@@ -502,8 +504,8 @@ public class MainWindow extends JFrame {
 									txtAF.setText(station.afsToHTML(afFont));
 									groupStats.update(station.numericGroupStats());
 
-									eonTableModel.fireTableDataChanged();
-									Util.packColumns(tblEON);
+									//eonTableModel.fireTableDataChanged();
+									Util.packColumns(tblEON, 1);
 									
 									// DI info
 									txtStereo.setText(station.getStereo() ? "Stereo" : "Mono");

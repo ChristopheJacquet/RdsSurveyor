@@ -25,7 +25,12 @@
 
 package eu.jacquet80.rds.ui;
 
+import java.awt.Component;
+
+import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableCellRenderer;
 
 import eu.jacquet80.rds.core.Station;
 import eu.jacquet80.rds.core.TunedStation;
@@ -74,5 +79,4 @@ public class EONTableModel extends AbstractTableModel {
 	public boolean isCellEditable(int rowIndex, int columnIndex) {
 		return false;
 	}
-
 }

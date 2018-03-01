@@ -138,7 +138,7 @@ public class PagingPanel extends AppPanel {
 	@Override
 	public void doNotifyChange() {
 		tableModel.fireTableDataChanged();
-		Util.packColumns(table);
+		Util.packColumns(table, 1);
 		
 		String  interval;
 		if(pagingApp.getInterval() >= 0) {

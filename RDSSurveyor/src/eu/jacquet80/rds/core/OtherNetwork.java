@@ -118,7 +118,9 @@ public class OtherNetwork extends Station {
 		String res = "Mapped: ";
 		synchronized(mappedAFs) {
 			for(Map.Entry<Integer, Set<Integer>> e : mappedAFs.entrySet()) {
-				res += "[" + frequencyToString(e.getKey()) + " → ";
+			    // Use \u00A0 non-breaking space below on both sides of the arrow
+			    // to avoid breaking lines inside a mapping in the UI.
+				res += "[" + frequencyToString(e.getKey()) + "\u00A0→\u00A0";
 				for(Iterator<Integer> it = e.getValue().iterator(); it.hasNext(); ) {
 					res += frequencyToString(it.next());
 					if(it.hasNext()) res += ", ";

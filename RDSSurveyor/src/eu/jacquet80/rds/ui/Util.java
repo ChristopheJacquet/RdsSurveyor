@@ -28,16 +28,17 @@ package eu.jacquet80.rds.ui;
 import java.awt.Component;
 
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
 public class Util {
-    public static void packColumns(final JTable table) {
+    public static void packColumns(final JTable table, final int rightColsToIgnore) {
     	SwingUtilities.invokeLater(new Runnable() {
     		public void run() {
-    	        for (int c=0; c<table.getColumnCount(); c++) {
+    	        for (int c = 0; c < table.getColumnCount() - rightColsToIgnore; c++) {
     	            packColumn(table, c);
     	        }
     		}
@@ -76,7 +77,30 @@ public class Util {
     
         // Set the width
         col.setPreferredWidth(width);
+        col.setMaxWidth(width);
     }
-
     
+    @SuppressWarnings("serial")
+    public static class WrappingCellRenderer extends JTextArea implements TableCellRenderer {
+        public WrappingCellRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+        }
+
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            if(isSelected) {
+                setForeground(table.getSelectionForeground());
+                setBackground(table.getSelectionBackground());
+            } else {
+                setForeground(table.getForeground());
+                setBackground(table.getBackground());
+            }
+            setText(value.toString());
+            setSize(table.getColumnModel().getColumn(column).getWidth(), getPreferredSize().height);
+            if (table.getRowHeight(row) != getPreferredSize().height) {
+                table.setRowHeight(row, getPreferredSize().height);
+            }
+            return this;
+        }
+    }  
 }
