@@ -33,9 +33,8 @@ import javax.swing.JLabel;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.oda.EN301700;
 
+@SuppressWarnings("serial")
 public class EN301700Panel extends AppPanel {
-	private static final long serialVersionUID = 4196965227267207244L;
-	
 	private final JLabel lblData = new JLabel();
 	private final EN301700 app;
 

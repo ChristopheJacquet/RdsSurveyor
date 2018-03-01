@@ -44,9 +44,8 @@ import eu.jacquet80.rds.app.Paging;
 import eu.jacquet80.rds.app.Paging.Message;
 import eu.jacquet80.rds.ui.Util;
 
+@SuppressWarnings("serial")
 public class PagingPanel extends AppPanel {
-	private static final long serialVersionUID = -1835993971276718953L;
-	
 	private Paging pagingApp;
 	private final PagingTableModel tableModel;
 	private final JTable table;
