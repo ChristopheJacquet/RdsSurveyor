@@ -227,23 +227,48 @@ public class GroupLevelDecoder {
 		// Groups 1A & 1B: to extract PIN we need blocks 1 and 3
 		if(type == 1 && blocksOk[3]) {
 			int pin = blocks[3];
-			workingStation.setPIN(pin);
-			console.printf("PIN=%04X [%s] ", pin, station.getPINText());
+			boolean pinValid = workingStation.setPIN(pin);
+			// Radio Paging section 3.2.4.3: if day=0 in the PIN, the PIN is invalid
+			// and the field is used to transmit enhanced paging info instead.
+			if(pinValid) {
+			    console.printf("PIN=%04X [%s] ", pin, station.getPINText());
+			} else {
+			    int variant = (blocks[3]>>8) & 0xF;
+			    switch(variant) {
+			    case 0: case 1: case 2: case 3:
+			        int opc = blocks[3] & 0xF;
+			        printOPC(console, opc);
+			        if(opc != 0) {
+	                    int pac = (blocks[3] >> 4) & 0x3F;
+	                    printPAC(console, pac);
+			        }
+			        break;
+			    case 4:
+			        int ecc = blocks[3] & 0xFF;
+			        workingStation.setECC(ecc);
+			        printECC(console, station.getPI(), ecc);
+			        break;
+			    default:
+			        console.printf("<Variant %d not implemented> ", variant);
+			    }
+			}
 		}
 		
-		// Group 1A: to extract slow labeling codes, we need blocks 1 and 3
+		// Group 1A: to extract slow labeling codes, we need blocks 1 and 2
 		if(type == 1 && version == 0 && blocksOk[2]) {
 			int variant = (blocks[2] >> 12) & 0x7;
 			int la = (blocks[2] >> 15) & 0x1;
 			console.print("LA=" + la + " v=" + variant + " ");
 			switch(variant) {
 			case 0:
-				int opc = (blocks[2] >> 8) & 0xF;
+			{
 				int ecc = blocks[2] & 0xFF;
-				console.printf("OPC=%01X ECC=%02X ", opc, ecc);
-				workingStation.setECC(ecc);
-				if(pi != -1) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
+                workingStation.setECC(ecc);
+                printECC(console, station.getPI(), ecc);
+                int opc = (blocks[2] >> 8) & 0xF;
+                printOPC(console, opc);
 				break;
+			}
 				
 			case 1:
 				int tmcid = blocks[2] & 0xFFF;
@@ -262,10 +287,12 @@ public class GroupLevelDecoder {
 				
 			case 2:
 			{
-				int operatorCode = blocks[2] & 0xFFF;
-				if(operatorCode != 0) {
-					console.printf("Enhanced Paging Operator Code: %03X", operatorCode);
-				}
+                int opc = (blocks[2] >> 8) & 0xF;
+                printOPC(console, opc);
+                if(opc != 0) {
+                    int pac = blocks[2] & 0x3F;
+                    printPAC(console, pac);
+                }
 				break;
 			}
 				
@@ -669,6 +696,22 @@ public class GroupLevelDecoder {
 		
 	}
 	
+	private void printECC(PrintWriter console, int pi, int ecc) {
+        console.printf("ECC=%02X ", ecc);
+        if(pi != -1) console.print("[" + RDS.getISOCountryCode((pi>>12) & 0xF, ecc) + "] ");
+	}
+	
+	private void printOPC(PrintWriter console, int opc) {
+	    if(opc == 0) {
+	        console.print("No ERP ");
+	    } else {
+	        console.printf("ERP OPC=%d ", opc);
+	    }
+	}
+	
+	private void printPAC(PrintWriter console, int pac) {
+        console.printf("PAC=%d ", pac);
+	}
 	
 	public TunedStation getTunedStation() {
 		return station;

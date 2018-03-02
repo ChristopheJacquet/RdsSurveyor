@@ -288,11 +288,13 @@ public abstract class Station {
 		}
 	}
 	
-	public void setPIN(int pin) {
+	boolean setPIN(int pin) {
 		int day = (pin>>11) & 0x1F;
+		if(day == 0) return false;
 		int hour = (pin>>6) & 0x1F;
 		int min = pin & 0x3F;
 		pinText = String.format("D=%d, H=%02d:%02d", day, hour, min);
+		return true;
 	}
 	
 	public String getPINText() {

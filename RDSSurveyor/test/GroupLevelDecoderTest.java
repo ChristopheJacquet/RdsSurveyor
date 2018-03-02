@@ -52,4 +52,10 @@ class GroupLevelDecoderTest {
                                "F999 F404 E592 8C00");
         assertEquals(ts.getLPS().toString(), "peace мир 平和");
 	}
+
+	@Test
+	void testECCWithERP() throws IOException {
+	    TunedStation ts = send("1134 12C4 2200 04A0");
+	    assertEquals(ts.getECC(), 0xA0);
+	}
 }

@@ -175,8 +175,7 @@ public class RDS {
 	private final static String[] ecc_D1 = {"  ", "NA", "LR", "GH", "MR", "CV/ST", "  ", "SN", "GM", "BI", "??", "BW", "KM", "TZ", "ET", "NG"};
 	private final static String[] ecc_D2 = {"  ", "SL", "ZW", "MZ", "UG", "SZ", "GN", "SO", "NE", "TD", "GW", "CD", "CI", "  ", "ZM", "ER"};
 	private final static String[] ecc_D3 = {"  ", "  ", "  ", "EH", "??", "RW", "LS", "  ", "SC", "  ", "MU", "  ", "SD", "  ", "  ", "  "};
-	private final static String[] ecc_A0 = {"US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "US/VI/PR", "  ", "US/VI/PR", "US/VI/PR"};
-
+	private final static String[] ecc_A0 = {"  ", "US", "US", "US", "US", "US", "US", "US", "US", "US", "US", "US", "  ", "US", "US", "  "};
 	private final static String[] ecc_A1 = {"  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "  ", "CA", "CA", "CA", "CA", "GL"};
 	private final static String[] ecc_A2 = {"  ", "AI", "AG", "EC", "  ", "BB", "BZ", "KY", "CR", "CU", "AR", "BR", "BM", "AN", "GP", "BS"};
 	private final static String[] ecc_A3 = {"  ", "BO", "CO", "JM", "MQ", "GF", "PY", "NI", "  ", "PA", "DM", "DO", "CL", "GD", "  ", "GY"};
