@@ -93,6 +93,7 @@ public class MainWindow extends JFrame {
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 40),
 			txtDynPS = new JTextArea(1, 80),
+			txtLongPS = new JTextArea(1, 16),
 			txtPIN = new JTextArea(1, 12);
 	
 	// Decoder Information + Music/Speech.
@@ -116,7 +117,7 @@ public class MainWindow extends JFrame {
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
 			
-	private final JTextComponent[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtDI};
+	private final JTextComponent[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtLongPS, txtPIN, txtDI};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -243,6 +244,7 @@ public class MainWindow extends JFrame {
 				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics"),
 				lblDynPS = new JLabel("Dynamic PS"),
+				lblLongPS = new JLabel("Long PS"),
 				lblDI = new JLabel("Decoder Information"),
 				lblBLER = new JLabel("Block error rate"),
 				lblLatestGroups = new JLabel("Latest groups"),
@@ -255,8 +257,8 @@ public class MainWindow extends JFrame {
 		}));
 
 		mainPanel.add(createArrangedPanel(new Component[][] {
-				{lblDynPS},
-				{txtDynPS},
+				{lblDynPS, lblLongPS},
+				{txtDynPS, txtLongPS},
 		}));
 		
 		mainPanel.add(createArrangedPanel(new Component[][] {
@@ -468,6 +470,7 @@ public class MainWindow extends JFrame {
 									}
 									
 									txtDynPS.setText(station.getDynamicPSmessage());
+									txtLongPS.setText(station.getLPS().toString());
 
 									txtPI.setText(String.format("%04X", pi));
 									txtPTY.setText(Integer.toString(station.getPTY()) + " (" + station.getPTYlabel() + ")");
