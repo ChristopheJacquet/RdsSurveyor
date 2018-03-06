@@ -45,7 +45,6 @@ import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
-import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -63,7 +62,6 @@ import javax.swing.text.JTextComponent;
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.core.TunedStation;
-import eu.jacquet80.rds.img.Image;
 import eu.jacquet80.rds.input.RDSReader;
 import eu.jacquet80.rds.log.ApplicationChanged;
 import eu.jacquet80.rds.log.DefaultLogMessageVisitor;
@@ -97,7 +95,7 @@ public class MainWindow extends JFrame {
 			txtPIN = new JTextArea(1, 12);
 	
 	// Decoder Information + Music/Speech.
-	private final JEditorPane txtDI = new JEditorPane();
+	private final JEditorPane txtSound = new JEditorPane();
 	
 	private final JEditorPane txtAF = new JEditorPane();
 	
@@ -117,7 +115,7 @@ public class MainWindow extends JFrame {
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
 			
-	private final JTextComponent[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtLongPS, txtPIN, txtDI};
+	private final JTextComponent[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtLongPS, txtPIN, txtSound};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -245,7 +243,7 @@ public class MainWindow extends JFrame {
 				lblGroupStats = new JLabel("Group statistics"),
 				lblDynPS = new JLabel("Dynamic PS"),
 				lblLongPS = new JLabel("Long PS"),
-				lblDI = new JLabel("Decoder Information"),
+				lblSound = new JLabel("Sound Information"),
 				lblBLER = new JLabel("Block error rate"),
 				lblLatestGroups = new JLabel("Latest groups"),
 				lblPIN = new JLabel("PIN");
@@ -287,8 +285,8 @@ public class MainWindow extends JFrame {
 		pnlAF.setLayout(boxLayoutAF);
 		
 		JPanel pnlTop = createArrangedPanel(new Component[][] {
-				{lblCountry, lblLang, lblPIN, lblDI},
-				{txtCountry, txtLang, txtPIN, txtDI},
+				{lblCountry, lblLang, lblPIN, lblSound},
+				{txtCountry, txtLang, txtPIN, txtSound},
 		});
 		pnlTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 		pnlAF.add(pnlTop);
@@ -362,7 +360,7 @@ public class MainWindow extends JFrame {
 				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.WHITE, 2)));
 		
-		txtDI.setContentType("text/html");
+		txtSound.setContentType("text/html");
 		
 		setPreferredSize(new Dimension(1000, 700));
 		
@@ -512,7 +510,7 @@ public class MainWindow extends JFrame {
 									Util.packColumns(tblEON, 1);
 									
 									// DI + Music/Speech info.
-									List<String> flags = new ArrayList<String>(5);
+									List<String> flags = new ArrayList<String>(4);
 									flags.add(station.getMusic() ? "Music" : "Speech");
 									flags.add(station.getStereo() ? "Stereo" : "Mono");
 									if(station.getArtificialHead()) flags.add("Artificial Head");
@@ -522,7 +520,7 @@ public class MainWindow extends JFrame {
 									for(String f : flags) {
 										flagsHTML += "<span style='background-color: #777777; color: #FFFFFF; font-family: \"" + afFont + "\"'>&nbsp;" + f + "&nbsp;</span> ";
 									}
-									txtDI.setText(flagsHTML);
+									txtSound.setText(flagsHTML);
 									// Traffic
 									// TODO improve me!
 									trafficModel.update();
