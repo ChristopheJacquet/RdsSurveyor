@@ -45,6 +45,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.ParallelGroup;
 import javax.swing.GroupLayout.SequentialGroup;
+import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -57,6 +58,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.text.JTextComponent;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.core.RDS;
@@ -91,11 +93,10 @@ public class MainWindow extends JFrame {
 			txtLang = new JTextArea(1, 20),
 			txtTime = new JTextArea(1, 40),
 			txtDynPS = new JTextArea(1, 80),
-			//txtRT = new JTextArea(1, 64),
-			txtCompressed = new JTextArea(1, 5),
-			txtStereo = new JTextArea(1, 5),
-			txtHead = new JTextArea(1, 5),
 			txtPIN = new JTextArea(1, 12);
+	
+	// Decoder Information + Music/Speech.
+	private final JEditorPane txtDI = new JEditorPane();
 	
 	private final JEditorPane txtAF = new JEditorPane();
 	
@@ -115,7 +116,7 @@ public class MainWindow extends JFrame {
 	private RTPanel pnlRT = new RTPanel();
 	private ODAPanel pnlODA = new ODAPanel();
 			
-	private final JTextArea[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtCompressed, txtStereo, txtHead};
+	private final JTextComponent[] smallTxt = {txtPTY, txtPTYN, txtTraffic, txtCountry, txtLang, txtTime, txtDynPS, txtPIN, txtDI};
 	private final JTextArea[] bigTxt = {txtPS, txtPSName, txtPI};
 	private final JTable tblEON;
 	private TunedStation station;
@@ -242,9 +243,7 @@ public class MainWindow extends JFrame {
 				lblRT = new JLabel("RT"),
 				lblGroupStats = new JLabel("Group statistics"),
 				lblDynPS = new JLabel("Dynamic PS"),
-				lblCompressed = new JLabel("Compressed"),
-				lblHead = new JLabel("Artificial head"),
-				lblStereo = new JLabel("Sound"),
+				lblDI = new JLabel("Decoder Information"),
 				lblBLER = new JLabel("Block error rate"),
 				lblLatestGroups = new JLabel("Latest groups"),
 				lblPIN = new JLabel("PIN");
@@ -286,8 +285,8 @@ public class MainWindow extends JFrame {
 		pnlAF.setLayout(boxLayoutAF);
 		
 		JPanel pnlTop = createArrangedPanel(new Component[][] {
-				{lblCountry, lblLang, lblStereo, lblCompressed, lblHead, lblPIN},
-				{txtCountry, txtLang, txtStereo, txtCompressed, txtHead, txtPIN},
+				{lblCountry, lblLang, lblPIN, lblDI},
+				{txtCountry, txtLang, txtPIN, txtDI},
 		});
 		pnlTop.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 		pnlAF.add(pnlTop);
@@ -315,7 +314,7 @@ public class MainWindow extends JFrame {
 		
 		globalPanel.add(tabbedPane, BorderLayout.CENTER);
 		
-		for(JTextArea txt : smallTxt) {
+		for(JTextComponent txt : smallTxt) {
 			txt.setFont(new Font(MainWindow.MONOSPACED, Font.PLAIN, txt.getFont().getSize()));
 			txt.setEditable(false);
 			txt.setBorder(BorderFactory.createCompoundBorder(
@@ -360,6 +359,8 @@ public class MainWindow extends JFrame {
 		txtRT.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createLineBorder(BORDER_COLOR, 1),
 				BorderFactory.createLineBorder(Color.WHITE, 2)));
+		
+		txtDI.setContentType("text/html");
 		
 		setPreferredSize(new Dimension(1000, 700));
 		
@@ -507,12 +508,18 @@ public class MainWindow extends JFrame {
 									//eonTableModel.fireTableDataChanged();
 									Util.packColumns(tblEON, 1);
 									
-									// DI info
-									txtStereo.setText(station.getStereo() ? "Stereo" : "Mono");
-									txtHead.setText(station.getArtificialHead() ? "Yes" : "No");
-									txtCompressed.setText(station.getCompressed() ? "Yes" : "No");
+									// DI + Music/Speech info.
+									List<String> flags = new ArrayList<String>(5);
+									flags.add(station.getMusic() ? "Music" : "Speech");
+									flags.add(station.getStereo() ? "Stereo" : "Mono");
+									if(station.getArtificialHead()) flags.add("Artificial Head");
+									if(station.getCompressed()) flags.add("Compressed");
 									lblPTY.setText("PTY [" + (station.getDPTY() ? "Dynamic" : "Static") + "]");
-									
+									String flagsHTML = "<html>";
+									for(String f : flags) {
+										flagsHTML += "<span style='background-color: #777777; color: #FFFFFF; font-family: \"" + afFont + "\"'>&nbsp;" + f + "&nbsp;</span> ";
+									}
+									txtDI.setText(flagsHTML);
 									// Traffic
 									// TODO improve me!
 									trafficModel.update();

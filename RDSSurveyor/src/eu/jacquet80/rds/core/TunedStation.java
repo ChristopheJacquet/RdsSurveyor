@@ -52,6 +52,7 @@ public class TunedStation extends Station {
 	private RDSTime streamTimeForDate = null;
 	private Application[] applications = new Application[32];
 	private List<Application> applicationList = new ArrayList<Application>();
+	private boolean diMusic;
 	private boolean diStereo, diArtif, diCompressed, diDPTY;
 	private int totalBlocks, totalBlocksOk;
 	private int[] latestBlocksOk = new int[25];
@@ -250,6 +251,10 @@ public class TunedStation extends Station {
 		return lps;
 	}
 	
+	public void setMusic(boolean diMusic) {
+		this.diMusic = diMusic;
+	}
+	
 	public void setDIbit(int addr, boolean diInfo, PrintWriter console) {
 		console.print("DI:");
 		switch(addr) {
@@ -299,6 +304,15 @@ public class TunedStation extends Station {
 	public Date getRealTimeForStreamTime(RDSTime time) {
 		if(time == null) return null;
 		return time.getRealTime(streamTimeForDate, date);
+	}
+	
+	/**
+	 * Returns the value of the Music/Speech (M/S) flag.
+	 * 
+	 * @return {@code true} for Music, {@code false} for Speech.
+	 */
+	public boolean getMusic() {
+		return diMusic;
 	}
 	
 	public boolean getStereo() {
