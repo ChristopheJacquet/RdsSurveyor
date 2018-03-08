@@ -84,16 +84,18 @@ public class OtherNetwork extends Station {
 	public synchronized String addAFPair(int a, int b) {
 		StringBuffer res = new StringBuffer("Pseudo-method A: ");
 		
-		// some stations use list length indicators, others don't
-		if(! isListLengthIndicator(a)) {
+		// Some stations use list length indicators, others don't.
+		if(isListLengthIndicator(a)) {
+			res.append("#" + (a-224));
+		} else {
 			int fA = channelToFrequency(a);
-			pseudoMethodAAFs.add(fA);
-			res.append(frequencyToString(fA)).append(", ");
+			if(fA > 0) pseudoMethodAAFs.add(fA);
+			res.append(frequencyToString(fA));
 		}
-		
+		res.append(", ");
 		
 		int fB = channelToFrequency(b);
-		pseudoMethodAAFs.add(fB);
+		if(fB > 0) pseudoMethodAAFs.add(fB);
 		res.append(frequencyToString(fB));
 		
 		return res.toString();
