@@ -227,7 +227,7 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 			}
 			
 			if(mixer == null) {
-				System.out.println("Native tuner: not found a recognized audio device.");
+				System.out.println("Native tuner: could not find a recognized audio device.");
 				System.out.println("Audio devices: " + audioDevices);
 				return;
 			}
