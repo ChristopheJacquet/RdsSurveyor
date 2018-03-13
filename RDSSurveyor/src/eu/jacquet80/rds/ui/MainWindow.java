@@ -33,6 +33,9 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -197,6 +200,7 @@ public class MainWindow extends JFrame {
 			
 			if(toolbar != null) {
 				pnlInputToolbar.add(toolbar);
+				toolbars.add(toolbar);
 			}
 		}
 		
@@ -373,6 +377,18 @@ public class MainWindow extends JFrame {
 		this.dumpDisplay = new DumpDisplay(10000);
 		///dumpDisplay.setVisible(true);
 		
+		KeyboardFocusManager.getCurrentKeyboardFocusManager()
+		  .addKeyEventDispatcher(new KeyEventDispatcher() {
+		      @Override
+		      public boolean dispatchKeyEvent(KeyEvent e) {
+		    	  	if(e.getID() == KeyEvent.KEY_PRESSED) {
+		    	  		for(InputToolBar tb : toolbars) {
+		    	  			if(tb.handleKey(e.getExtendedKeyCode())) break;
+		    	  		}
+		    	  	}
+		        return false;
+		      }
+		});
 		
 		windowUpdaterVisitor = new DefaultLogMessageVisitor() {
 			@Override

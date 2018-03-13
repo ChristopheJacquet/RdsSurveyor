@@ -2,6 +2,8 @@ package eu.jacquet80.rds.ui.input;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.Icon;
 import javax.swing.JButton;
@@ -24,6 +26,8 @@ public abstract class InputToolBar extends JToolBar {
 			handleButtonAction(e);
 		}
 	};
+	
+	private Map<Integer, String> keyMap = new HashMap<Integer, String>();
 
 	public static InputToolBar forReader(RDSReader reader, Log log) {
 		//System.out.println("For reader: " + reader);
@@ -58,13 +62,13 @@ public abstract class InputToolBar extends JToolBar {
 	}
 
 	
-	protected JButton addButton(Icon icon, String command, int mnemonic) {
+	protected JButton addButton(Icon icon, String command, int keyCode) {
 		JButton button = new JButton(icon);
 		button.setActionCommand(command);
 		button.addActionListener(buttonListener);
 		add(button);
 		
-		if(mnemonic != 0) button.setMnemonic(mnemonic);
+		keyMap.put(keyCode, command);
 		
 		return button;
 	}
@@ -95,4 +99,13 @@ public abstract class InputToolBar extends JToolBar {
 	protected abstract void handleButtonAction(ActionEvent e);
 	
 	public abstract void unregister();
+	
+	public boolean handleKey(int keyCode) {
+		String action = keyMap.get(keyCode);
+		if(action != null) {
+			handleButtonAction(new ActionEvent(this, ActionEvent.ACTION_PERFORMED, action));
+			return true;
+		}
+		return false;
+	}
 }
