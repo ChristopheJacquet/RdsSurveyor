@@ -19,7 +19,7 @@ BEGIN
             VALUE "FileDescription", "RTL2832U driver for RDS Surveyor"
             VALUE "FileVersion", "1, 0, 0, 0"
             VALUE "InternalName", "rtl"
-            VALUE "LegalCopyright", "ï¿½ 2015 Michael von Glasow"
+            VALUE "LegalCopyright", "© 2015 Michael von Glasow"
             VALUE "OriginalFilename", "rtl.dll"
             VALUE "ProductName", "RTL2832U driver for RDS Surveyor"
             VALUE "ProductVersion", "1, 0, 0, 0"
