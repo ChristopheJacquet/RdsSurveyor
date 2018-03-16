@@ -18,14 +18,18 @@ jar {
   }
 }
 
-task fatJar(type: Jar) {
-    manifest {
-        attributes 'Class-Path': '.',
-        	           'Main-Class': 'eu.jacquet80.rds.RDSSurveyor'
-    }
-    baseName = 'all-in-one-jar'
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    with jar
+task dist(type: Zip, dependsOn: jar) {
+	doFirst {
+		new File(buildDir, 'log').mkdirs()
+	}
+
+	from jar.outputs.files
+	from('../README.md') {
+		into('log')
+	}
+	from('../lib/') {
+		into('lib')
+	}
 }
 
 dependencies {

@@ -5,6 +5,8 @@ RDS Surveyor is a complete tool for decoding and analyzing [Radio Data System](h
 
 RDS Surveyor is Java-based, hence it runs on all platforms. It has been successfully used on Linux, MacOS and Windows.
 
+Project homepage: http://rds-surveyor.jacquet.xyz/.
+
 ### Supported hardware
 
 RDS Surveyor can use diverse data sources:
@@ -38,9 +40,11 @@ As of March 2018, it handles only the basic data stream of RDS1, but support for
 
 #### Downloading a compiled executable
 
+Go to http://rds-surveyor.jacquet.xyz/download/.
+
 #### Compiling
 
-To compile and the main program, you need Java SE 6 or later and the Gradle build system. Go into the `RDSSurveyor` directory and run:
+To compile and the main program, you need Java SE 7 or later and the Gradle build system version 4.6 or later. Go into the `RDSSurveyor` directory and run:
 
 ```
 gradle jar
