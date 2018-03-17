@@ -26,6 +26,7 @@
 package eu.jacquet80.rds.ui.app;
 
 import java.awt.BorderLayout;
+import java.awt.Font;
 
 import javax.swing.AbstractListModel;
 import javax.swing.JList;
@@ -38,7 +39,7 @@ import eu.jacquet80.rds.app.InHouse;
 
 @SuppressWarnings("serial")
 public class InHousePanel extends AppPanel {
-	private final JList list = new JList();
+	private final JList<String> list = new JList<String>();
 	private final IHListModel listModel;
 	
 	private InHouse app = null;
@@ -47,7 +48,9 @@ public class InHousePanel extends AppPanel {
 		super(new BorderLayout());
 		listModel = new IHListModel();
 		list.setModel(listModel);
-		list.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+		list.setLayoutOrientation(JList.VERTICAL_WRAP);
+		Font f = new Font(Font.MONOSPACED, Font.PLAIN, list.getFont().getSize());
+		list.setFont(f);
 		add(new JScrollPane(list), BorderLayout.CENTER);
 	}
 	
@@ -72,9 +75,7 @@ public class InHousePanel extends AppPanel {
 		
 	}
 	
-	private class IHListModel extends AbstractListModel {
-		private static final long serialVersionUID = 1L;
-
+	private class IHListModel extends AbstractListModel<String> {
 		@Override
 		public int getSize() {
 			synchronized(InHousePanel.this) {
@@ -84,7 +85,7 @@ public class InHousePanel extends AppPanel {
 		}
 		
 		@Override
-		public Object getElementAt(int index) {
+		public String getElementAt(int index) {
 			synchronized(InHousePanel.this) {
 				if(app != null) return app.getMessage(index);
 				else return "ERR";

@@ -27,13 +27,17 @@ package eu.jacquet80.rds.app;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import eu.jacquet80.rds.core.RDS;
 import eu.jacquet80.rds.log.RDSTime;
 
 public class InHouse extends Application {
 	private final List<Message> messages = new ArrayList<Message>();
+	private final Map<Message, MessageMetadata> metadata =
+			new HashMap<Message, MessageMetadata>();
 	
 	public InHouse() {
 	}
@@ -49,7 +53,12 @@ public class InHouse extends Application {
 		if(blocksOk[1] && blocksOk[2] && blocksOk[3]) {
 			Message m = new Message(blocks[1] & 0x1F, blocks[2], blocks[3]);
 			synchronized(this) {
-				messages.add(m);
+				if(metadata.containsKey(m)) {
+					metadata.get(m).addOccurrence();
+				} else {
+					messages.add(m);
+					metadata.put(m, new MessageMetadata());
+				}
 			}
 			console.print(m.getDump());
 		}
@@ -60,12 +69,14 @@ public class InHouse extends Application {
 	}
 	
 	public synchronized String getMessage(int index) {
-		return messages.get(index).getDump();
+		Message m = messages.get(index);
+		return m.getHTMLDump() + " [" + metadata.get(m).getCount() + "]";
 	}
 
-	public static class Message {
+	private static class Message {
 		private final int w1, w2, w3;
 		private final String contents;
+		private final String contentsHTML;
 		
 		public Message(int w1, int w2, int w3) {
 			this.w1 = w1;
@@ -73,18 +84,50 @@ public class InHouse extends Application {
 			this.w3 = w3;
 			
 			contents = 
-				Character.toString(character((w2 >> 8) & 0xFF)) +
-				Character.toString(character(w2 & 0xFF)) +
-				Character.toString(character((w3 >> 8) & 0xFF)) +
-				Character.toString(character(w3 & 0xFF));
+				character((w2 >> 8) & 0xFF, false) + character(w2 & 0xFF, false) +
+				character((w3 >> 8) & 0xFF, false) + character(w3 & 0xFF, false);
+			contentsHTML = 
+				character((w2 >> 8) & 0xFF, true) + character(w2 & 0xFF, true) +
+				character((w3 >> 8) & 0xFF, true) + character(w3 & 0xFF, true);
 		}
 		
-		private char character(int v) {
-			if(v >= 32 && v<=255) return RDS.toChar(v); else return '.';
+		private String character(int v, boolean html) {
+			if(v >= 32 && v<=255) return Character.toString(RDS.toChar(v));
+			else return html ? "<font color=#7777FF>.</font>" : ".";
+		}
+		
+		public String getHTMLDump() {
+			return "<html>" + 
+					String.format("%02X/%04X-%04X", w1, w2, w3) +
+					" (" + contentsHTML + ")</html>";
 		}
 		
 		public String getDump() {
 			return String.format("%02X/%04X-%04X", w1, w2, w3) + " (" + contents + ")";
+		}		
+		
+		@Override
+		public boolean equals(Object obj) {
+			if(! (obj instanceof Message)) return false;
+			Message m = (Message)obj;
+			return this.w1 == m.w1 && this.w2 == m.w2 && this.w3 == m.w3;
+		}
+		
+		@Override
+		public int hashCode() {
+			return this.w1 ^ ((this.w2<<16) | this.w3);
+		}
+	}
+	
+	private static class MessageMetadata {
+		private int count = 1;
+		
+		public void addOccurrence() {
+			count++;
+		}
+		
+		public int getCount() {
+			return count;
 		}
 	}
 }
