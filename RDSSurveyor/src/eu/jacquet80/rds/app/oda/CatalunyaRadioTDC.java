@@ -2,6 +2,8 @@ package eu.jacquet80.rds.app.oda;
 
 import java.util.Vector;
 
+import eu.jacquet80.rds.core.RDS;
+
 public class CatalunyaRadioTDC extends TDC {
 	private final Vector<String> messages = new Vector<String>();  // concurrent list
 	private final StringBuffer currentMessage = new StringBuffer();
@@ -31,7 +33,7 @@ public class CatalunyaRadioTDC extends TDC {
 		}
 		
 		for(int i=iStart; i<=iStop; i++) {
-			currentMessage.append(character(contents[i]));
+			currentMessage.append(RDS.toChar(contents[i]));
 		}
 
 		if(contents[3] == 4) {

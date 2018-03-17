@@ -237,42 +237,13 @@ public class RDS {
 		return synd;
 	}
 	
-	/*
-	private static int poids(int codeword) {
-		int poids = 0;
-		for(int i=0; i<26; i++) {
-			if((codeword & 1) != 0) poids++;
-			codeword >>= 1;
-		}
-		return poids;
-	}
-	
-	public static void main(String[] args) throws FileNotFoundException {
-		int[] errors = new int[1024];
-		for(int cw=1; cw < (1<<26); cw++) {
-			int synd = calcSyndrome(cw) >> 6;
-			if(errors[synd] == 0) errors[synd] = cw;
-			else {
-				if(poids(cw) < poids(errors[synd])) errors[synd] = cw;
-			}
-			if(cw % 1000000 == 0) System.out.println(cw);
-		}
-		
-		PrintWriter w = new PrintWriter(new File("/tmp/errors.txt"));
-		for(int s=0; s<1024; s++) {
-			w.printf("0x%07X, ", errors[s]);
-			if(s%16 == 15) w.println();
-		}
-		w.flush();
-		w.close();
-	}
-	*/
+	private final static char CTRLCHAR = '\u2423';
 	
 	private final static char[] charmap = new char[] {
-		  '\u0000', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020',
-		  '\u0020', '\u0020', '\n',   	'\u000B', '\u0020', '\r',	  '\u0020', '\u0020',
-		  '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020',
-		  '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u0020', '\u001F',	
+		  CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR,
+		  CTRLCHAR, CTRLCHAR, '\u240A', '\u240B', CTRLCHAR, '\u240D', CTRLCHAR, CTRLCHAR,
+		  CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR,
+		  CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, CTRLCHAR, '\u241F',
 		  '\u0020',	'\u0021', '\u0022',	'\u0023', '\u00A4',	'\u0025', '\u0026',	'\'',     
 		  '\u0028',	'\u0029', '\u002A',	'\u002B', '\u002C',	'\u002D', '\u002E',	'\u002F',	
 		  '\u0030',	'\u0031', '\u0032',	'\u0033', '\u0034',	'\u0035', '\u0036',	'\u0037',	
@@ -300,7 +271,7 @@ public class RDS {
 		  '\u00C3',	'\u00C5', '\u00C6', '\u0152', '\u0177',	'\u00DD', '\u00D5',	'\u00D8',	
 		  '\u00DE',	'\u014A', '\u0154',	'\u0106', '\u015A',	'\u0179', '\u0166',	'\u00F0',	
 		  '\u00E3',	'\u00E5', '\u00E6',	'\u0153', '\u0175',	'\u00FD', '\u00F5',	'\u00F8',	
-		  '\u00FE',	'\u014B', '\u0155',	'\u0107', '\u015B',	'\u017A', '\u0167',	'\u0020',
+		  '\u00FE',	'\u014B', '\u0155',	'\u0107', '\u015B',	'\u017A', '\u0167',	CTRLCHAR,
 	};
 
 	

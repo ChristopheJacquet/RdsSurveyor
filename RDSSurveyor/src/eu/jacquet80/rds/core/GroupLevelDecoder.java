@@ -183,7 +183,7 @@ public class GroupLevelDecoder {
 			if(blocksOk[3]) {
 				char ch1 = RDS.toChar( (blocks[3]>>8) & 0xFF);
 				char ch2 = RDS.toChar(blocks[3] & 0xFF);
-				console.print("PS pos=" + addr + ": \"" + toASCII(ch1) + toASCII(ch2) + "\" ");
+				console.print("PS pos=" + addr + ": \"" + ch1 + ch2 + "\" ");
 				workingStation.getPS().setChars(addr, ch1, ch2);
 			}
 
@@ -355,8 +355,8 @@ public class GroupLevelDecoder {
 			rt.setFlag(ab);
 
 			console.print("RT A/B=" + (ab == 0 ? 'A' : 'B') + " pos=" + addr + ": \"");
-			if(version == 0) console.print(toASCII(ch1) + "" + toASCII(ch2));
-			console.print(toASCII(ch3) + "" + toASCII(ch4));
+			if(version == 0) console.print(ch1 + "" + ch2);
+			console.print(ch3 + "" + ch4);
 			console.print('\"');
 		}
 
@@ -489,8 +489,8 @@ public class GroupLevelDecoder {
 				console.printf("%02X/%04X-%04X", a, blocks[2], blocks[3]);
 				if(type == 5 || type == 6) {
 					console.printf(" (%c%c%c%c)", 
-							toASCII((char)((blocks[2]>>8) & 0xFF)), toASCII((char)(blocks[2] & 0xFF)), 
-							toASCII((char)((blocks[3]>>8) & 0xFF)), toASCII((char)(blocks[3] & 0xFF)));
+							RDS.toChar((blocks[2]>>8) & 0xFF), RDS.toChar(blocks[2] & 0xFF), 
+							RDS.toChar((blocks[3]>>8) & 0xFF), RDS.toChar(blocks[3] & 0xFF));
 				}
 			}
 
@@ -531,14 +531,14 @@ public class GroupLevelDecoder {
 				char c1 = RDS.toChar((blocks[2]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[2] & 0xFF);
 				workingStation.getPTYN().setChars(pos*2, c1, c2);
-				console.print(Character.toString(toASCII(c1)) + Character.toString(toASCII(c2)));
+				console.print(Character.toString(c1) + Character.toString(c2));
 			} else console.print("??");
 
 			if(blocksOk[3]) {
 				char c1 = RDS.toChar((blocks[3]>>8) & 0xFF);
 				char c2 = RDS.toChar(blocks[3] & 0xFF);
 				workingStation.getPTYN().setChars(pos*2+1, c1, c2);
-				console.print(Character.toString(toASCII(c1)) + Character.toString(toASCII(c2)));
+				console.print(Character.toString(c1) + Character.toString(c2));
 			} else console.print("??");
 
 			console.print("\"");
@@ -586,7 +586,7 @@ public class GroupLevelDecoder {
 					if(variant >= 0 && variant <= 3) {  // ON PS
 						char ch1 = RDS.toChar( (blocks[2]>>8) & 0xFF);
 						char ch2 = RDS.toChar( blocks[2] & 0xFF);
-						console.print("ON.PS pos=" + variant + ": \"" + toASCII(ch1) + toASCII(ch2) + "\", ");
+						console.print("ON.PS pos=" + variant + ": \"" + ch1 + ch2 + "\", ");
 
 						if(on != null) on.getPS().setChars(variant, ch1, ch2);
 					}
@@ -808,19 +808,6 @@ public class GroupLevelDecoder {
 				}
 			}
 		 */
-	}
-
-	private static String toASCII(String s) {
-		StringBuffer res = new StringBuffer(s.length());
-		for(int i=0; i<s.length(); i++) {
-			char current = s.charAt(i);
-			res.append(current >= 32 && current < 128 ? current : '.');
-		}
-		return res.toString();
-	}
-
-	private static char toASCII(char c) {
-		return c >= 32 && c < 128 ? c : '.';
 	}
 
 	public void reset() {

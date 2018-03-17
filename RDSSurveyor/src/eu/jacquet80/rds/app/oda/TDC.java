@@ -28,10 +28,10 @@ public abstract class TDC extends Application {
 					(blocks[2] >> 8) & 0xFF, blocks[2] & 0xFF, 
 					(blocks[3] >> 8) & 0xFF, blocks[3] & 0xFF};
 			String str = 
-					Character.toString(character(octet[0])) +
-					Character.toString(character(octet[1])) +
-					Character.toString(character(octet[2])) +
-					Character.toString(character(octet[3]));
+					Character.toString(RDS.toChar(octet[0])) +
+					Character.toString(RDS.toChar(octet[1])) +
+					Character.toString(RDS.toChar(octet[2])) +
+					Character.toString(RDS.toChar(octet[3]));
 			console.printf("Channel %02d: \"%s\"  ", channel, str);
 			
 			String res = processTDCData(channel, octet);
@@ -39,10 +39,6 @@ public abstract class TDC extends Application {
 		}
 	}
 	
-	protected static char character(int v) {
-		if(v >= 32 && v<=255) return RDS.toChar(v); else return '.';
-	}
-
 	@SuppressWarnings("rawtypes")
 	private static Class preferredTDCApp;
 	

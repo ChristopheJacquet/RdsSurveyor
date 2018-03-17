@@ -70,36 +70,27 @@ public class InHouse extends Application {
 	
 	public synchronized String getMessage(int index) {
 		Message m = messages.get(index);
-		return m.getHTMLDump() + " [" + metadata.get(m).getCount() + "]";
+		return
+			"<html>" +
+			m.getDump().replaceAll(
+					"(\u2423|\u240A|\u240B|\u240D|\u241F)",
+					"<font color=#7777FF>$1</font>") +
+			" [" + metadata.get(m).getCount() + "] " +
+			"</html>";
 	}
 
 	private static class Message {
 		private final int w1, w2, w3;
 		private final String contents;
-		private final String contentsHTML;
 		
 		public Message(int w1, int w2, int w3) {
 			this.w1 = w1;
 			this.w2 = w2;
 			this.w3 = w3;
 			
-			contents = 
-				character((w2 >> 8) & 0xFF, false) + character(w2 & 0xFF, false) +
-				character((w3 >> 8) & 0xFF, false) + character(w3 & 0xFF, false);
-			contentsHTML = 
-				character((w2 >> 8) & 0xFF, true) + character(w2 & 0xFF, true) +
-				character((w3 >> 8) & 0xFF, true) + character(w3 & 0xFF, true);
-		}
-		
-		private String character(int v, boolean html) {
-			if(v >= 32 && v<=255) return Character.toString(RDS.toChar(v));
-			else return html ? "<font color=#7777FF>.</font>" : ".";
-		}
-		
-		public String getHTMLDump() {
-			return "<html>" + 
-					String.format("%02X/%04X-%04X", w1, w2, w3) +
-					" (" + contentsHTML + ")</html>";
+			contents = new String(new char[] {
+				RDS.toChar((w2 >> 8) & 0xFF), RDS.toChar(w2 & 0xFF),
+				RDS.toChar((w3 >> 8) & 0xFF), RDS.toChar(w3 & 0xFF)});
 		}
 		
 		public String getDump() {
