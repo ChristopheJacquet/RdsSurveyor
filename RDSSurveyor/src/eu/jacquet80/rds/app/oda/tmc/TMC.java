@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -62,6 +64,18 @@ public class TMC {
 	};
 	private static String dbUrl = null;
 	private static Connection dbConnection = null;
+	private static Charset charset = null;
+	
+	public static void setCharset(String charsetName) {
+		try {
+			charset = Charset.forName(charsetName);
+			System.out.println("Charset for LT tables: " + charset.name());
+		} catch(IllegalCharsetNameException e) {
+			System.err.println("Illegal charset: '" + charsetName + "'");
+		} catch(UnsupportedCharsetException e) {
+			System.err.println("Unsupported charset: '" + charsetName + "'");
+		}
+	}
 	
 	static BufferedReader openTMCFile(String name) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(TMC.class.getResourceAsStream(name)));
@@ -79,7 +93,15 @@ public class TMC {
 	 * @throws IOException
 	 */
 	static BufferedReader openLTFile(File file) throws IOException {
-		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+		BufferedReader br;
+		// If charset explicitly specified, then use it.
+		if(charset != null) {
+			try {
+				br = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
+				return br;
+			} catch(Exception e) {}
+		}
+		br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 		/*
 		 * According to the original TMC spec, encoding for the LT is ISO-8859-1. However, by now
 		 * TISA has certified location tables in UTF-8 encoding. Examples are Switzerland, Italy

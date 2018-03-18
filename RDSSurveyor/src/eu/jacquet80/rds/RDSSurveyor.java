@@ -269,6 +269,8 @@ public class RDSSurveyor {
 					}
 				} else if("-lt".equals(args[i])) {
 					inLtPath = getParam("lt", args, ++i);
+				} else if("-ltcharset".equals(args[i])) {
+					TMC.setCharset(getParam("ltcharset", args, ++i));
 				} else if("-ltdb".equals(args[i])) {
 					dbUrl = String.format("jdbc:hsqldb:file:%s", getParam("ltdb", args, ++i));
 				} else {
@@ -297,6 +299,7 @@ public class RDSSurveyor {
 					System.out.println("  -tdc <decoder>           Use a given TDC decoder (available decoder: CATRADIO)");
 					System.out.println("  -force <group>:<aid>     Force to use a given ODA for the given group");
 					System.out.println("  -lt <path>               Read TMC location tables found at the given path (or subdirs)");
+					System.out.println("  -ltcharset <charset>     Use a specific charset for reading TMC location tables");
 					System.out.println("  -ltdb <path>             Use TMC location database at the given path");
 					System.exit(1);
 				}
