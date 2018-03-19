@@ -7,6 +7,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -173,8 +174,9 @@ public class DumpDisplay extends JFrame {
 		@Override
 		protected void paintComponent(Graphics g_) {
 			super.paintComponent(g_);
-						
+			
 			Graphics2D g = (Graphics2D) g_;
+			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 			g.setFont(font);
 			FontMetrics fm = g.getFontMetrics();
 			int lineHeight = fm.getHeight();
