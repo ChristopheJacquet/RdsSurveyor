@@ -36,6 +36,7 @@ import javax.swing.event.ListDataListener;
 
 import eu.jacquet80.rds.app.Application;
 import eu.jacquet80.rds.app.InHouse;
+import eu.jacquet80.rds.ui.MainWindow;
 
 @SuppressWarnings("serial")
 public class InHousePanel extends AppPanel {
@@ -49,7 +50,7 @@ public class InHousePanel extends AppPanel {
 		listModel = new IHListModel();
 		list.setModel(listModel);
 		list.setLayoutOrientation(JList.VERTICAL_WRAP);
-		Font f = new Font(Font.MONOSPACED, Font.PLAIN, list.getFont().getSize());
+		Font f = new Font(MainWindow.MONOSPACED, Font.PLAIN, list.getFont().getSize());
 		list.setFont(f);
 		add(new JScrollPane(list), BorderLayout.CENTER);
 	}
