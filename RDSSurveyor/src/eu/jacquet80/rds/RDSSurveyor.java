@@ -39,6 +39,8 @@ import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.sound.sampled.UnsupportedAudioFileException;
+
 import com.fazecast.jSerialComm.SerialPort;
 
 import eu.jacquet80.rds.app.oda.TDC;
@@ -118,7 +120,7 @@ public class RDSSurveyor {
 		return args[pos];
 	}
 	
-	public static void main(String[] args) throws IOException, UnavailableInputMethod {
+	public static void main(String[] args) throws IOException, UnavailableInputMethod, UnsupportedAudioFileException {
 		System.out.println("RDS Surveyor - (C) Christophe Jacquet and contributors, 2009-2018.");
 		
 		GroupReader reader = null;
@@ -202,6 +204,9 @@ public class RDSSurveyor {
 				} else if("-insdr".equals(args[i])) {
 					reader = new SdrGroupReader(console, getParam("insdr", args, ++i));
 					liveGroupInput = true;
+				} else if("-inmpxwav".equals(args[i])) {
+					File f = new File(getParam("inmpxwav", args, ++i));
+					reader = new BitStreamSynchronizer(console, new AudioBitReader(f));
 				} else if("-ingns".equals(args[i])) {
 					int baudRate = 38400;
 					String port = getParam("ingns", args, ++i);

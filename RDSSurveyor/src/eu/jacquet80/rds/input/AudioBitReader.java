@@ -36,7 +36,14 @@ import java.io.InputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.ArrayBlockingQueue;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import eu.jacquet80.rds.util.MathUtil;
 import biz.source_code.dsp.filter.FilterCharacteristicsType;
@@ -63,9 +70,6 @@ public class AudioBitReader extends BitReader {
 	
 	/** Output buffer length for decoded data bits */
 	private static final int OBUFLEN = 128;
-	
-	/** The input stream */
-	private final DataInputStream in;
 	
 	/** A stream from which other applications can retrieve audio data */
 	private PipedInputStream audioMirrorSource;
@@ -107,15 +111,24 @@ public class AudioBitReader extends BitReader {
 
 	/* Decoded data bit from RDS stream, for debugging only */
 	private int sbit;
+	
+	private static class InputSpec {
+		public final DataInputStream stream;
+		public final int sampleRate;
+		
+		public InputSpec(DataInputStream stream, int sampleRate) {
+			this.stream = stream;
+			this.sampleRate = sampleRate;
+		}
+	}
 
 	/**
 	 * Creates a new AudioBitReader and starts decoding RDS date from it.
 	 * 
 	 * @param srate
 	 */
-	public AudioBitReader(DataInputStream stream, int srate) {
-		this.in = stream;
-		this.sampleRate = srate;
+	public AudioBitReader(final InputSpec in) {
+		this.sampleRate = in.sampleRate;
 		this.decimate = this.sampleRate / 7125;
 		this.audioMirrorSource = new PipedInputStream();
 		try {
@@ -242,17 +255,23 @@ public class AudioBitReader extends BitReader {
 						stats = null;
 					}
 				}
+				
+				final byte[] buf = new byte[2];
+				final ByteBuffer bb = ByteBuffer.wrap(buf);
+				bb.order(ByteOrder.LITTLE_ENDIAN);
 
 				while (true) {
 					bytesread = 0;
 					while (bytesread < IBUFLEN) {
 						try {
-							sample[bytesread] = Short.reverseBytes(in.readShort());
+							in.stream.readFully(buf);
+							sample[bytesread] = bb.getShort();
+							bb.rewind();
 							bytesread++;
 						} catch (EOFException e) {
 							break;
 						} catch (IOException e) {
-							System.err.println("IOException.");
+							e.printStackTrace(System.err);
 							break;
 						}
 					}
@@ -403,6 +422,24 @@ public class AudioBitReader extends BitReader {
 				}
 			}
 		}.start();
+	}
+	
+	public AudioBitReader(DataInputStream stream, int sampleRate) {
+		this(new InputSpec(stream, sampleRate));
+	}
+	
+	public AudioBitReader(File audioFile) throws UnsupportedAudioFileException, IOException {
+		this(audioFileDataInputStream(audioFile));
+	}
+	
+	private static InputSpec audioFileDataInputStream(File audioFile) throws UnsupportedAudioFileException, IOException {
+		AudioInputStream ais = AudioSystem.getAudioInputStream(audioFile);
+		AudioFormat format = ais.getFormat();
+		System.out.println("Audio format: " + format);
+		if(format.getChannels() != 1 || format.getSampleSizeInBits() != 16 || format.isBigEndian()) {
+			throw new UnsupportedAudioFileException("RDS Surveyor currently supports only the 16-bit PCM, mono, little-endian format.");
+		}
+		return new InputSpec(new DataInputStream(ais), (int)format.getSampleRate());
 	}
 	
 	/**
