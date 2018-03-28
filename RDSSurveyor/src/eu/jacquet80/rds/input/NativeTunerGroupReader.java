@@ -140,7 +140,7 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 			System.load(absoluteLibPath);
 		} catch(UnsatisfiedLinkError e) {
 			throw new UnavailableInputMethod(
-					aFilename + ": cannot load library");
+					aFilename + ": cannot load library (" + e.getMessage() + ")");
 		}
 
 		if(open()) {

@@ -138,9 +138,6 @@ public class AudioBitReader extends BitReader {
 		}
 		new Thread() {
 			public void run() {
-				/* Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample */
-				short sample[]        = new short[IBUFLEN];
-				
 				/* Subcarrier frequency */
 				double fsc = FC_0;
 
@@ -256,33 +253,29 @@ public class AudioBitReader extends BitReader {
 					}
 				}
 				
-				final byte[] buf = new byte[2];
+				/* Array of audio samples retrieved, IBUFLEN samples, 16 bits (2 bytes) per sample */
+				final byte[] buf = new byte[IBUFLEN*2];
 				final ByteBuffer bb = ByteBuffer.wrap(buf);
 				bb.order(ByteOrder.LITTLE_ENDIAN);
 
 				while (true) {
-					bytesread = 0;
-					while (bytesread < IBUFLEN) {
-						try {
-							in.stream.readFully(buf);
-							sample[bytesread] = bb.getShort();
-							bb.rewind();
-							bytesread++;
-						} catch (EOFException e) {
-							break;
-						} catch (IOException e) {
-							e.printStackTrace(System.err);
-							break;
-						}
+					try {
+						in.stream.readFully(buf);
+					} catch (EOFException e) {
+						break;
+					} catch (IOException e) {
+						e.printStackTrace(System.err);
+						continue;
 					}
-					
-					if (bytesread < 1) break;
+					bytesread = IBUFLEN;
+					bb.rewind();
 
 					/* Reset audio counters periodically to prevent overflow */
 					inCount %= inRatio;
 					outCount %= outRatio;
 					
 					for (i = 0; i < bytesread; i++) {
+						final short sample = bb.getShort();
 						if (isPlaying && (audioMirrorSink != null))
 							try {
 								/* resample */
@@ -294,7 +287,7 @@ public class AudioBitReader extends BitReader {
 								 * outCount/inCount <= outRatio/inRatio)
 								 */
 								if (outCount * inRatio <= outRatio * inCount) {
-									audioMirrorSink.writeShort(Short.reverseBytes(sample[i]));
+									audioMirrorSink.writeShort(Short.reverseBytes(sample));
 									outCount++;
 								}
 							} catch (IOException e) {
@@ -304,8 +297,8 @@ public class AudioBitReader extends BitReader {
 						/* Subcarrier downmix & phase recovery */
 
 						subcarr_phi    += 2 * Math.PI * fsc / (double) sampleRate;
-						subcarr_bb[0]  = lp2400iFilter.step(sample[i] / 32768.0 * Math.cos(subcarr_phi));
-						subcarr_bb[1]  = lp2400qFilter.step(sample[i] / 32768.0 * Math.sin(subcarr_phi));
+						subcarr_bb[0]  = lp2400iFilter.step(sample / 32768.0 * Math.cos(subcarr_phi));
+						subcarr_bb[1]  = lp2400qFilter.step(sample / 32768.0 * Math.sin(subcarr_phi));
 
 						d_phi_sc = lpPllFilter.step(subcarr_bb[1] * subcarr_bb[0]);
 						subcarr_phi -= pll_beta * d_phi_sc;
@@ -345,7 +338,7 @@ public class AudioBitReader extends BitReader {
 							if (DEBUG) {
 								if (outRaw != null)
 									try {
-										outRaw.writeShort(Short.reverseBytes(sample[i]));
+										outRaw.writeShort(Short.reverseBytes(sample));
 									} catch (IOException e) {
 										e.printStackTrace();
 									}
