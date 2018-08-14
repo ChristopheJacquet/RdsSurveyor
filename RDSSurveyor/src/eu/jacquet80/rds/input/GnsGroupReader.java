@@ -483,8 +483,9 @@ public class GnsGroupReader extends TunerGroupReader implements Closeable {
 							responseStart += len;
 						}
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
+						close();
+						return;
 					}
 
 					if (responseStart < 10) {
