@@ -13,6 +13,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import eu.jacquet80.rds.core.BitStreamSynchronizer;
 import eu.jacquet80.rds.core.BitStreamSynchronizer.Status;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
+import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
 import eu.jacquet80.rds.log.RealTime;
 
@@ -204,7 +205,7 @@ public class SdrGroupReader extends TunerGroupReader {
 
 	@Override
 	public GroupReaderEvent getGroup() throws IOException, EndOfStream {
-		GroupReaderEvent ret = null;
+		GroupReaderEvent event;
 		
 		readTuner(); // this is here for legacy reasons, the method currently does nothing
 		
@@ -213,12 +214,13 @@ public class SdrGroupReader extends TunerGroupReader {
 			return new FrequencyChangeEvent(new RealTime(), getFrequency());
 		}
 		
-		ret = synchronizer.getGroup();
+		event = synchronizer.getGroup();
 		
-		if (ret != null) {
+		if ((event != null) && (event instanceof GroupEvent)) {
 			newGroups = true;
-		}
-		return ret;
+			return new GroupEvent(new RealTime(), ((GroupEvent) event).blocks, ((GroupEvent) event).ignored);
+		} else
+			return null;
 	}
 	
 	/**
