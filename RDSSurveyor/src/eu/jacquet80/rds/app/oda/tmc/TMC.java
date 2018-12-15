@@ -15,6 +15,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Types;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -64,9 +66,36 @@ public class TMC {
 	};
 	private static String dbUrl = null;
 	private static Connection dbConnection = null;
+
+	/** The character set to be used for location table encoding */
 	private static Charset charset = null;
-	
+
+	/** Whether `charset` was explicitly requested by the user */
+	private static boolean isCharsetForced = false;
+
+	/**
+	 * @brief Sets the encoding for imported location data.
+	 * 
+	 * Any character set supported by the Java platform can be set here. Since some location tables deviate from the
+	 * canonical character set names, corrections for some commonly found deviations are applied.
+	 * 
+	 * @param charsetName The character set name, see description.
+	 */
 	public static void setCharset(String charsetName) {
+		/* Fix incorrect spellings of ISO charsets, e.g. "ISO8859-15" or "ISO 8859-15" */
+		if (charsetName.matches("^ISO ?8859-.*")) {
+			charsetName = charsetName.replaceFirst("ISO ?8859-", "ISO-8859-");
+		}
+		/* 
+		 * Strip alternate names in parentheses, e.g. "ISO08859-15 (Latin-9)".
+		 * A more resilient approach would be to parse those as well and use them as a fallback if the primary name
+		 * does not work for whatever reason. In this case, we would need to consider additional non-compliant
+		 * spellings, e.g. "Latin 9" instead of "Latin-9". However, no case is known in which the alternate name would
+		 * have been beneficial, therefore it is being ignored for now.
+		 */
+		if (charsetName.matches(".* *\\(.*")) {
+			charsetName = charsetName.replaceFirst(" *\\(.*", "");
+		}
 		try {
 			charset = Charset.forName(charsetName);
 			System.out.println("Charset for LT tables: " + charset.name());
@@ -101,13 +130,16 @@ public class TMC {
 				return br;
 			} catch(Exception e) {}
 		}
-		br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 		/*
-		 * According to the original TMC spec, encoding for the LT is ISO-8859-1. However, by now
-		 * TISA has certified location tables in UTF-8 encoding. Examples are Switzerland, Italy
-		 * and Slovakia (all files), as well as Sweden (NAMES only). Hence we try to probe for the
-		 * encoding actually used and open the file accordingly.
+		 * If no usable charset is specified, try to guess the encoding used.
+		 * According to the original TMC spec, encoding for the LT was ISO-8859-1. Later revisions allowed for
+		 * different encodings, including UTF-8. Some of these files begin with a byte-order marker; examples of these
+		 * are Switzerland, Italy and Slovakia (all files), as well as Sweden (NAMES only). Hence we try to probe for
+		 * the BOM first. If found, we assume UTF-8, else ISO-8859-1. This is still not perfect, as any other encoding
+		 * (as well as UTF-8 without BOM, as used by Slovenia), will be mis-guessed and, as a consequence, any
+		 * characters not normally found in the English language may be represented incorrectly.
 		 */
+		br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 		try {
 			String line = br.readLine();
 			if (line.codePointAt(0) == 0xfeff)
@@ -927,14 +959,33 @@ public class TMC {
 				Arrays.toString(arr2.toArray())));
 		return true;
 	}
-	
+
 	/**
-	 * @brief Determines if the location data set at {@code path} needs to be imported in the database,
-	 * and removes older versions of the data set.
+	 * @brief Whether a string is a valid date in DD/MM/YYYY format.
 	 * 
-	 * A location data set will be imported into the database if the database does not yet contain a
-	 * data set with the same CID and TABCD, or if it contains an older version. In the latter case,
-	 * this method will delete all data associated with the older version.
+	 * @param string The string to examine
+	 * 
+	 * @return true if {@code string} is a date, false if not
+	 */
+	private static boolean isDmyDate(String string) {
+		SimpleDateFormat ddmmyyyy = new SimpleDateFormat("dd/MM/yyyy");
+		try {
+			return (ddmmyyyy.parse(string) != null);
+		} catch (ParseException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * @brief Prepares an update of the database with the location data set at {@code path}.
+	 * 
+	 * First, unless a character set has been explicitly set by the user, the character set for the data is determined
+	 * from {@code README.DAT} and stored. If this step fails, no character set will be set, and the import routine
+	 * will try to probe for the correct character set to use.
+	 * 
+	 * Next, the new location data set is compared to the database to see if it needs to be imported. This is the case
+	 * if the database does not yet contain a data set with the same CID and TABCD, or if it contains an older version.
+	 * In the latter case, this method will delete all data associated with the older version.
 	 * 
 	 * If the folder at {@code path} does not hold a valid location data set (specifically, if its
 	 * {@code LOCATIONDATASETS.DAT} file is not found), the result will be {@code false}. 
@@ -945,7 +996,67 @@ public class TMC {
 	public static boolean prepareDataSetUpdate(File path) {
 		boolean ret = false;
 		String version = null;
-		File file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
+		isCharsetForced = (charset != null);
+		File file = new File(path.getAbsolutePath() + File.separator + "README.DAT");
+		if (file.exists() && !isCharsetForced) {
+			String[] values = null;
+			try {
+				BufferedReader br = openLTFile(file);
+				String line = br.readLine();
+				values = TMC.colonPattern.split(line);
+			} catch (Exception e) {
+				System.out.println(String.format("Failed to parse README.DAT in %s, skipping charset detection", path.getAbsolutePath()));
+			}
+			if ((values != null) && (values.length >= 5)) {
+				/*
+				 * The position of the character set in README.DAT seems to vary: Most location datasets have them
+				 * in [4], but some may place it in [5] or [6]. In any case, the charset field always seems to be
+				 * preceded by two date fields (dd/mm/yyyy) and a string, though the date fields may be empty. The
+				 * fields preceding the two dates are numbers, i.e. they will never contain a valid date.
+				 */
+				Boolean[] pos = {Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
+						null, null, null, Boolean.FALSE};
+				int firstPos = -1;
+				int i;
+
+				/* Limit positions to the available fields */
+				for (i = 4; i < 7; i++)
+					if ((i >= values.length) || (values[i].isEmpty()))
+						pos[i] = Boolean.FALSE;
+
+				/*
+				 * If a field is non-empty, not a date and was not preceded by a date, the field 3 positions after
+				 * it cannot be a character set.
+				 * If a field is non-empty, not a date and was preceded by two dates, the field 2 positions after
+				 * it cannot be a character set.
+				 * If two consecutive fields are dates, the field 3 positions after the first is likely a charset.
+				 */
+				for (i = 1; i <= 4; i++) {
+					if (!values[i].isEmpty()) {
+						if (!isDmyDate(values[i])) {
+							if (pos[i+2] == Boolean.FALSE)
+								pos[i+3] = Boolean.FALSE;
+							if (pos[i+1] == Boolean.TRUE)
+								pos[i+2] = Boolean.FALSE;
+						} else if ((i < 4) && (!values[i+1].isEmpty()) && (isDmyDate(values[i+1])))
+							pos[i+3] = Boolean.TRUE;
+					}
+				}
+
+				/* Use the first true value for the position; failing that, the first null value */
+				for (i = 6; i >= 4; i--)
+					if (pos[i] == Boolean.TRUE)
+						firstPos = i;
+				if (firstPos < 0)
+					for (i = 6; i >= 4; i--)
+						if (pos[i] == null)
+							firstPos = i;
+
+				if (firstPos > 0)
+					setCharset(values[firstPos]);
+			}
+		}
+		file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
 		PreparedStatement stmt = null;
 		int cid = -1;
 		int tabcd = -1;
@@ -1008,6 +1119,8 @@ public class TMC {
 		File file;
 		
 		if (!prepareDataSetUpdate(path)) {
+			if (!isCharsetForced)
+				charset = null;
 			return;
 		}
 		
@@ -1067,6 +1180,10 @@ public class TMC {
 		importTable("Poffsets", file);
 		
 		// 22 - INTERSECTIONS.DAT; skipped for now
+
+		/* clear charset if it was read from the location table data */
+		if (!isCharsetForced)
+			charset = null;
 	}
 	
 	/**
