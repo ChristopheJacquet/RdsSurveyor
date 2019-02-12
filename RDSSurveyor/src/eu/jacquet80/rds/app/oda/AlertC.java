@@ -1366,7 +1366,7 @@ public class AlertC extends ODA {
 				return null;
 			if (!(secondary instanceof TMCPoint))
 				return null;
-			if ((secondary.name1.name == null) || (secondary.name1.name.isEmpty()))
+			if ((secondary.name1 == null) || (secondary.name1.name == null) || (secondary.name1.name.isEmpty()))
 				return null;
 			else
 				return secondary.name1.name;
