@@ -1311,7 +1311,7 @@ public class AlertC extends ODA {
 				return null;
 			if (!(location instanceof TMCPoint))
 				return null;
-			if ((location.name1.name == null) || (location.name1.name.isEmpty()))
+			if ((location.name1 == null) || (location.name1.name == null) || (location.name1.name.isEmpty()))
 				return null;
 			else
 				return location.name1.name;
