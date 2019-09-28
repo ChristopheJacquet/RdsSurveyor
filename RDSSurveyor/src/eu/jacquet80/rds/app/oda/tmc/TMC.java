@@ -63,6 +63,8 @@ public class TMC {
 		// 21 - Poffsets - POFFSETS.DAT
 		"create cached table if not exists Poffsets(CID integer, TABCD integer, LCD integer, NEG_OFF_LCD integer, POS_OFF_LCD integer, foreign key(CID, TABCD) references LocationDataSets(CID, TABCD) on delete cascade, primary key(CID, TABCD, LCD));",
 		// 22 - Intersections - INTERSECTIONS.DAT; skipped for now
+		// 23 - TabcdAliases - TABCDALIASES.DAT; not part of official spec
+		"create cached table if not exists TabcdAliases(CID integer, ALIAS integer, TABCD integer, primary key(CID, ALIAS));",
 	};
 	private static String dbUrl = null;
 	private static Connection dbConnection = null;
@@ -280,7 +282,7 @@ public class TMC {
 
 	public static Country getCountry(String cc, int ltn) {
 		Country ret = COUNTRIES.get("ccd=" + cc + ";tabcd=" + ltn);
-		if (ret == null) 
+		if (ret == null) {
 			try {
 				PreparedStatement stmt = dbConnection.prepareStatement("select * from Countries where CCD = ? and CID in (select CID from LocationDataSets where TABCD = ?);");
 				stmt.setString(1, cc);
@@ -292,12 +294,29 @@ public class TMC {
 					putCountry(country.cid, country);
 					putCountry(country.ecc, country);
 					return country;
-				} else
-					return null;
+				}
 			} catch (SQLException e) {
 				e.printStackTrace(System.err);
 				return null;
 			}
+			/* no hit, try to find country by CC and alias LTN */
+			try {
+				PreparedStatement stmt = dbConnection.prepareStatement("select * from Countries where CCD = ? and CID in (select CID from TabcdAliases where ALIAS = ?);");
+				stmt.setString(1, cc);
+				stmt.setInt(2, ltn);
+				ResultSet rset = stmt.executeQuery();
+				if (rset.next()) {
+					Country country = new Country(rset);
+					putCountry(cc, ltn, country);
+					putCountry(country.cid, country);
+					putCountry(country.ecc, country);
+					return country;
+				}
+			} catch (SQLException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		}
 		return ret;
 	}
 	
@@ -381,7 +400,51 @@ public class TMC {
 	public static void putLocationDataset(int cid, int tabcd, LocationDataset locationDataset) {
 		LOCATION_DATASETS.put(cid + ";" + tabcd, locationDataset);
 	}
-	
+
+	private static Map<String, Integer> LTN_ALIASES = new HashMap<String, Integer>();
+
+	/**
+	 * @brief Returns the LTN to be used for a given alias.
+	 *
+	 * If the {@code tabcd} argument refers to an existing location data set, it is returned unaltered. If
+	 * {@code tabcd} is an alias for another location data set, the LTN of that data set is returned. If {@code tabcd}
+	 * does not refer to a known location data set, it is returned unaltered.
+	 *
+	 * @param cid The TMC country ID (use {@link #getCountry(int)} or {@link #getCountry(String, int)} to convert an
+	 * RDS CC or ECC into a CID)
+	 * @param alias The LTN
+	 * @return The LTN to be used for lookup. The LTN is not guaranteed to be contained in the location database.
+	 */
+	public static int getLtnForAlias(int cid, int alias) {
+		int ret = alias;
+		Integer tabcd = LTN_ALIASES.get(cid + ";" + alias);
+		if (tabcd != null)
+			ret = tabcd;
+		else {
+			LocationDataset lds = getLocationDataset(cid, alias);
+			if (lds != null)
+				putLtnAlias(cid, alias, lds.tabcd);
+			else
+				try {
+					PreparedStatement stmt = dbConnection.prepareStatement("select * from TabcdAliases where CID = ? AND ALIAS = ?");
+					stmt.setInt(1, cid);
+					stmt.setInt(2, alias);
+					ResultSet rset = stmt.executeQuery();
+					if (rset.next()) {
+						ret = rset.getInt("TABCD");
+						putLtnAlias(cid, alias, ret);
+					}
+				} catch (SQLException e) {
+					e.printStackTrace(System.err);
+				}
+		}
+		return ret;
+	}
+
+	public static void putLtnAlias(int cid, int alias, Integer tabcd) {
+		LTN_ALIASES.put(cid + ";" + alias, tabcd);
+	}
+
 	private static Map<String, TMCName> NAMES = new HashMap<String, TMCName>();
 
 	public static TMCName getName(int cid, int nid) {
@@ -441,6 +504,7 @@ public class TMC {
 	private static Map<String, TMCLocation> LOCATIONS = new HashMap<String, TMCLocation>();
 
 	public static TMCLocation getLocation(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		TMCLocation ret = LOCATIONS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null) {
 			ret = getArea(cid, tabcd, lcd);
@@ -465,12 +529,14 @@ public class TMC {
 	}
 	
 	public static void putLocation(int cid, int tabcd, int lcd, TMCLocation location) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		LOCATIONS.put(cid + ";" + tabcd + ";" + lcd, location);
 	}
 	
 	private static Map<String, TMCArea> AREAS = new HashMap<String, TMCArea>();
 
 	public static TMCArea getArea(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		TMCArea ret = AREAS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null) 
 			try {
@@ -506,12 +572,14 @@ public class TMC {
 	}
 	
 	public static void putArea(int cid, int tabcd, int lcd, TMCArea area) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		AREAS.put(cid + ";" + tabcd + ";" + lcd, area);
 	}
 
 	private static Map<String, Road> ROADS = new HashMap<String, Road>();
 
 	public static Road getRoad(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		Road ret = ROADS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null) 
 			try {
@@ -535,12 +603,14 @@ public class TMC {
 	}
 	
 	public static void putRoad(int cid, int tabcd, int lcd, Road road) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		ROADS.put(cid + ";" + tabcd + ";" + lcd, road);
 	}
 	
 	private static Map<String, Segment> SEGMENTS = new HashMap<String, Segment>();
 
 	public static Segment getSegment(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		Segment ret = SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null) 
 			try {
@@ -574,6 +644,7 @@ public class TMC {
 	}
 	
 	public static void putSegment(int cid, int tabcd, int lcd, Segment segment) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
 	}
 	
@@ -589,6 +660,7 @@ public class TMC {
 	 * @return The first segment, or {@code null} if not found.
 	 */
 	public static Segment getFirstSegment(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		Segment ret = FIRST_SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null)
 			try {
@@ -631,6 +703,7 @@ public class TMC {
 	}
 	
 	public static void putFirstSegment(int cid, int tabcd, int lcd, Segment segment) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		FIRST_SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
 	}
 	
@@ -646,6 +719,7 @@ public class TMC {
 	 * @return The last segment, or {@code null} if not found.
 	 */
 	public static Segment getLastSegment(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		Segment ret = LAST_SEGMENTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null)
 			try {
@@ -688,12 +762,14 @@ public class TMC {
 	}
 	
 	public static void putLastSegment(int cid, int tabcd, int lcd, Segment segment) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		LAST_SEGMENTS.put(cid + ";" + tabcd + ";" + lcd, segment);
 	}
 	
 	private static Map<String, TMCPoint> POINTS = new HashMap<String, TMCPoint>();
 
 	public static TMCPoint getPoint(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		TMCPoint ret = POINTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null) 
 			try {
@@ -727,6 +803,7 @@ public class TMC {
 	}
 	
 	public static void putPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
 	
@@ -742,6 +819,7 @@ public class TMC {
 	 * @return The first point, or {@code null} if not found.
 	 */
 	public static TMCPoint getFirstPoint(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		TMCPoint ret = FIRST_POINTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null)
 			try {
@@ -784,6 +862,7 @@ public class TMC {
 	}
 	
 	public static void putFirstPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		FIRST_POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
 	
@@ -799,6 +878,7 @@ public class TMC {
 	 * @return The last point, or {@code null} if not found.
 	 */
 	public static TMCPoint getLastPoint(int cid, int tabcd, int lcd) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		TMCPoint ret = LAST_POINTS.get(cid + ";" + tabcd + ";" + lcd);
 		if (ret == null)
 			try {
@@ -841,6 +921,7 @@ public class TMC {
 	}
 	
 	public static void putLastPoint(int cid, int tabcd, int lcd, TMCPoint point) {
+		tabcd = getLtnForAlias(cid, tabcd);
 		LAST_POINTS.put(cid + ";" + tabcd + ";" + lcd, point);
 	}
 	
@@ -1105,7 +1186,8 @@ public class TMC {
 				return false;
 			}
 		} else {
-			System.out.println(String.format("No LOCATIONDATASETS.DAT in %s, skipping", path.getAbsolutePath()));
+			System.out.println(String.format("No LOCATIONDATASETS.DAT in %s, skipping location table import",
+					path.getAbsolutePath()));
 			return false;
 		}
 	}
@@ -1118,72 +1200,121 @@ public class TMC {
 	public static void readLocationTablesFromDir(File path) {
 		File file;
 		
-		if (!prepareDataSetUpdate(path)) {
-			if (!isCharsetForced)
-				charset = null;
-			return;
+		if (prepareDataSetUpdate(path)) {
+			// 1 - COUNTRIES.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "COUNTRIES.DAT");
+			importTable("Countries", file);
+
+			// 2 - LOCATIONDATASETS.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
+			importTable("LocationDataSets", file);
+
+			// 3 - LOCATIONCODES.DAT; skipped for now
+			// 4 - CLASSES.DAT; skipped for now
+			// 5 - TYPES.DAT; skipped for now
+			// 6 - SUBTYPES.DAT; skipped for now
+			// 7 - LANGUAGES.DAT; skipped for now
+			// 8 - EUROROADNO-DAT; skipped for now;
+
+			// 9 - NAMES.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "NAMES.DAT");
+			importTable("Names", file);
+
+			// 10 - NAMETRANSLATIONS.DAT; skipped for now
+			// 11 - SUBTYPETRANSLATIONS.DAT; skipped for now
+			// 12 - ERNO_BELONGS_TO_CO.DAT; skipped for now
+
+			// 13 - ADMINISTRATIVEAREA.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "ADMINISTRATIVEAREA.DAT");
+			importTable("AdministrativeAreas", file);
+
+			// 14 - OTHERAREAS.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "OTHERAREAS.DAT");
+			importTable("OtherAreas", file);
+
+			// 15 - ROADS.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "ROADS.DAT");
+			importTable("Roads", file);
+
+			// 16 - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
+
+			// 17 - SEGMENTS.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "SEGMENTS.DAT");
+			importTable("Segments", file);
+
+			// 18 - SOFFSETS.DAT
+			file = new File(path.getAbsolutePath() + File.separator + "SOFFSETS.DAT");
+			importTable("Soffsets", file);
+
+			// 19 - SEG_HAS_ERNO.DAT; skipped for now
+
+			// 20 - POINTS.DAT;
+			file = new File(path.getAbsolutePath() + File.separator + "POINTS.DAT");
+			importTable("Points", file);
+
+			// 21 - POFFSETS.DAT
+			file = new File(path.getAbsolutePath() + File.separator + "POFFSETS.DAT");
+			importTable("Poffsets", file);
+
+			// 22 - INTERSECTIONS.DAT; skipped for now
 		}
-		
-		// 1 - COUNTRIES.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "COUNTRIES.DAT");
-		importTable("Countries", file);
-
-		// 2 - LOCATIONDATASETS.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "LOCATIONDATASETS.DAT");
-		importTable("LocationDataSets", file);
-		
-		// 3 - LOCATIONCODES.DAT; skipped for now
-		// 4 - CLASSES.DAT; skipped for now
-		// 5 - TYPES.DAT; skipped for now
-		// 6 - SUBTYPES.DAT; skipped for now
-		// 7 - LANGUAGES.DAT; skipped for now
-		// 8 - EUROROADNO-DAT; skipped for now;
-
-		// 9 - NAMES.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "NAMES.DAT");
-		importTable("Names", file);
-		
-		// 10 - NAMETRANSLATIONS.DAT; skipped for now
-		// 11 - SUBTYPETRANSLATIONS.DAT; skipped for now
-		// 12 - ERNO_BELONGS_TO_CO.DAT; skipped for now
-
-		// 13 - ADMINISTRATIVEAREA.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "ADMINISTRATIVEAREA.DAT");
-		importTable("AdministrativeAreas", file);
-
-		// 14 - OTHERAREAS.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "OTHERAREAS.DAT");
-		importTable("OtherAreas", file);
-
-		// 15 - ROADS.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "ROADS.DAT");
-		importTable("Roads", file);
-		
-		// 16 - ROAD_NETWORK_LEVEL_TYPES.DAT; skipped for now
-
-		// 17 - SEGMENTS.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "SEGMENTS.DAT");
-		importTable("Segments", file);
-
-		// 18 - SOFFSETS.DAT
-		file = new File(path.getAbsolutePath() + File.separator + "SOFFSETS.DAT");
-		importTable("Soffsets", file);
-		
-		// 19 - SEG_HAS_ERNO.DAT; skipped for now
-
-		// 20 - POINTS.DAT;
-		file = new File(path.getAbsolutePath() + File.separator + "POINTS.DAT");
-		importTable("Points", file);
-		
-		// 21 - POFFSETS.DAT
-		file = new File(path.getAbsolutePath() + File.separator + "POFFSETS.DAT");
-		importTable("Poffsets", file);
-		
-		// 22 - INTERSECTIONS.DAT; skipped for now
 
 		/* clear charset if it was read from the location table data */
 		if (!isCharsetForced)
 			charset = null;
+
+		// TabcdAliases - TABCDALIASES.DAT; not part of official spec
+		file = new File(path.getAbsolutePath() + File.separator + "TABCDALIASES.DAT");
+		if (file.exists()) {
+			System.out.println(String.format("Found TABCDALIASES.DAT in %s, importing aliases",
+					path.getAbsolutePath()));
+			String table = "TabcdAliases";
+			PreparedStatement stmt = null;
+			Boolean hasConstraintViolations = false;
+			System.out.println(String.format("Processing table %s from file %s", table, file.getAbsolutePath()));
+			try {
+				BufferedReader br = openLTFile(file);
+				String line = br.readLine();
+				String[] fields = getFields(line);
+				int[] types = getColumnTypes(table, fields);
+				String[] values;
+				StringBuilder stmtBuilder = new StringBuilder("merge into ");
+				stmtBuilder.append(table);
+				stmtBuilder.append(" as t using (VALUES(?, ?, ?)) as vals(CID, ALIAS, TABCD) ");
+				stmtBuilder.append("on t.CID = vals.CID AND t.ALIAS = vals.ALIAS ");
+				stmtBuilder.append("when matched then update set t.TABCD = vals.TABCD ");
+				stmtBuilder.append("when not matched then insert values vals.CID, vals.ALIAS, vals.TABCD;");
+				stmt = dbConnection.prepareStatement(stmtBuilder.toString());
+				while((line = br.readLine()) != null)
+					if (line.length() > 0) {
+						stmt.clearParameters();
+						values = TMC.colonPattern.split(line);
+						for (int i = 0; i < fields.length; i++) {
+							if ((i >= values.length) || values[i].isEmpty())
+								stmt.setNull(i + 1, types[i]);
+							else
+								stmt.setInt(i + 1, Integer.parseInt(values[i]));
+						}
+						
+						try {
+							stmt.executeUpdate();
+						} catch (SQLIntegrityConstraintViolationException e) {
+							hasConstraintViolations = true;
+						}
+					}
+				dbConnection.commit();
+			} catch (IOException e) {
+				e.printStackTrace(System.err);
+				return;
+			} catch (SQLException e) {
+				if (stmt != null)
+					System.err.println(String.format("Error executing: %s", stmt.toString()));
+				e.printStackTrace(System.err);
+				return;
+			}
+			if (hasConstraintViolations)
+				System.err.println(String.format("Some records from %s were skipped due to integrity constraint violations.", file.getAbsolutePath()));
+		}
 	}
 	
 	/**
