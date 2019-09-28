@@ -288,7 +288,7 @@ public class TMCPoint extends TMCLocation {
 			else
 				return name1.name;
 		else
-			if (junctionNumber.isEmpty())
+			if ((junctionNumber == null) || junctionNumber.isEmpty())
 				return null;
 			else
 				return junctionNumber;
