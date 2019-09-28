@@ -834,11 +834,13 @@ public class AlertC extends ODA {
 		}
 		
 		/**
-		 * Contains an event from one of the forecast update classes.
+		 * @brief Whether the message is a forecast message.
+		 *  
+		 * A message is a forecast message if it contains an event from one of the forecast update classes.
 		 * 
 		 * @return
 		 */
-		private boolean isForecastMessage() {
+		public boolean isForecastMessage() {
 			for(InformationBlock ib : informationBlocks) {
 				for(Event e : ib.events) {
 					int c = e.tmcEvent.updateClass;
