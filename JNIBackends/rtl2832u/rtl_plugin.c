@@ -988,7 +988,7 @@ double get_stabilized_qual() {
 	int samplesSize = MAXIMUM_BUF_LENGTH;
 
 	/* Buffer to receive samples for quality measurement */
-	int16_t samples[samplesSize];
+	static int16_t samples[MAXIMUM_BUF_LENGTH];
 
 	/* Samples actually read */
 	int samplesRead = 0;
@@ -1029,7 +1029,7 @@ double get_stabilized_rssi() {
 	/* Size of samples buffer */
 	int samplesSize = MAXIMUM_BUF_LENGTH / 16;
 	/* Buffer to receive samples for RSSI measurement */
-	int16_t samples[samplesSize];
+	static int16_t samples[MAXIMUM_BUF_LENGTH];
 	int samplesRead = 0;
 	int rssiTrend = 0;
 	double rssi = RSSI_INVALID;

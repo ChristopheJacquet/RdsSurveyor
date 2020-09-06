@@ -1,8 +1,9 @@
-FLAGS=-Wall -W -Wfatal-errors -Wunused -pedantic -std=gnu99 `pkg-config libusb-1.0 --cflags` -fPIC
+JAVA_HOME:=`/usr/libexec/java_home`
+FLAGS=-Wall -pedantic -std=gnu99 `pkg-config libusb-1.0 --cflags` -fPIC -I $(JAVA_HOME)/include -I $(JAVA_HOME)/include/darwin `pkg-config libusb-1.0 --cflags` -mmacosx-version-min=10.8
 LINKFLAGS=`pkg-config librtlsdr --libs` -framework IOKit -framework CoreFoundation
 
 all: rtl_plugin
 
 rtl_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h rtl_plugin.c convenience/convenience.c
-	gcc -shared -o rtl.dylib rtl_plugin.c convenience/convenience.c kissfft/kiss_fft.c kissfft/kiss_fftr.c -I /System/Library/Frameworks/JavaVM.framework/Headers $(FLAGS) $(LINKFLAGS)
+	gcc -shared -o rtl.dylib rtl_plugin.c convenience/convenience.c kissfft/kiss_fft.c kissfft/kiss_fftr.c $(FLAGS) $(LINKFLAGS)
 	
