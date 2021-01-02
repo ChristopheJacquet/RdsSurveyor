@@ -1,0 +1,149 @@
+/*
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+
+html {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: sans-serif;
+  font-size: 30px;
+  position: relative;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+table {
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+#radio_app {
+  background-color: #eeeeca;
+  border: 2px solid #888888;
+  border-radius: 20px;
+  padding: 20px;
+  width: 600px;
+  text-align: center;
+
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#title, #start, #tuner, #basicrds {
+  margin: 20px 0;
+}
+
+#start {
+  font-size: 70%;
+  padding: 4px;
+  border-radius: 5px;
+}
+
+#start.connected {
+  background-color: #9bfd9b;
+  color: #000000;
+}
+
+#start.disconnected {
+  background-color: #eb5d5d;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+#freqbox {
+  background-color: #333;
+  color: #00dddd;
+  display: inline-block;
+  min-width: 8em;
+  min-height: 30px;
+  text-align: center;
+  margin: 4px 10px;
+  padding: 5px;
+}
+
+#frequnit {
+  font-size: 50%;
+}
+
+.seekbtn {
+  cursor: pointer;
+}
+
+#psbox {
+  min-width: 8em;
+}
+
+#pibox {
+  min-width: 4em;
+}
+
+#rtbox {
+  font-size: 80%;
+  width: 100%;
+  min-height: 1em;
+}
+
+.legend {
+  font-size: 70%;
+}
+
+.value {
+  border: 1px solid #666666;
+  background-color: #ffffff;
+  text-align: center;
+  display: inline-block;
+  font-family: "Roboto Mono", monospace;
+  border-radius: 4px;
+}
+
+#groupstatsbox {
+  font-family: sans-serif;
+  padding: 4px;
+}
+
+.tag {
+  background-color: #00aaaa;
+  color: #ffffff;
+  padding: 3px 6px;
+  margin: 4px 6px;
+  border-radius: 4px;
+  font-size: 70%;
+}
+
+footer {
+  position: absolute;
+  bottom: 1em;
+  left: 10%;
+  font-size: 50%;
+  margin: 0;
+  padding: 10px 0%;
+  width: 80%;
+  font-style: italic;
+  z-index: -1;
+}
+
+footer img {
+  float: right;
+  margin-left: 20px;
+}

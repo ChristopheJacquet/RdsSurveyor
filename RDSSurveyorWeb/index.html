@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>RDS Surveyor Web</title>
+    <script src="https://unpkg.com/vue@3.0.4"></script>
+    <script src="radio_app.js"></script>
+    <script src="rds.js"></script>
+    <script src="si470x.js"></script>
+    <link rel="stylesheet" href="radio.css">
+  </head>
+  <body onload="start_radio_app();">
+    <div id="radio_app">
+      <div id="title">RDS Surveyor Web</div>
+      <div id="start" onclick="init();" :class="{ connected: dongle!=null, disconnected: dongle==null }">
+        {{ dongleText }}
+      </div>
+
+      <div id="tuner">
+        <span class="seekbtn" onclick="dongle.seek(true, false);" title="Seek Down">&#9194;</span> 
+        <span id="freqbox">
+          <span id="freq">{{ freq / 1000 }}</span><span id="frequnit"> MHz</span>
+        </span>
+        <span class="seekbtn" onclick="dongle.seek(true, true);" title="Seek Up">&#9193;</span>
+      </div>
+
+      <div id="basicrds">
+        <table>
+          <tr><td><span class="legend">PI</span></td><td><span class="legend">PS</span></td></tr>
+          <tr><td><span class="value" id="pibox">{{ formattedPI }}</span></td><td><span class="value" id="psbox">{{ ps }}</span></td></tr>
+
+          <tr><td colspan="2"><span class="legend">RT</span></td></tr>
+          <tr><td colspan="2"><span class="value" id="rtbox">{{ rt }}</span></td></tr>
+        </table>
+        <table>
+          <tr><td><span class="legend">Group stats</span></td>
+              <td><span class="value" id="groupstatsbox"><span class="tag" v-for="g in groupStats">{{ g }}</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <footer>
+      <img src="si470x_dongles.jpg" width="250">
+      <p>
+      This is an experimental RDS decoder for the Web, developed as part of
+      <a href="https://rds-surveyor.jacquet.xyz/">RDS Surveyor</a>, based on
+      <a href="https://www.chromestatus.com/feature/5172464636133376">Chrome's
+      experimental WebHID API</a>. This is expected to work by setting the
+      <a href="https://web.dev/hid/#enabling-via-chrome:flags">
+      #experimental-web-platform-features</a> flag, or at
+      <code>rds-surveyor.jacquet.xyz</code> from Chrome 86 to Chrome 88.
+      </p>
+      <p>
+      It works with the FM radio USB dongles based on Silicon Lab's Si470x
+      chips such as the ones depicted here. Just plug in your dongle, click on
+      “click here to start” (red banner) and give Chrome the authorization to
+      access the USB HID device.
+      </p>
+
+      <p>
+      The raw RDS groups are displayed in the browser's console.
+      </p>
+    </footer>
+  </body>
+</html>
+
+<!--
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
