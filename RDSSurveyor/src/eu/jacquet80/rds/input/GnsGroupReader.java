@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
