@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import eu.jacquet80.rds.input.GroupReader.EndOfStream;
 import eu.jacquet80.rds.input.group.FrequencyChangeEvent;
 import eu.jacquet80.rds.input.group.GroupEvent;
 import eu.jacquet80.rds.input.group.GroupReaderEvent;
@@ -590,9 +589,9 @@ public class GnsGroupReader extends TunerGroupReader implements Closeable {
 								}
 								/*
 								 * TODO not sure if conversion is correct
-								 * (maximum is 0xFF in theory, 0x0F is maximum observed so far)
+								 * (maximum is 0xFF in theory, 0x1F is maximum observed so far)
 								 */
-								gnsData.rssi = intData[6] * 0x1111;
+								gnsData.rssi = intData[6] * 0x842;
 							}
 						}
 						opcodes.remove(Integer.valueOf(intData[3]));
