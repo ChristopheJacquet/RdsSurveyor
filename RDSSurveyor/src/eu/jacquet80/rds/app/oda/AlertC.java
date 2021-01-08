@@ -672,9 +672,9 @@ public class AlertC extends ODA {
 			} else if(time >= 96 && time <= 200) {
 				return String.format("midnight + %d days, %d hours", (time-96) / 24, (time-96) % 24);
 			} else if(time >= 201 && time <= 231) {
-				return "day " + (time - 200) + " this month";
+				return "day " + (time - 200) + " this/next month";
 			} else if(time >= 232 && time <= 255) {
-				return String.format("%02d/%02d", 15 + 16*((time-231)%2),(time-231)/2);
+				return String.format("%s of month %02d", (time & 1) == 1 ? "end" : "middle", (time-230)/2);
 			} else {
 				return "INVALID";
 			}
