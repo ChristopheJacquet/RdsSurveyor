@@ -908,8 +908,8 @@ public class AlertC extends ODA {
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.hasDiversion) res.append(", diversion advised");
-			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
-			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
+			if(startTime != -1) res.append(", start=").append(formatTime(startTime)).append(" [").append(startTime).append("]");
+			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime)).append(" [").append(stopTime).append("]");
 			res.append('\n');
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
@@ -997,8 +997,8 @@ public class AlertC extends ODA {
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.hasDiversion) res.append(", diversion advised");
-			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
-			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append(" [").append(startTime).append("]").append("</font>");
+			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append(" [").append(stopTime).append("]").append("</font>");
 			res.append("<br/>");
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
