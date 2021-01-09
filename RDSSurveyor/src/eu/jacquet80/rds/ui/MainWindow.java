@@ -399,19 +399,18 @@ public class MainWindow extends JFrame {
 			
 			@Override
 			public void visit(StationTuned stationTuned) {
-				synchronized(MainWindow.this) {
-					bler.clear();
-					latestGroups.clear();
-					station = stationTuned.getStation();
-					eonTableModel.setTunedStation(station);
-					pnlRT.setStation(station);
-					pnlODA.setStation(station);
-				}
-					
 				// reset the tabs displayed
 				try {
 					SwingUtilities.invokeAndWait(new Runnable() {
 						public void run() {
+							synchronized(MainWindow.this) {
+								bler.clear();
+								latestGroups.clear();
+								station = stationTuned.getStation();
+								eonTableModel.setTunedStation(station);
+								pnlRT.setStation(station);
+								pnlODA.setStation(station);
+							}
 							tabbedPane.removeAll();
 							tabbedPane.addTab("Base", pnlAF);
 							tabbedPane.addTab("EON", pnlEON);
