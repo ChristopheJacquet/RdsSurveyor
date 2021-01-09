@@ -384,7 +384,7 @@ public class RDSSurveyor {
 		if(scan) {
 			if(reader instanceof TunerGroupReader) {
 				final TunerGroupReader tgr = (TunerGroupReader) reader;
-				new Thread() {
+				new Thread("Scanner") {
 					public void run() {
 						while(true) {
 							int cnt = 0;

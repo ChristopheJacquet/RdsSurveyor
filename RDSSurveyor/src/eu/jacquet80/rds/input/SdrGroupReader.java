@@ -370,6 +370,10 @@ public class SdrGroupReader extends TunerGroupReader {
 
 
 	private class SoundPlayer extends Thread {
+		{
+			setName("SdrGoupReader#SoundPlayer");
+		}
+
 		private SourceDataLine outLine;
 
 		public SoundPlayer() {

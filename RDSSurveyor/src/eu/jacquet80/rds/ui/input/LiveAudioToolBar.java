@@ -30,7 +30,7 @@ public class LiveAudioToolBar extends InputToolBar {
 		lblStatus.setPreferredSize(new Dimension(100, 30));
 		add(lblStatus);
 		
-		new Thread() {
+		new Thread("LiveAudioToolBar") {
 			public void run() {
 				while(active) {
 					// update label

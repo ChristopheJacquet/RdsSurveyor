@@ -198,6 +198,10 @@ public class NativeTunerGroupReader extends TunerGroupReader {
 
 	
 	private class SoundPlayer extends Thread {
+		{
+			setName("NativeTunerGroupReader#SoundPlayer");
+		}
+
 		private Mixer mixer = null;
 		private TargetDataLine inLine;
 		private SourceDataLine outLine;

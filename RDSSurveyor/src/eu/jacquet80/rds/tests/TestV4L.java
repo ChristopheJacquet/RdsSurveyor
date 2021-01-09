@@ -53,7 +53,7 @@ public class TestV4L {
 		decoder = new GroupLevelDecoder(log);
 		radio = new V4LTunerGroupReader("/dev/radio0");
 
-		new Thread() {
+		new Thread("TestV4L") {
 			public void run() {
 				while(true) {
 					try {
