@@ -672,9 +672,9 @@ public class AlertC extends ODA {
 			} else if(time >= 96 && time <= 200) {
 				return String.format("midnight + %d days, %d hours", (time-96) / 24, (time-96) % 24);
 			} else if(time >= 201 && time <= 231) {
-				return "day " + (time - 200) + " this month";
+				return "day " + (time - 200) + " this/next month";
 			} else if(time >= 232 && time <= 255) {
-				return String.format("%02d/%02d", 15 + 16*((time-231)%2),(time-231)/2);
+				return String.format("%s of month %02d", (time & 1) == 1 ? "end" : "middle", (time-230)/2);
 			} else {
 				return "INVALID";
 			}
@@ -908,8 +908,8 @@ public class AlertC extends ODA {
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.hasDiversion) res.append(", diversion advised");
-			if(startTime != -1) res.append(", start=").append(formatTime(startTime));
-			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime));
+			if(startTime != -1) res.append(", start=").append(formatTime(startTime)).append(" [").append(startTime).append("]");
+			if(stopTime != -1) res.append(", stop=").append(formatTime(stopTime)).append(" [").append(stopTime).append("]");
 			res.append('\n');
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
@@ -997,8 +997,8 @@ public class AlertC extends ODA {
 			res.append(", durationType=").append(durationType);
 			res.append(", duration=" + this.duration);
 			if(this.hasDiversion) res.append(", diversion advised");
-			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append("</font>");
-			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append("</font>");
+			if(startTime != -1) res.append("<br><font color='#330000'>start=").append(formatTime(startTime)).append(" [").append(startTime).append("]").append("</font>");
+			if(stopTime != -1) res.append("<br><font color='#003300'>stop=").append(formatTime(stopTime)).append(" [").append(stopTime).append("]").append("</font>");
 			res.append("<br/>");
 			res.append("received=").append(date);
 			res.append(", expires=").append(this.getPersistence());
