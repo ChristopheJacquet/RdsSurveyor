@@ -136,7 +136,7 @@ public class AudioBitReader extends BitReader {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		new Thread() {
+		new Thread("AudioBitReader") {
 			public void run() {
 				/* Subcarrier frequency */
 				double fsc = FC_0;

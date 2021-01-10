@@ -16,6 +16,7 @@ public class Overviewer extends Thread {
 	public Overviewer(TunerGroupReader tgr, PrintStream console) {
 		this.tgr = tgr;
 		this.console = console;
+		this.setName("Overviewer");
 	}
 	
 	public void run() {

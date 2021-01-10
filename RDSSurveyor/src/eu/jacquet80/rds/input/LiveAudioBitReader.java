@@ -105,7 +105,7 @@ public class LiveAudioBitReader extends BitReader {
 		
 		line.start();
 
-		new Thread() {
+		new Thread("LiveAudioBitReader") {
 			public void run() {
 				for(;;) {
 					line.read(receiveFrame, 0, 2 * frameLength);

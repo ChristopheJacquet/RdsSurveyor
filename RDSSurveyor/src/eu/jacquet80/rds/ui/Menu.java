@@ -77,7 +77,7 @@ public class Menu {
 				final JMenuItem item = (JMenuItem) e.getSource();
 				
 				// the actions cannot be performed in AWT's dispatch thread
-				new Thread() {
+				new Thread("Menu-ActionListener") {
 					public void run() {
 						JFrame window = null;
 						

@@ -167,7 +167,7 @@ public class TunerToolBar extends InputToolBar {
 		
 		update();
 		
-		new Thread() {
+		new Thread("TunerToolBar") {
 			public void run() {
 				while(active) {
 					update();

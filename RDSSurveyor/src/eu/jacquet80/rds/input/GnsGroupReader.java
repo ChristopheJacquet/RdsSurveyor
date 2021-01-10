@@ -455,6 +455,10 @@ public class GnsGroupReader extends TunerGroupReader implements Closeable {
 	 * appropriate data structures.
 	 */
 	private class ResponseReader extends Thread {
+		{
+			setName("GnsGroupReader#ResponseReader");
+		}
+
 		@Override
 		public void run() {
 			while (!closed) {

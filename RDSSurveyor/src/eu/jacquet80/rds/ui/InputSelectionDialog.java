@@ -142,7 +142,7 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 					RDSSurveyor.preferences.put(RDSSurveyor.PREF_LAST_DIR, fc.getSelectedFile().getParent());
 				}
 			} else if(source == btnTCP) {
-				Thread t = new Thread() {
+				Thread t = new Thread("NetworkOpenDialog") {
 					public void run() {
 						choice = NetworkOpenDialog.dialog();
 						choiceDone.release();
