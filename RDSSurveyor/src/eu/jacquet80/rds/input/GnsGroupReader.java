@@ -595,7 +595,7 @@ public class GnsGroupReader extends TunerGroupReader implements Closeable {
 								 * TODO not sure if conversion is correct
 								 * (maximum is 0xFF in theory, presumably 0x3F or more, up to 0x2C observed so far)
 								 */
-								gnsData.rssi = intData[6] * 0x410;
+								gnsData.rssi = intData[6] * 0xFFFF / 0x3F;
 							}
 						}
 						opcodes.remove(Integer.valueOf(intData[3]));
