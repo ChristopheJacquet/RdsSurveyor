@@ -1,3 +1,5 @@
+include ../Makevars.linux
+
 FLAGS=-Wall -W -Wfatal-errors -pedantic -std=c99 -fPIC
 LINKFLAGS=`pkg-config hidapi-libusb --libs` -lrt -lpthread
 
@@ -7,7 +9,7 @@ si470x_hidapi: si470x_hidapi.c si470x_hidapi.h
 	gcc -c si470x_hidapi.c -I /usr/include/hidapi $(FLAGS)
 
 si470x_plugin: eu_jacquet80_rds_input_NativeTunerGroupReader.h si470x_plugin.c
-	gcc -shared -o si470x.so si470x_hidapi.o si470x_plugin.c -I /usr/lib/jvm/default-java/include $(FLAGS) $(LINKFLAGS)
+	gcc -shared -o si470x.so si470x_hidapi.o si470x_plugin.c $(JAVAINCS) $(FLAGS) $(LINKFLAGS)
 
 si470x_test: si470x_test.c si470x_hidapi.o
 	gcc -o si470x_test si470x_test.c si470x_hidapi.o $(FLAGS) $(LINKFLAGS)
