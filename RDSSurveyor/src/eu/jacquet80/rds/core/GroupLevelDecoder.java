@@ -503,8 +503,16 @@ public class GroupLevelDecoder {
 				} else if(type == 6) {
 					newApp = new InHouse();
 					workingStation.setApplicationForGroup(6, 0, newApp);
+				} else if(type == 8 && version == 0) {
+					// Auto-create AlertC (TMC) decoder when group 8A is received
+					newApp = new AlertC();
+					workingStation.setApplicationForGroup(8, 0, newApp);
+					newApp.setStation(workingStation);
+					console.println("\t[Auto-initialized TMC decoder for group 8A]");
 				}
 
+				// Refresh app reference after potential creation
+				app = workingStation.getApplicationForGroup(type, version);
 			}
 
 			if(app != null) {
