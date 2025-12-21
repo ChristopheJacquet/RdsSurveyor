@@ -70,6 +70,7 @@ public class LiveAudioMPXBitReader extends BitReader {
 		// Try to open audio line with different configurations
 		AudioFormat audioFormat = null;
 		int channels = 1; // Track which configuration worked
+		int actualSampleRate = sampleRate; // Track which sample rate worked
 
 		// Try different sample rates and channel configurations
 		int[] sampleRatesToTry = {sampleRate, 192000, 96000, 48000};
@@ -95,7 +96,7 @@ public class LiveAudioMPXBitReader extends BitReader {
 					line.open(audioFormat);
 
 					// Success!
-					this.sampleRate = sr;
+					actualSampleRate = sr;
 					channels = ch;
 					System.out.println("Opened audio line: " + sr + " Hz, " +
 					                   (ch == 1 ? "mono" : "stereo") + ", 16-bit");
@@ -121,6 +122,8 @@ public class LiveAudioMPXBitReader extends BitReader {
 			                      "Tried sample rates: 192kHz, 96kHz, 48kHz in mono and stereo.");
 		}
 
+		// Initialize the final fields
+		this.sampleRate = actualSampleRate;
 		final int finalChannels = channels;
 
 		// Create a piped stream to feed audio data to the AudioBitReader demodulator
@@ -130,7 +133,7 @@ public class LiveAudioMPXBitReader extends BitReader {
 			DataInputStream dis = new DataInputStream(pis);
 
 			// Create the demodulator that will extract RDS from the MPX audio
-			demodulator = new AudioBitReader(dis, sampleRate);
+			demodulator = new AudioBitReader(dis, this.sampleRate);
 
 			// Start the audio capture thread
 			final PipedOutputStream outputStream = pos;
