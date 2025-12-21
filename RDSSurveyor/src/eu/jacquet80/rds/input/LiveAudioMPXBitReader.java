@@ -67,29 +67,61 @@ public class LiveAudioMPXBitReader extends BitReader {
 	 * @throws IOException if the audio line cannot be opened
 	 */
 	public LiveAudioMPXBitReader(int sampleRate) throws IOException {
-		this.sampleRate = sampleRate;
+		// Try to open audio line with different configurations
+		AudioFormat audioFormat = null;
+		int channels = 1; // Track which configuration worked
 
-		// Set up audio format: mono, 16-bit PCM, little-endian
-		AudioFormat audioFormat = new AudioFormat(
-			AudioFormat.Encoding.PCM_SIGNED,
-			sampleRate,
-			16,      // 16-bit samples
-			1,       // mono
-			2,       // frame size (2 bytes per sample)
-			sampleRate,
-			false    // little-endian
-		);
+		// Try different sample rates and channel configurations
+		int[] sampleRatesToTry = {sampleRate, 192000, 96000, 48000};
+		int[] channelsToTry = {1, 2}; // mono first, then stereo
 
-		DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
+		LineUnavailableException lastException = null;
 
-		try {
-			line = (TargetDataLine) AudioSystem.getLine(info);
-			line.open(audioFormat);
-		} catch (LineUnavailableException e) {
-			System.err.println("Unable to get a recording line for MPX audio input");
-			e.printStackTrace();
-			throw new IOException("Cannot open audio line: " + e.getMessage());
+		for (int sr : sampleRatesToTry) {
+			for (int ch : channelsToTry) {
+				try {
+					audioFormat = new AudioFormat(
+						AudioFormat.Encoding.PCM_SIGNED,
+						sr,
+						16,      // 16-bit samples
+						ch,      // channels
+						ch * 2,  // frame size (2 bytes per sample * channels)
+						sr,
+						false    // little-endian
+					);
+
+					DataLine.Info info = new DataLine.Info(TargetDataLine.class, audioFormat);
+					line = (TargetDataLine) AudioSystem.getLine(info);
+					line.open(audioFormat);
+
+					// Success!
+					this.sampleRate = sr;
+					channels = ch;
+					System.out.println("Opened audio line: " + sr + " Hz, " +
+					                   (ch == 1 ? "mono" : "stereo") + ", 16-bit");
+					break;
+				} catch (LineUnavailableException e) {
+					lastException = e;
+					if (line != null) {
+						line.close();
+						line = null;
+					}
+					// Try next configuration
+				}
+			}
+			if (line != null) break; // Found a working configuration
 		}
+
+		if (line == null) {
+			System.err.println("Unable to get a recording line for MPX audio input");
+			if (lastException != null) {
+				lastException.printStackTrace();
+			}
+			throw new IOException("Cannot open audio line with any supported format. " +
+			                      "Tried sample rates: 192kHz, 96kHz, 48kHz in mono and stereo.");
+		}
+
+		final int finalChannels = channels;
 
 		// Create a piped stream to feed audio data to the AudioBitReader demodulator
 		try {
@@ -106,11 +138,25 @@ public class LiveAudioMPXBitReader extends BitReader {
 				public void run() {
 					line.start();
 					byte[] buffer = new byte[4096];
+					byte[] monoBuffer = new byte[4096]; // For converting stereo to mono
 					try {
 						while (true) {
 							int bytesRead = line.read(buffer, 0, buffer.length);
 							if (bytesRead > 0) {
-								outputStream.write(buffer, 0, bytesRead);
+								if (finalChannels == 2) {
+									// Convert stereo to mono by taking only the left channel
+									int monoBytes = 0;
+									for (int i = 0; i < bytesRead; i += 4) {
+										// Copy left channel (first 2 bytes of each frame)
+										monoBuffer[monoBytes++] = buffer[i];
+										monoBuffer[monoBytes++] = buffer[i + 1];
+										// Skip right channel (bytes i+2 and i+3)
+									}
+									outputStream.write(monoBuffer, 0, monoBytes);
+								} else {
+									// Already mono, write directly
+									outputStream.write(buffer, 0, bytesRead);
+								}
 								outputStream.flush();
 							}
 						}
