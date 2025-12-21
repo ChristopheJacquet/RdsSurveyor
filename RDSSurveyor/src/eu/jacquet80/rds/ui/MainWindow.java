@@ -398,7 +398,7 @@ public class MainWindow extends JFrame {
 			}
 			
 			@Override
-			public void visit(StationTuned stationTuned) {
+			public void visit(final StationTuned stationTuned) {
 				// reset the tabs displayed
 				try {
 					SwingUtilities.invokeAndWait(new Runnable() {
