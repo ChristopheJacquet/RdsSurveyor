@@ -60,6 +60,7 @@ import eu.jacquet80.rds.input.GnsGroupReader;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.HexFileGroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
+import eu.jacquet80.rds.input.LiveAudioMPXBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
 import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.SyncBinaryFileBitReader;
@@ -177,6 +178,25 @@ public class RDSSurveyor {
 					bitStreamSynchronizer = new BitStreamSynchronizer(console, binReader);
 					reader = bitStreamSynchronizer;
 					liveInput = true;
+				} else if("-inaudiompx".equals(args[i])) {
+					// Raw FM MPX audio input
+					int sampleRate = 192000; // default to 192kHz
+					// Check if next argument is a sample rate
+					if (i + 1 < args.length && args[i + 1].matches("\\d+")) {
+						sampleRate = Integer.parseInt(args[++i]);
+					}
+					BitReader binReader = new LiveAudioMPXBitReader(sampleRate);
+					// TODO Ugly hack
+					{
+						outBinFile = new File(tempDir, "rdslog_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".rds");
+
+						System.out.println("Binary output file is " + outBinFile.getAbsoluteFile());
+						binReader = new TeeBitReader(binReader, outBinFile);
+					}
+
+					bitStreamSynchronizer = new BitStreamSynchronizer(console, binReader);
+					reader = bitStreamSynchronizer;
+					liveInput = true;
 				} else if("-inaudiopipe".equals(args[i])) {
 					reader = new BitStreamSynchronizer(console, new AudioBitReader(new DataInputStream(System.in), Integer.parseInt(getParam("inaudiopipe", args, ++i))));
 					liveInput = true;
@@ -282,7 +302,8 @@ public class RDSSurveyor {
 					System.out.println("Unknown argument: " + args[i]);
 					
 					System.out.println("Arguments:");
-					System.out.println("  -inaudio                 Use sound card audio as input");
+					System.out.println("  -inaudio                 Use sound card audio as input (data/clock signals)");
+					System.out.println("  -inaudiompx [samplerate] Use sound card for raw FM MPX audio (default: 192kHz)");
 					System.out.println("  -inaudiopipe             Use raw audio from stdin as input");
 					System.out.println("  -inbinfile <file>        Use the given binary file as input");
 					System.out.println("  -insyncbinfile <file>    Use the given synchronized binary file as input");

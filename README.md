@@ -70,6 +70,18 @@ To read from a log file from RDS Surveyor or RDS Spy:
 java -jar rdssurveyor.jar -ingrouphexfile <file.rds>
 ```
 
+To use raw FM MPX audio from the sound card (e.g., from StereoTool or MicroMPX):
+
+```
+java -jar rdssurveyor.jar -inaudiompx
+```
+
+You can optionally specify the sample rate (default is 192 kHz):
+
+```
+java -jar rdssurveyor.jar -inaudiompx 128000
+```
+
 To use the Si470x or RTL-SDR backend, you need to reference the shared object file. Examples:
 
 * To input from Si470x on Linux: `java -jar rdssurveyor.jar -intuner si470x.so`.
