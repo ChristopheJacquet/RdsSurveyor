@@ -25,6 +25,7 @@ import eu.jacquet80.rds.input.BitReader;
 import eu.jacquet80.rds.input.FileFormatGuesser;
 import eu.jacquet80.rds.input.GroupReader;
 import eu.jacquet80.rds.input.LiveAudioBitReader;
+import eu.jacquet80.rds.input.LiveAudioMPXBitReader;
 import eu.jacquet80.rds.input.NativeTunerGroupReader;
 import eu.jacquet80.rds.input.SdrGroupReader;
 import eu.jacquet80.rds.input.UnavailableInputMethod;
@@ -120,7 +121,36 @@ public class InputSelectionDialog extends JFrame implements ActionListener {
 		Object source = e.getSource();
 		try {
 			if(source == btnAudio) {
-				BitReader br =  new LiveAudioBitReader();
+				// Ask user which type of audio input they want
+				Object[] options = {
+					"Raw FM MPX audio (from StereoTool, MicroMPX, etc.)",
+					"Data/Clock signals (from TDA7330, etc.)"
+				};
+				int audioType = JOptionPane.showOptionDialog(
+					this,
+					"<html>Select the type of audio input:<br><br>" +
+					"<b>Raw FM MPX audio:</b> For unprocessed FM multiplex audio from software like StereoTool or MicroMPX<br>" +
+					"<b>Data/Clock signals:</b> For pre-decoded RDS signals from hardware decoders like TDA7330</html>",
+					"Audio Input Type",
+					JOptionPane.YES_NO_OPTION,
+					JOptionPane.QUESTION_MESSAGE,
+					null,
+					options,
+					options[0]
+				);
+
+				BitReader br;
+				if (audioType == 0) {
+					// Raw FM MPX audio - use the new demodulating reader
+					br = new LiveAudioMPXBitReader();
+				} else if (audioType == 1) {
+					// Traditional data/clock input
+					br = new LiveAudioBitReader();
+				} else {
+					// User cancelled
+					return;
+				}
+
 				choice = new BitStreamSynchronizer(System.out, br);
 				live = true;
 				choiceDone.release();

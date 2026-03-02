@@ -3,8 +3,8 @@ apply plugin: 'java'
 group = 'eu.jacquet80.rds'
 archivesBaseName = 'rdssurveyor'
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 javadoc.options.links("http://docs.oracle.com/javase/7/docs/api/")
 
 jar {
@@ -12,9 +12,9 @@ jar {
     attributes 'Class-Path': '.',
                'Main-Class': 'eu.jacquet80.rds.RDSSurveyor'
   }
-  
+
   from {
-    configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
   }
 }
 
@@ -33,7 +33,7 @@ task dist(type: Zip, dependsOn: jar) {
 }
 
 dependencies {
-    compile fileTree(dir: 'lib', include: '*.jar')
+    implementation fileTree(dir: 'lib', include: '*.jar')
 }
 
 sourceSets {
