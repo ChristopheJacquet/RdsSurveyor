@@ -1,0 +1,1 @@
+JAVAINCS=-I /usr/lib/jvm/default-java/include -I /usr/lib/jvm/default-java/include/linux
